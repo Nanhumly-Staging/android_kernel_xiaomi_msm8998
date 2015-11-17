@@ -18,9 +18,10 @@ static int proc_self_readlink(struct dentry *dentry, char __user *buffer,
 	return readlink_copy(buffer, buflen, tmp);
 }
 
-static const char *proc_self_follow_link(struct dentry *dentry, void **cookie)
+static const char *proc_self_get_link(struct dentry *dentry,
+				      struct inode *inode, void **cookie)
 {
-	struct pid_namespace *ns = dentry->d_sb->s_fs_info;
+	struct pid_namespace *ns = inode->i_sb->s_fs_info;
 	pid_t tgid = task_tgid_nr_ns(current, ns);
 	char *name;
 
@@ -31,6 +32,8 @@ static const char *proc_self_follow_link(struct dentry *dentry, void **cookie)
 	if (current->flags & PF_KTHREAD)
 		return ERR_PTR(-EOPNOTSUPP);
 
+	if (!dentry)
+		return ERR_PTR(-ECHILD);
 	if (!tgid)
 		return ERR_PTR(-ENOENT);
 	/* 11 for max length of signed int in decimal + NULL term */
@@ -43,7 +46,7 @@ static const char *proc_self_follow_link(struct dentry *dentry, void **cookie)
 
 static const struct inode_operations proc_self_inode_operations = {
 	.readlink	= proc_self_readlink,
-	.follow_link	= proc_self_follow_link,
+	.get_link	= proc_self_get_link,
 	.put_link	= kfree_put_link,
 };
 
