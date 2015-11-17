@@ -506,6 +506,11 @@ in your dentry operations instead.
 	hold a spinlock	or other resources that do not allow a schedule.
 --
 [mandatory]
+	any symlink that might use page_follow_link_light/page_put_link() must
+	have inode_nohighmem(inode) called before anything might start playing with
+	its pagecache.
+--
+[mandatory]
 	->getxattr() and xattr_handler.get() get dentry and inode passed separately.
 	dentry might be yet to be attached to inode, so do _not_ use its ->d_inode
 	in the instances.  Rationale: !@#!@# security_d_instantiate() needs to be

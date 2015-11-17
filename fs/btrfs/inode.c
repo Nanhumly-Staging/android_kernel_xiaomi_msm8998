@@ -3825,6 +3825,7 @@ cache_acl:
 		break;
 	case S_IFLNK:
 		inode->i_op = &btrfs_symlink_inode_operations;
+		inode_nohighmem(inode);
 		inode->i_mapping->a_ops = &btrfs_symlink_aops;
 		break;
 	default:
@@ -9849,6 +9850,7 @@ static int btrfs_symlink(struct inode *dir, struct dentry *dentry,
 	btrfs_free_path(path);
 
 	inode->i_op = &btrfs_symlink_inode_operations;
+	inode_nohighmem(inode);
 	inode->i_mapping->a_ops = &btrfs_symlink_aops;
 	inode_set_bytes(inode, name_len);
 	btrfs_i_size_write(inode, name_len);
