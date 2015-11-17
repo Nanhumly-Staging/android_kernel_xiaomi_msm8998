@@ -32,14 +32,12 @@ static const char *proc_self_get_link(struct dentry *dentry,
 	if (current->flags & PF_KTHREAD)
 		return ERR_PTR(-EOPNOTSUPP);
 
-	if (!dentry)
-		return ERR_PTR(-ECHILD);
 	if (!tgid)
 		return ERR_PTR(-ENOENT);
 	/* 11 for max length of signed int in decimal + NULL term */
-	name = kmalloc(12, GFP_KERNEL);
-	if (!name)
-		return ERR_PTR(-ENOMEM);
+	name = kmalloc(12, dentry ? GFP_KERNEL : GFP_ATOMIC);
+	if (unlikely(!name))
+		return dentry ? ERR_PTR(-ENOMEM) : ERR_PTR(-ECHILD);
 	sprintf(name, "%d", tgid);
 	return *cookie = name;
 }
