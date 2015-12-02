@@ -32,21 +32,9 @@ security_set(const struct xattr_handler *handler, struct dentry *dentry,
 				  buffer, size, flags);
 }
 
-static size_t security_list(const struct xattr_handler *handler,
-			    struct dentry *dentry, char *list, size_t list_len,
-			    const char *name, size_t namelen)
+static bool security_list(struct dentry *dentry)
 {
-	const size_t len = namelen + 1;
-
-	if (IS_PRIVATE(d_inode(dentry)))
-		return 0;
-
-	if (list && len <= list_len) {
-		memcpy(list, name, namelen);
-		list[namelen] = '\0';
-	}
-
-	return len;
+	return !IS_PRIVATE(d_inode(dentry));
 }
 
 /* Initializes the security context for a new inode and returns the number
