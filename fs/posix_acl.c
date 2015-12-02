@@ -884,7 +884,7 @@ posix_acl_xattr_list(const struct xattr_handler *handler,
 }
 
 const struct xattr_handler posix_acl_access_xattr_handler = {
-	.prefix = POSIX_ACL_XATTR_ACCESS,
+	.prefix = XATTR_NAME_POSIX_ACL_ACCESS,
 	.flags = ACL_TYPE_ACCESS,
 	.list = posix_acl_xattr_list,
 	.get = posix_acl_xattr_get,
@@ -893,7 +893,7 @@ const struct xattr_handler posix_acl_access_xattr_handler = {
 EXPORT_SYMBOL_GPL(posix_acl_access_xattr_handler);
 
 const struct xattr_handler posix_acl_default_xattr_handler = {
-	.prefix = POSIX_ACL_XATTR_DEFAULT,
+	.prefix = XATTR_NAME_POSIX_ACL_DEFAULT,
 	.flags = ACL_TYPE_DEFAULT,
 	.list = posix_acl_xattr_list,
 	.get = posix_acl_xattr_get,
