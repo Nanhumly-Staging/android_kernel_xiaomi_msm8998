@@ -1421,7 +1421,8 @@ static int fuse_readdir(struct file *file, struct dir_context *ctx)
 }
 
 static const char *fuse_get_link(struct dentry *dentry,
-				 struct inode *inode, void **cookie)
+				 struct inode *inode,
+				 struct delayed_call *done)
 {
 	struct fuse_conn *fc = get_fuse_conn(inode);
 	FUSE_ARGS(args);
@@ -1447,7 +1448,7 @@ static const char *fuse_get_link(struct dentry *dentry,
 		link = ERR_PTR(ret);
 	} else {
 		link[ret] = '\0';
-		*cookie = link;
+		set_delayed_call(done, kfree_link, link);
 	}
 	fuse_invalidate_atime(inode);
 	return link;
@@ -2043,7 +2044,6 @@ static const struct inode_operations fuse_common_inode_operations = {
 static const struct inode_operations fuse_symlink_inode_operations = {
 	.setattr	= fuse_setattr,
 	.get_link	= fuse_get_link,
-	.put_link	= kfree_put_link,
 	.readlink	= generic_readlink,
 	.getattr	= fuse_getattr,
 	.setxattr	= fuse_setxattr,
