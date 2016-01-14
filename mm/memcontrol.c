@@ -333,7 +333,7 @@ void memcg_put_cache_ids(void)
  * conditional to this static branch, we'll have to allow modules that does
  * kmem_cache_alloc and the such to see this symbol as well
  */
-struct static_key memcg_kmem_enabled_key;
+DEFINE_STATIC_KEY_FALSE(memcg_kmem_enabled_key);
 EXPORT_SYMBOL(memcg_kmem_enabled_key);
 
 #endif /* CONFIG_MEMCG_KMEM */
@@ -2927,7 +2927,7 @@ static int memcg_activate_kmem(struct mem_cgroup *memcg,
 	err = page_counter_limit(&memcg->kmem, nr_pages);
 	VM_BUG_ON(err);
 
-	static_key_slow_inc(&memcg_kmem_enabled_key);
+	static_branch_inc(&memcg_kmem_enabled_key);
 	/*
 	 * A memory cgroup is considered kmem-active as soon as it gets
 	 * kmemcg_id. Setting the id after enabling static branching will
@@ -3676,7 +3676,7 @@ static void memcg_destroy_kmem(struct mem_cgroup *memcg)
 {
 	if (memcg->kmem_acct_activated) {
 		memcg_destroy_kmem_caches(memcg);
-		static_key_slow_dec(&memcg_kmem_enabled_key);
+		static_branch_dec(&memcg_kmem_enabled_key);
 		WARN_ON(page_counter_read(&memcg->kmem));
 	}
 	tcp_destroy_cgroup(memcg);
@@ -4388,7 +4388,7 @@ mem_cgroup_css_online(struct cgroup_subsys_state *css)
 
 #ifdef CONFIG_INET
 	if (cgroup_subsys_on_dfl(memory_cgrp_subsys) && !cgroup_memory_nosocket)
-		static_key_slow_inc(&memcg_sockets_enabled_key);
+		static_branch_inc(&memcg_sockets_enabled_key);
 #endif
 
 	/*
@@ -4443,7 +4443,7 @@ static void mem_cgroup_css_free(struct cgroup_subsys_state *css)
 	memcg_destroy_kmem(memcg);
 #ifdef CONFIG_INET
 	if (cgroup_subsys_on_dfl(memory_cgrp_subsys) && !cgroup_memory_nosocket)
-		static_key_slow_dec(&memcg_sockets_enabled_key);
+		static_branch_dec(&memcg_sockets_enabled_key);
 #endif
 	__mem_cgroup_free(memcg);
 }
@@ -5704,7 +5704,7 @@ void mem_cgroup_replace_page(struct page *oldpage, struct page *newpage)
 
 #ifdef CONFIG_INET
 
-struct static_key memcg_sockets_enabled_key;
+DEFINE_STATIC_KEY_FALSE(memcg_sockets_enabled_key);
 EXPORT_SYMBOL(memcg_sockets_enabled_key);
 
 void sock_update_memcg(struct sock *sk)
