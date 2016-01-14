@@ -29,7 +29,8 @@ struct compat_timespec;
 
 #ifdef __KERNEL__
 
-#define THREADINFO_GFP		(GFP_KERNEL | __GFP_NOTRACK | __GFP_ZERO)
+# define THREADINFO_GFP		(GFP_KERNEL_ACCOUNT | __GFP_NOTRACK | \
+				 __GFP_ZERO)
 
 /*
  * flag set/clear/test wrappers
