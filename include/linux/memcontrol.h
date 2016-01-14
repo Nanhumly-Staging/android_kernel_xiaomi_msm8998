@@ -98,7 +98,6 @@ enum cg_proto_flags {
 struct cg_proto {
 	struct page_counter	memory_allocated;	/* Current allocated memory. */
 	int			memory_pressure;
-	long			sysctl_mem[3];
 	unsigned long		flags;
 	/*
 	 * memcg field is used to find which memcg we belong directly
