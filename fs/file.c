@@ -39,11 +39,12 @@ static void *alloc_fdmem(size_t size)
 	 * vmalloc() if the allocation size will be considered "large" by the VM.
 	 */
 	if (size <= (PAGE_SIZE << PAGE_ALLOC_COSTLY_ORDER)) {
-		void *data = kmalloc(size, GFP_KERNEL|__GFP_NOWARN|__GFP_NORETRY);
+		void *data = kmalloc(size, GFP_KERNEL_ACCOUNT |
+				     __GFP_NOWARN | __GFP_NORETRY);
 		if (data != NULL)
 			return data;
 	}
-	return vmalloc(size);
+	return __vmalloc(size, GFP_KERNEL_ACCOUNT | __GFP_HIGHMEM, PAGE_KERNEL);
 }
 
 static void __free_fdtable(struct fdtable *fdt)
@@ -170,7 +171,7 @@ static struct fdtable *alloc_fdtable(unsigned int slots_wanted)
 	if (unlikely(nr > INT_MAX / sizeof(struct file *)))
 		return ERR_PTR(-EMFILE);
 
-	fdt = kmalloc(sizeof(struct fdtable), GFP_KERNEL);
+	fdt = kmalloc(sizeof(struct fdtable), GFP_KERNEL_ACCOUNT);
 	if (!fdt)
 		goto out;
 	fdt->max_fds = nr;
