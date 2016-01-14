@@ -34,7 +34,7 @@ void tcp_destroy_cgroup(struct mem_cgroup *memcg)
 		return;
 
 	if (memcg->tcp_mem.active)
-		static_key_slow_dec(&memcg_socket_limit_enabled);
+		static_key_slow_dec(&memcg_sockets_enabled_key);
 }
 
 static int tcp_update_limit(struct mem_cgroup *memcg, unsigned long nr_pages)
@@ -69,7 +69,7 @@ static int tcp_update_limit(struct mem_cgroup *memcg, unsigned long nr_pages)
 		 * will do the update in the same memcg. Without that, we can't
 		 * properly shutdown the static key.
 		 */
-		static_key_slow_inc(&memcg_socket_limit_enabled);
+		static_key_slow_inc(&memcg_sockets_enabled_key);
 		memcg->tcp_mem.active = true;
 	}
 
