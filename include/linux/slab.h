@@ -88,6 +88,11 @@
 #else
 # define SLAB_FAILSLAB		0x00000000UL
 #endif
+#ifdef CONFIG_MEMCG_KMEM
+# define SLAB_ACCOUNT		0x04000000UL	/* Account to memcg */
+#else
+# define SLAB_ACCOUNT		0x00000000UL
+#endif
 
 #ifdef CONFIG_KASAN
 #define SLAB_KASAN		0x08000000UL
