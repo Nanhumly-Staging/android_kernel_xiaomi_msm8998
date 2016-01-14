@@ -196,44 +196,6 @@ bool sk_net_capable(const struct sock *sk, int cap)
 }
 EXPORT_SYMBOL(sk_net_capable);
 
-
-#ifdef CONFIG_MEMCG_KMEM
-int mem_cgroup_sockets_init(struct mem_cgroup *memcg, struct cgroup_subsys *ss)
-{
-	struct proto *proto;
-	int ret = 0;
-
-	mutex_lock(&proto_list_mutex);
-	list_for_each_entry(proto, &proto_list, node) {
-		if (proto->init_cgroup) {
-			ret = proto->init_cgroup(memcg, ss);
-			if (ret)
-				goto out;
-		}
-	}
-
-	mutex_unlock(&proto_list_mutex);
-	return ret;
-out:
-	list_for_each_entry_continue_reverse(proto, &proto_list, node)
-		if (proto->destroy_cgroup)
-			proto->destroy_cgroup(memcg);
-	mutex_unlock(&proto_list_mutex);
-	return ret;
-}
-
-void mem_cgroup_sockets_destroy(struct mem_cgroup *memcg)
-{
-	struct proto *proto;
-
-	mutex_lock(&proto_list_mutex);
-	list_for_each_entry_reverse(proto, &proto_list, node)
-		if (proto->destroy_cgroup)
-			proto->destroy_cgroup(memcg);
-	mutex_unlock(&proto_list_mutex);
-}
-#endif
-
 /*
  * Each address family might have different locking rules, so we have
  * one slock key per address family and separate keys for internal and
@@ -1701,7 +1663,7 @@ struct sock *sk_clone_lock(const struct sock *sk, const gfp_t priority)
 		sk_tx_queue_clear(newsk);
 		newsk->sk_wq = NULL;
 
-		if (mem_cgroup_sockets_enabled && sk->sk_cgrp)
+		if (mem_cgroup_sockets_enabled && sk->sk_memcg)
 			sock_update_memcg(newsk);
 
 		if (newsk->sk_prot->sockets_allocated)
@@ -2326,8 +2288,8 @@ int __sk_mem_schedule(struct sock *sk, int size, int kind)
 
 	allocated = sk_memory_allocated_add(sk, amt);
 
-	if (mem_cgroup_sockets_enabled && sk->sk_cgrp &&
-	    !mem_cgroup_charge_skmem(sk->sk_cgrp, amt))
+	if (mem_cgroup_sockets_enabled && sk->sk_memcg &&
+	    !mem_cgroup_charge_skmem(sk->sk_memcg, amt))
 		goto suppress_allocation;
 
 	/* Under limit. */
@@ -2390,8 +2352,8 @@ suppress_allocation:
 
 	sk_memory_allocated_sub(sk, amt);
 
-	if (mem_cgroup_sockets_enabled && sk->sk_cgrp)
-		mem_cgroup_uncharge_skmem(sk->sk_cgrp, amt);
+	if (mem_cgroup_sockets_enabled && sk->sk_memcg)
+		mem_cgroup_uncharge_skmem(sk->sk_memcg, amt);
 
 	return 0;
 }
@@ -2408,8 +2370,8 @@ void __sk_mem_reclaim(struct sock *sk, int amount)
 	sk_memory_allocated_sub(sk, amount);
 	sk->sk_forward_alloc -= amount << SK_MEM_QUANTUM_SHIFT;
 
-	if (mem_cgroup_sockets_enabled && sk->sk_cgrp)
-		mem_cgroup_uncharge_skmem(sk->sk_cgrp, amount);
+	if (mem_cgroup_sockets_enabled && sk->sk_memcg)
+		mem_cgroup_uncharge_skmem(sk->sk_memcg, amount);
 
 	if (sk_under_memory_pressure(sk) &&
 	    (sk_memory_allocated(sk) < sk_prot_mem_limits(sk, 0)))
