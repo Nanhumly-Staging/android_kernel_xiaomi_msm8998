@@ -1119,9 +1119,6 @@ bool task_in_mem_cgroup(struct task_struct *task, struct mem_cgroup *memcg)
 	return ret;
 }
 
-#define mem_cgroup_from_counter(counter, member)	\
-	container_of(counter, struct mem_cgroup, member)
-
 /**
  * mem_cgroup_margin - calculate chargeable space of a memory cgroup
  * @memcg: the memory cgroup
@@ -4286,17 +4283,6 @@ static void __mem_cgroup_free(struct mem_cgroup *memcg)
 	kfree(memcg);
 }
 
-/*
- * Returns the parent mem_cgroup in memcgroup hierarchy with hierarchy enabled.
- */
-struct mem_cgroup *parent_mem_cgroup(struct mem_cgroup *memcg)
-{
-	if (!memcg->memory.parent)
-		return NULL;
-	return mem_cgroup_from_counter(memcg->memory.parent, memory);
-}
-EXPORT_SYMBOL(parent_mem_cgroup);
-
 static struct cgroup_subsys_state * __ref
 mem_cgroup_css_alloc(struct cgroup_subsys_state *parent_css)
 {
@@ -4336,6 +4322,9 @@ mem_cgroup_css_alloc(struct cgroup_subsys_state *parent_css)
 #endif
 #ifdef CONFIG_CGROUP_WRITEBACK
 	INIT_LIST_HEAD(&memcg->cgwb_list);
+#endif
+#ifdef CONFIG_INET
+	memcg->socket_pressure = jiffies;
 #endif
 	idr_replace(&mem_cgroup_idr, memcg, memcg->id.id);
 	return &memcg->css;
