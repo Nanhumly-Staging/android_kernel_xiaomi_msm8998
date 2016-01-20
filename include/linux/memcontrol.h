@@ -167,6 +167,12 @@ struct mem_cgroup_id {
 	atomic_t ref;
 };
 
+enum memcg_kmem_state {
+	KMEM_NONE,
+	KMEM_ALLOCATED,
+	KMEM_ONLINE,
+};
+
 /*
  * The memory controller data structure. The memory controller controls both
  * page cache and RSS per cgroup. We would eventually like to provide
@@ -251,8 +257,7 @@ struct mem_cgroup {
 #if defined(CONFIG_MEMCG_KMEM)
         /* Index in the kmem_cache->memcg_params.memcg_caches array */
 	int kmemcg_id;
-	bool kmem_acct_activated;
-	bool kmem_acct_active;
+	enum memcg_kmem_state kmem_state;
 #endif
 
 	int last_scanned_node;
@@ -764,9 +769,9 @@ static inline bool memcg_kmem_enabled(void)
 	return static_branch_unlikely(&memcg_kmem_enabled_key);
 }
 
-static inline bool memcg_kmem_is_active(struct mem_cgroup *memcg)
+static inline bool memcg_kmem_online(struct mem_cgroup *memcg)
 {
-	return memcg->kmem_acct_active;
+	return memcg->kmem_state == KMEM_ONLINE;
 }
 
 /*
@@ -864,7 +869,7 @@ static inline bool memcg_kmem_enabled(void)
 	return false;
 }
 
-static inline bool memcg_kmem_is_active(struct mem_cgroup *memcg)
+static inline bool memcg_kmem_online(struct mem_cgroup *memcg)
 {
 	return false;
 }
