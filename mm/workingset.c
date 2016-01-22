@@ -349,8 +349,8 @@ static enum lru_status shadow_lru_isolate(struct list_head *item,
 			BUG_ON(!radix_tree_exceptional_entry(node->slots[i]));
 			node->slots[i] = NULL;
 			workingset_node_shadows_dec(node);
-			BUG_ON(!mapping->nrshadows);
-			mapping->nrshadows--;
+			BUG_ON(!mapping->nrexceptional);
+			mapping->nrexceptional--;
 		}
 	}
 	BUG_ON(workingset_node_shadows(node));
