@@ -1572,10 +1572,10 @@ static void destroy_ep_files (struct dev_data *dev)
 		put_ep (ep);
 
 		/* break link to dcache */
-		mutex_lock (&parent->i_mutex);
+		inode_lock(parent);
 		d_delete (dentry);
 		dput (dentry);
-		mutex_unlock (&parent->i_mutex);
+		inode_unlock(parent);
 
 		spin_lock_irq (&dev->lock);
 	}

@@ -236,7 +236,7 @@ long ext4_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		flags = ext4_mask_flags(inode->i_mode, flags);
 
 		err = -EPERM;
-		mutex_lock(&inode->i_mutex);
+		inode_lock(inode);
 		/* Is it quota file? Do not allow user to mess with it */
 		if (IS_NOQUOTA(inode))
 			goto flags_out;
@@ -318,7 +318,7 @@ flags_err:
 		}
 
 flags_out:
-		mutex_unlock(&inode->i_mutex);
+		inode_unlock(inode);
 		mnt_drop_write_file(filp);
 		return err;
 	}
@@ -349,7 +349,7 @@ flags_out:
 			goto setversion_out;
 		}
 
-		mutex_lock(&inode->i_mutex);
+		inode_lock(inode);
 		handle = ext4_journal_start(inode, EXT4_HT_INODE, 1);
 		if (IS_ERR(handle)) {
 			err = PTR_ERR(handle);
@@ -364,7 +364,7 @@ flags_out:
 		ext4_journal_stop(handle);
 
 unlock_out:
-		mutex_unlock(&inode->i_mutex);
+		inode_unlock(inode);
 setversion_out:
 		mnt_drop_write_file(filp);
 		return err;
@@ -510,9 +510,9 @@ group_add_out:
 		 * ext4_ext_swap_inode_data before we switch the
 		 * inode format to prevent read.
 		 */
-		mutex_lock(&(inode->i_mutex));
+		inode_lock((inode));
 		err = ext4_ext_migrate(inode);
-		mutex_unlock(&(inode->i_mutex));
+		inode_unlock((inode));
 		mnt_drop_write_file(filp);
 		return err;
 	}
@@ -643,11 +643,11 @@ resizefs_out:
 		if (err)
 			goto encryption_policy_out;
 
-		mutex_lock(&inode->i_mutex);
+		inode_lock(inode);
 
 		err = ext4_process_policy(&policy, inode);
 
-		mutex_unlock(&inode->i_mutex);
+		inode_unlock(inode);
 
 		mnt_drop_write_file(filp);
 encryption_policy_out:

@@ -50,7 +50,7 @@ static loff_t msr_seek(struct file *file, loff_t offset, int orig)
 	loff_t ret;
 	struct inode *inode = file_inode(file);
 
-	mutex_lock(&inode->i_mutex);
+	inode_lock(inode);
 	switch (orig) {
 	case SEEK_SET:
 		file->f_pos = offset;
@@ -63,7 +63,7 @@ static loff_t msr_seek(struct file *file, loff_t offset, int orig)
 	default:
 		ret = -EINVAL;
 	}
-	mutex_unlock(&inode->i_mutex);
+	inode_unlock(inode);
 	return ret;
 }
 

@@ -63,7 +63,7 @@ static loff_t cpuid_seek(struct file *file, loff_t offset, int orig)
 	loff_t ret;
 	struct inode *inode = file->f_mapping->host;
 
-	mutex_lock(&inode->i_mutex);
+	inode_lock(inode);
 	switch (orig) {
 	case 0:
 		file->f_pos = offset;
@@ -76,7 +76,7 @@ static loff_t cpuid_seek(struct file *file, loff_t offset, int orig)
 	default:
 		ret = -EINVAL;
 	}
-	mutex_unlock(&inode->i_mutex);
+	inode_unlock(inode);
 	return ret;
 }
 

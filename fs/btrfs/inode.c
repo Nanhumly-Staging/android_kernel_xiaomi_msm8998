@@ -8586,7 +8586,7 @@ static ssize_t btrfs_direct_IO(struct kiocb *iocb, struct iov_iter *iter,
 		 * not unlock the i_mutex at this case.
 		 */
 		if (offset + count <= inode->i_size) {
-			mutex_unlock(&inode->i_mutex);
+			inode_unlock(inode);
 			relock = true;
 		}
 		ret = btrfs_delalloc_reserve_space(inode, offset, count);
@@ -8628,7 +8628,7 @@ out:
 	if (wakeup)
 		inode_dio_end(inode);
 	if (relock)
-		mutex_lock(&inode->i_mutex);
+		inode_lock(inode);
 
 	return ret;
 }

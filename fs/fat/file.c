@@ -20,9 +20,9 @@ static int fat_ioctl_get_attributes(struct inode *inode, u32 __user *user_attr)
 {
 	u32 attr;
 
-	mutex_lock(&inode->i_mutex);
+	inode_lock(inode);
 	attr = fat_make_attrs(inode);
-	mutex_unlock(&inode->i_mutex);
+	inode_unlock(inode);
 
 	return put_user(attr, user_attr);
 }
@@ -43,7 +43,7 @@ static int fat_ioctl_set_attributes(struct file *file, u32 __user *user_attr)
 	err = mnt_want_write_file(file);
 	if (err)
 		goto out;
-	mutex_lock(&inode->i_mutex);
+	inode_lock(inode);
 
 	/*
 	 * ATTR_VOLUME and ATTR_DIR cannot be changed; this also
@@ -105,7 +105,7 @@ static int fat_ioctl_set_attributes(struct file *file, u32 __user *user_attr)
 	fat_save_attrs(inode, attr);
 	mark_inode_dirty(inode);
 out_unlock_inode:
-	mutex_unlock(&inode->i_mutex);
+	inode_unlock(inode);
 	mnt_drop_write_file(file);
 out:
 	return err;

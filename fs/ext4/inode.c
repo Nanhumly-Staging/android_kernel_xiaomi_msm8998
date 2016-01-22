@@ -3248,7 +3248,7 @@ static ssize_t ext4_ext_direct_IO(struct kiocb *iocb, struct iov_iter *iter,
 
 	if (overwrite) {
 		down_read(&EXT4_I(inode)->i_data_sem);
-		mutex_unlock(&inode->i_mutex);
+		inode_unlock(inode);
 	}
 
 	/*
@@ -3352,7 +3352,7 @@ retake_lock:
 	/* take i_mutex locking again if we do a ovewrite dio */
 	if (overwrite) {
 		up_read(&EXT4_I(inode)->i_data_sem);
-		mutex_lock(&inode->i_mutex);
+		inode_lock(inode);
 	}
 
 	return ret;
@@ -3691,7 +3691,7 @@ int ext4_update_disksize_before_punch(struct inode *inode, loff_t offset,
 	handle_t *handle;
 	loff_t size = i_size_read(inode);
 
-	WARN_ON(!mutex_is_locked(&inode->i_mutex));
+	WARN_ON(!inode_is_locked(inode));
 	if (offset > size || offset + len < size)
 		return 0;
 
@@ -3755,7 +3755,7 @@ int ext4_punch_hole(struct inode *inode, loff_t offset, loff_t length)
 			return ret;
 	}
 
-	mutex_lock(&inode->i_mutex);
+	inode_lock(inode);
 
 	/* No need to punch hole beyond i_size */
 	if (offset >= inode->i_size)
@@ -3859,7 +3859,7 @@ out_dio:
 	up_write(&EXT4_I(inode)->i_mmap_sem);
 	ext4_inode_resume_unlocked_dio(inode);
 out_mutex:
-	mutex_unlock(&inode->i_mutex);
+	inode_unlock(inode);
 	return ret;
 #else
 	/*
@@ -3935,7 +3935,7 @@ void ext4_truncate(struct inode *inode)
 	 * have i_mutex locked because it's not necessary.
 	 */
 	if (!(inode->i_state & (I_NEW|I_FREEING)))
-		WARN_ON(!mutex_is_locked(&inode->i_mutex));
+		WARN_ON(!inode_is_locked(inode));
 	trace_ext4_truncate_enter(inode);
 
 	if (!ext4_can_truncate(inode))
