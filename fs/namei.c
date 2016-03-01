@@ -3883,31 +3883,6 @@ SYSCALL_DEFINE2(mkdir, const char __user *, pathname, umode_t, mode)
 	return sys_mkdirat(AT_FDCWD, pathname, mode);
 }
 
-/*
- * The dentry_unhash() helper will try to drop the dentry early: we
- * should have a usage count of 1 if we're the only user of this
- * dentry, and if that is true (possibly after pruning the dcache),
- * then we drop the dentry now.
- *
- * A low-level filesystem can, if it choses, legally
- * do a
- *
- *	if (!d_unhashed(dentry))
- *		return -EBUSY;
- *
- * if it cannot handle the case of removing a directory
- * that is still in use by something else..
- */
-void dentry_unhash(struct dentry *dentry)
-{
-	shrink_dcache_parent(dentry);
-	spin_lock(&dentry->d_lock);
-	if (dentry->d_lockref.count == 1)
-		__d_drop(dentry);
-	spin_unlock(&dentry->d_lock);
-}
-EXPORT_SYMBOL(dentry_unhash);
-
 int vfs_rmdir2(struct vfsmount *mnt, struct inode *dir, struct dentry *dentry)
 {
 	int error = may_delete(mnt, dir, dentry, 1);
