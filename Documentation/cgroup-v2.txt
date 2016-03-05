@@ -826,7 +826,7 @@ PAGE_SIZE multiple when read back.
 		processes killed but should generally be close.
 
 
-5-2-2. General Usage
+5-2-2. Usage Guidelines
 
 "memory.high" is the main mechanism to control memory usage.
 Over-committing on high limit (sum of high limits > available memory)
