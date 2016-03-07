@@ -422,14 +422,9 @@ static int configfs_attach_attr(struct configfs_dirent * sd, struct dentry * den
 
 	error = configfs_create(dentry, (attr->ca_mode & S_IALLUGO) | S_IFREG,
 				configfs_init_file);
-	if (error) {
+	if (error)
 		configfs_put(sd);
-		return error;
-	}
-
-	d_rehash(dentry);
-
-	return 0;
+	return error;
 }
 
 static struct dentry * configfs_lookup(struct inode *dir,
