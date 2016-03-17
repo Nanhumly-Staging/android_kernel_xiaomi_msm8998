@@ -172,12 +172,19 @@ static unsigned long *alloc_thread_stack_node(struct task_struct *tsk,
 	struct page *page = alloc_kmem_pages_node(node, THREADINFO_GFP,
 						  THREAD_SIZE_ORDER);
 
+	if (page)
+		memcg_kmem_update_page_stat(page, MEMCG_KERNEL_STACK,
+					    1 << THREAD_SIZE_ORDER);
+
 	return page ? page_address(page) : NULL;
 }
 
 static inline void free_thread_stack(unsigned long *stack)
 {
 	struct page *page = virt_to_page(stack);
+
+	memcg_kmem_update_page_stat(page, MEMCG_KERNEL_STACK,
+				    -(1 << THREAD_SIZE_ORDER));
 
 	kasan_alloc_pages(page, THREAD_SIZE_ORDER);
 	kaiser_unmap_thread_stack(stack);
