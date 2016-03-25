@@ -1447,12 +1447,12 @@ static inline void security_skb_classify_flow(struct sk_buff *skb, struct flowi 
 
 #ifdef CONFIG_SECURITY_PATH
 int security_path_unlink(const struct path *dir, struct dentry *dentry);
-int security_path_mkdir(struct path *dir, struct dentry *dentry, umode_t mode);
+int security_path_mkdir(const struct path *dir, struct dentry *dentry, umode_t mode);
 int security_path_rmdir(const struct path *dir, struct dentry *dentry);
-int security_path_mknod(struct path *dir, struct dentry *dentry, umode_t mode,
+int security_path_mknod(const struct path *dir, struct dentry *dentry, umode_t mode,
 			unsigned int dev);
 int security_path_truncate(const struct path *path);
-int security_path_symlink(struct path *dir, struct dentry *dentry,
+int security_path_symlink(const struct path *dir, struct dentry *dentry,
 			  const char *old_name);
 int security_path_link(struct dentry *old_dentry, struct path *new_dir,
 		       struct dentry *new_dentry);
@@ -1468,7 +1468,7 @@ static inline int security_path_unlink(const struct path *dir, struct dentry *de
 	return 0;
 }
 
-static inline int security_path_mkdir(struct path *dir, struct dentry *dentry,
+static inline int security_path_mkdir(const struct path *dir, struct dentry *dentry,
 				      umode_t mode)
 {
 	return 0;
@@ -1479,7 +1479,7 @@ static inline int security_path_rmdir(const struct path *dir, struct dentry *den
 	return 0;
 }
 
-static inline int security_path_mknod(struct path *dir, struct dentry *dentry,
+static inline int security_path_mknod(const struct path *dir, struct dentry *dentry,
 				      umode_t mode, unsigned int dev)
 {
 	return 0;
@@ -1490,7 +1490,7 @@ static inline int security_path_truncate(const struct path *path)
 	return 0;
 }
 
-static inline int security_path_symlink(struct path *dir, struct dentry *dentry,
+static inline int security_path_symlink(const struct path *dir, struct dentry *dentry,
 					const char *old_name)
 {
 	return 0;
