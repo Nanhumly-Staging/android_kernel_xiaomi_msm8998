@@ -135,9 +135,9 @@ struct dentry *kernfs_node_dentry(struct kernfs_node *kn,
 		kntmp = find_next_ancestor(kn, knparent);
 		if (WARN_ON(!kntmp))
 			return ERR_PTR(-EINVAL);
-		inode_lock(d_inode(dentry));
-		dtmp = lookup_one_len(kntmp->name, dentry, strlen(kntmp->name));
-		inode_unlock(d_inode(dentry));
+
+		dtmp = lookup_one_len_unlocked(kntmp->name, dentry,
+					       strlen(kntmp->name));
 		dput(dentry);
 		if (IS_ERR(dtmp))
 			return dtmp;
