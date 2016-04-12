@@ -484,7 +484,7 @@ out:
  * If there is an error, the caller will reset the flags via
  * configfs_detach_rollback().
  */
-static int configfs_detach_prep(struct dentry *dentry, struct mutex **wait_mutex)
+static int configfs_detach_prep(struct dentry *dentry, struct dentry **wait)
 {
 	struct configfs_dirent *parent_sd = dentry->d_fsdata;
 	struct configfs_dirent *sd;
@@ -505,8 +505,8 @@ static int configfs_detach_prep(struct dentry *dentry, struct mutex **wait_mutex
 		if (sd->s_type & CONFIGFS_USET_DEFAULT) {
 			/* Abort if racing with mkdir() */
 			if (sd->s_type & CONFIGFS_USET_IN_MKDIR) {
-				if (wait_mutex)
-					*wait_mutex = &d_inode(sd->s_dentry)->i_mutex;
+				if (wait)
+					*wait= dget(sd->s_dentry);
 				return -EAGAIN;
 			}
 
@@ -514,7 +514,7 @@ static int configfs_detach_prep(struct dentry *dentry, struct mutex **wait_mutex
 			 * Yup, recursive.  If there's a problem, blame
 			 * deep nesting of default_groups
 			 */
-			ret = configfs_detach_prep(sd->s_dentry, wait_mutex);
+			ret = configfs_detach_prep(sd->s_dentry, wait);
 			if (!ret)
 				continue;
 		} else
@@ -1352,7 +1352,7 @@ static int configfs_rmdir(struct inode *dir, struct dentry *dentry)
 	 * the new link is temporarily attached
 	 */
 	do {
-		struct mutex *wait_mutex;
+		struct dentry *wait;
 
 		mutex_lock(&configfs_symlink_mutex);
 		spin_lock(&configfs_dirent_lock);
@@ -1363,7 +1363,7 @@ static int configfs_rmdir(struct inode *dir, struct dentry *dentry)
 		 */
 		ret = sd->s_dependent_count ? -EBUSY : 0;
 		if (!ret) {
-			ret = configfs_detach_prep(dentry, &wait_mutex);
+			ret = configfs_detach_prep(dentry, &wait);
 			if (ret)
 				configfs_detach_rollback(dentry);
 		}
@@ -1377,8 +1377,9 @@ static int configfs_rmdir(struct inode *dir, struct dentry *dentry)
 			}
 
 			/* Wait until the racing operation terminates */
-			mutex_lock(wait_mutex);
-			mutex_unlock(wait_mutex);
+			inode_lock(d_inode(wait));
+			inode_unlock(d_inode(wait));
+			dput(wait);
 		}
 	} while (ret == -EAGAIN);
 
