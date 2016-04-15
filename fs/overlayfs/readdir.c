@@ -210,7 +210,9 @@ static int ovl_check_whiteouts(struct dentry *dir, struct ovl_readdir_data *rdd)
 
 	old_cred = ovl_override_creds(rdd->dentry->d_sb);
 
-	err = mutex_lock_killable(&dir->d_inode->i_mutex);
+	inode_lock(dir->d_inode);
+	err = 0;
+	// XXX: err = mutex_lock_killable(&dir->d_inode->i_mutex);
 	if (!err) {
 		while (rdd->first_maybe_whiteout) {
 			p = rdd->first_maybe_whiteout;
