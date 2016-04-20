@@ -146,7 +146,7 @@ SYSCALL_DEFINE3(old_readdir, unsigned int, fd,
 		struct old_linux_dirent __user *, dirent, unsigned int, count)
 {
 	int error;
-	struct fd f = fdget(fd);
+	struct fd f = fdget_pos(fd);
 	struct readdir_callback buf = {
 		.ctx.actor = fillonedir,
 		.dirent = dirent
@@ -159,7 +159,7 @@ SYSCALL_DEFINE3(old_readdir, unsigned int, fd,
 	if (buf.result)
 		error = buf.result;
 
-	fdput(f);
+	fdput_pos(f);
 	return error;
 }
 
@@ -246,7 +246,7 @@ SYSCALL_DEFINE3(getdents, unsigned int, fd,
 	if (!access_ok(VERIFY_WRITE, dirent, count))
 		return -EFAULT;
 
-	f = fdget(fd);
+	f = fdget_pos(fd);
 	if (!f.file)
 		return -EBADF;
 
@@ -260,7 +260,7 @@ SYSCALL_DEFINE3(getdents, unsigned int, fd,
 		else
 			error = count - buf.count;
 	}
-	fdput(f);
+	fdput_pos(f);
 	return error;
 }
 
@@ -330,7 +330,7 @@ SYSCALL_DEFINE3(getdents64, unsigned int, fd,
 	if (!access_ok(VERIFY_WRITE, dirent, count))
 		return -EFAULT;
 
-	f = fdget(fd);
+	f = fdget_pos(fd);
 	if (!f.file)
 		return -EBADF;
 
@@ -345,6 +345,6 @@ SYSCALL_DEFINE3(getdents64, unsigned int, fd,
 		else
 			error = count - buf.count;
 	}
-	fdput(f);
+	fdput_pos(f);
 	return error;
 }
