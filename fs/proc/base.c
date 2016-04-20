@@ -2399,8 +2399,8 @@ out:
 
 static const struct file_operations proc_map_files_operations = {
 	.read		= generic_read_dir,
-	.iterate	= proc_map_files_readdir,
-	.llseek		= default_llseek,
+	.iterate_shared	= proc_map_files_readdir,
+	.llseek		= generic_file_llseek,
 };
 
 struct timers_private {
@@ -2781,8 +2781,8 @@ static int proc_attr_dir_readdir(struct file *file, struct dir_context *ctx)
 
 static const struct file_operations proc_attr_dir_operations = {
 	.read		= generic_read_dir,
-	.iterate	= proc_attr_dir_readdir,
-	.llseek		= default_llseek,
+	.iterate_shared	= proc_attr_dir_readdir,
+	.llseek		= generic_file_llseek,
 };
 
 static struct dentry *proc_attr_dir_lookup(struct inode *dir,
@@ -3203,8 +3203,8 @@ static int proc_tgid_base_readdir(struct file *file, struct dir_context *ctx)
 
 static const struct file_operations proc_tgid_base_operations = {
 	.read		= generic_read_dir,
-	.iterate	= proc_tgid_base_readdir,
-	.llseek		= default_llseek,
+	.iterate_shared	= proc_tgid_base_readdir,
+	.llseek		= generic_file_llseek,
 };
 
 struct pid *tgid_pidfd_to_pid(const struct file *file)
@@ -3606,8 +3606,8 @@ static struct dentry *proc_tid_base_lookup(struct inode *dir, struct dentry *den
 
 static const struct file_operations proc_tid_base_operations = {
 	.read		= generic_read_dir,
-	.iterate	= proc_tid_base_readdir,
-	.llseek		= default_llseek,
+	.iterate_shared	= proc_tid_base_readdir,
+	.llseek		= generic_file_llseek,
 };
 
 static const struct inode_operations proc_tid_base_inode_operations = {
@@ -3817,6 +3817,6 @@ static const struct inode_operations proc_task_inode_operations = {
 
 static const struct file_operations proc_task_operations = {
 	.read		= generic_read_dir,
-	.iterate	= proc_task_readdir,
-	.llseek		= default_llseek,
+	.iterate_shared	= proc_task_readdir,
+	.llseek		= generic_file_llseek,
 };
