@@ -1863,7 +1863,6 @@ static loff_t ll_dir_seek(struct file *file, loff_t offset, int origin)
 	int api32 = ll_need_32bit_api(sbi);
 	loff_t ret = -EINVAL;
 
-	inode_lock(inode);
 	switch (origin) {
 	case SEEK_SET:
 		break;
@@ -1901,7 +1900,6 @@ static loff_t ll_dir_seek(struct file *file, loff_t offset, int origin)
 	goto out;
 
 out:
-	inode_unlock(inode);
 	return ret;
 }
 
@@ -1920,7 +1918,7 @@ const struct file_operations ll_dir_operations = {
 	.open     = ll_dir_open,
 	.release  = ll_dir_release,
 	.read     = generic_read_dir,
-	.iterate  = ll_readdir,
+	.iterate_shared  = ll_readdir,
 	.unlocked_ioctl   = ll_dir_ioctl,
 	.fsync    = ll_fsync,
 };
