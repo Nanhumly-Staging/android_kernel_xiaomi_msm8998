@@ -3109,6 +3109,8 @@ static int atomic_open(struct nameidata *nd, struct dentry *dentry,
 		acc_mode = MAY_OPEN;
 	}
 	error = may_open(&file->f_path, acc_mode, open_flag);
+	if (WARN_ON(error > 0))
+		error = -EINVAL;
 out:
 	dput(dentry);
 	return error;
