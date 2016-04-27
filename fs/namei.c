@@ -3386,10 +3386,6 @@ finish_open:
 		return error;
 	}
 	audit_inode(nd->name, nd->path.dentry, 0);
-	if (unlikely(d_is_symlink(nd->path.dentry))) {
-		error = -ELOOP;
-		goto out;
-	}
 	if (open_flag & O_CREAT) {
 		error = -EISDIR;
 		if (d_is_dir(nd->path.dentry))
