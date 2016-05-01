@@ -796,7 +796,7 @@ const struct inode_operations logfs_dir_iops = {
 const struct file_operations logfs_dir_fops = {
 	.fsync		= logfs_fsync,
 	.unlocked_ioctl	= logfs_ioctl,
-	.iterate	= logfs_readdir,
+	.iterate_shared	= logfs_readdir,
 	.read		= generic_read_dir,
 	.llseek		= default_llseek,
 };
