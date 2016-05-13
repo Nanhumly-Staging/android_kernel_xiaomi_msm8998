@@ -248,12 +248,19 @@ int hfs_cat_delete(u32 cnid, struct inode *dir, struct qstr *str)
 		}
 	}
 
+<<<<<<< HEAD
 	list_for_each(pos, &HFS_I(dir)->open_dir_list) {
 		struct hfs_readdir_data *rd =
 			list_entry(pos, struct hfs_readdir_data, list);
+=======
+	/* we only need to take spinlock for exclusion with ->release() */
+	spin_lock(&HFS_I(dir)->open_dir_lock);
+	list_for_each_entry(rd, &HFS_I(dir)->open_dir_list, list) {
+>>>>>>> 9717a91b01fed (hfs: switch to ->iterate_shared())
 		if (fd.tree->keycmp(fd.search_key, (void *)&rd->key) < 0)
 			rd->file->f_pos--;
 	}
+	spin_unlock(&HFS_I(dir)->open_dir_lock);
 
 	res = hfs_brec_remove(&fd);
 	if (res)
