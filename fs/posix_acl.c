@@ -878,10 +878,10 @@ EXPORT_SYMBOL(set_posix_acl);
 
 static int
 posix_acl_xattr_set(const struct xattr_handler *handler,
-		    struct dentry *dentry, const char *name,
-		    const void *value, size_t size, int flags)
+		    struct dentry *unused, struct inode *inode,
+		    const char *name, const void *value,
+		    size_t size, int flags)
 {
-	struct inode *inode = d_backing_inode(dentry);
 	struct posix_acl *acl = NULL;
 	int ret;
 
