@@ -365,13 +365,14 @@ out_free:
 	return err;
 }
 
-int ubifs_setxattr(struct dentry *dentry, const char *name,
-		   const void *value, size_t size, int flags)
+int ubifs_setxattr(struct dentry *dentry, struct inode *inode,
+		   const char *name, const void *value,
+		   size_t size, int flags)
 {
 	dbg_gen("xattr '%s', host ino %lu ('%pd'), size %zd",
 		name, d_inode(dentry)->i_ino, dentry, size);
 
-	return setxattr(d_inode(dentry), name, value, size, flags);
+	return setxattr(inode, name, value, size, flags);
 }
 
 ssize_t ubifs_getxattr(struct dentry *dentry, struct inode *host,

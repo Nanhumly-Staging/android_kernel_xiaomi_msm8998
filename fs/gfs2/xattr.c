@@ -1230,10 +1230,11 @@ int __gfs2_xattr_set(struct inode *inode, const char *name,
 }
 
 static int gfs2_xattr_set(const struct xattr_handler *handler,
-			  struct dentry *dentry, const char *name,
-			  const void *value, size_t size, int flags)
+			  struct dentry *unused, struct inode *inode,
+			  const char *name, const void *value,
+			  size_t size, int flags)
 {
-	return __gfs2_xattr_set(d_inode(dentry), name, value,
+	return __gfs2_xattr_set(inode, name, value,
 				size, flags, handler->flags);
 }
 
