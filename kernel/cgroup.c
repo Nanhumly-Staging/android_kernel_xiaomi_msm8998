@@ -6424,6 +6424,16 @@ void cgroup_sk_free(struct sock_cgroup_data *skcd)
 
 /* cgroup namespaces */
 
+static struct ucounts *inc_cgroup_namespaces(struct user_namespace *ns)
+{
+	return inc_ucount(ns, current_euid(), UCOUNT_CGROUP_NAMESPACES);
+}
+
+static void dec_cgroup_namespaces(struct ucounts *ucounts)
+{
+	dec_ucount(ucounts, UCOUNT_CGROUP_NAMESPACES);
+}
+
 static struct cgroup_namespace *alloc_cgroup_ns(void)
 {
 	struct cgroup_namespace *new_ns;
@@ -6445,6 +6455,7 @@ static struct cgroup_namespace *alloc_cgroup_ns(void)
 void free_cgroup_ns(struct cgroup_namespace *ns)
 {
 	put_css_set(ns->root_cset);
+	dec_cgroup_namespaces(ns->ucounts);
 	put_user_ns(ns->user_ns);
 	ns_free_inum(&ns->ns);
 	kfree(ns);
@@ -6456,6 +6467,7 @@ struct cgroup_namespace *copy_cgroup_ns(unsigned long flags,
 					struct cgroup_namespace *old_ns)
 {
 	struct cgroup_namespace *new_ns;
+	struct ucounts *ucounts;
 	struct css_set *cset;
 
 	BUG_ON(!old_ns);
@@ -6469,6 +6481,10 @@ struct cgroup_namespace *copy_cgroup_ns(unsigned long flags,
 	if (!ns_capable(user_ns, CAP_SYS_ADMIN))
 		return ERR_PTR(-EPERM);
 
+	ucounts = inc_cgroup_namespaces(user_ns);
+	if (!ucounts)
+		return ERR_PTR(-ENFILE);
+
 	/* It is not safe to take cgroup_mutex here */
 	spin_lock_irq(&css_set_lock);
 	cset = task_css_set(current);
@@ -6478,10 +6494,12 @@ struct cgroup_namespace *copy_cgroup_ns(unsigned long flags,
 	new_ns = alloc_cgroup_ns();
 	if (IS_ERR(new_ns)) {
 		put_css_set(cset);
+		dec_cgroup_namespaces(ucounts);
 		return new_ns;
 	}
 
 	new_ns->user_ns = get_user_ns(user_ns);
+	new_ns->ucounts = ucounts;
 	new_ns->root_cset = cset;
 
 	return new_ns;
