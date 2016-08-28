@@ -25,6 +25,7 @@
 #include <linux/kmemcheck.h>
 #include <linux/rcupdate.h>
 #include <linux/once.h>
+#include <linux/fs.h>
 
 #include <uapi/linux/net.h>
 
@@ -128,6 +129,9 @@ struct page;
 struct sockaddr;
 struct msghdr;
 struct module;
+struct sk_buff;
+typedef int (*sk_read_actor_t)(read_descriptor_t *, struct sk_buff *,
+			       unsigned int, size_t);
 
 struct proto_ops {
 	int		family;
@@ -188,6 +192,8 @@ struct proto_ops {
 	/* The following functions are called internally by kernel with
 	 * sock lock already held.
 	 */
+	int		(*read_sock)(struct sock *sk, read_descriptor_t *desc,
+				     sk_read_actor_t recv_actor);
 	int		(*sendpage_locked)(struct sock *sk, struct page *page,
 					   int offset, size_t size, int flags);
 	int		(*sendmsg_locked)(struct sock *sk, struct msghdr *msg,
