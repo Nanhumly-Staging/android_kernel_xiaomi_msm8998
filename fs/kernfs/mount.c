@@ -157,6 +157,7 @@ static int kernfs_fill_super(struct super_block *sb, unsigned long magic)
 	sb->s_blocksize_bits = PAGE_CACHE_SHIFT;
 	sb->s_magic = magic;
 	sb->s_op = &kernfs_sops;
+	sb->s_xattr = kernfs_xattr_handlers;
 	sb->s_time_gran = 1;
 
 	/* get root inode, initialize and unlock it */
