@@ -810,4 +810,6 @@ size_t ecryptfs_get_key_size_to_restore_key(size_t stored_key_size,
 bool ecryptfs_check_space_for_salt(const size_t key_size,
 		const size_t salt_size);
 
+extern const struct xattr_handler *ecryptfs_xattr_handlers[];
+
 #endif /* #ifndef ECRYPTFS_KERNEL_H */
