@@ -27,8 +27,8 @@ int ovl_copy_xattr(struct dentry *old, struct dentry *new)
 	int error = 0;
 	size_t slen;
 
-	if (!old->d_inode->i_op->getxattr ||
-	    !new->d_inode->i_op->getxattr)
+	if (!(old->d_inode->i_opflags & IOP_XATTR) ||
+	    !(new->d_inode->i_opflags & IOP_XATTR))
 		return 0;
 
 	list_size = vfs_listxattr(old, NULL, 0);
