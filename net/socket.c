@@ -549,7 +549,6 @@ static int sockfs_setattr(struct dentry *dentry, struct iattr *iattr)
 }
 
 static const struct inode_operations sockfs_inode_ops = {
-	.getxattr = generic_getxattr,
 	.listxattr = sockfs_listxattr,
 	.setattr = sockfs_setattr,
 };

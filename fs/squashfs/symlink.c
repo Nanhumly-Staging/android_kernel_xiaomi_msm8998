@@ -121,7 +121,6 @@ const struct inode_operations squashfs_symlink_inode_ops = {
 	.readlink = generic_readlink,
 	.follow_link = page_follow_link_light,
 	.put_link = page_put_link,
-	.getxattr = generic_getxattr,
 	.listxattr = squashfs_listxattr
 };
 

@@ -153,8 +153,5 @@ struct inode_operations ll_fast_symlink_inode_operations = {
 	.put_link	= ll_put_link,
 	.getattr	= ll_getattr,
 	.permission	= ll_inode_permission,
-	.setxattr	= ll_setxattr,
-	.getxattr	= ll_getxattr,
 	.listxattr	= ll_listxattr,
-	.removexattr	= ll_removexattr,
 };
