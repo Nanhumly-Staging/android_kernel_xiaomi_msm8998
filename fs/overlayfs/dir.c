@@ -928,8 +928,5 @@ const struct inode_operations ovl_dir_inode_operations = {
 	.mknod		= ovl_mknod,
 	.permission	= ovl_permission,
 	.getattr	= ovl_dir_getattr,
-	.setxattr	= ovl_setxattr,
-	.getxattr	= ovl_getxattr,
 	.listxattr	= ovl_listxattr,
-	.removexattr	= ovl_removexattr,
 };

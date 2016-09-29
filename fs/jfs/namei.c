@@ -1537,10 +1537,7 @@ const struct inode_operations jfs_dir_inode_operations = {
 	.rmdir		= jfs_rmdir,
 	.mknod		= jfs_mknod,
 	.rename		= jfs_rename,
-	.setxattr	= jfs_setxattr,
-	.getxattr	= jfs_getxattr,
 	.listxattr	= jfs_listxattr,
-	.removexattr	= jfs_removexattr,
 	.setattr	= jfs_setattr,
 #ifdef CONFIG_JFS_POSIX_ACL
 	.get_acl	= jfs_get_acl,

@@ -369,10 +369,7 @@ static const struct inode_operations ovl_file_inode_operations = {
 	.setattr	= ovl_setattr,
 	.permission	= ovl_permission,
 	.getattr	= ovl_getattr,
-	.setxattr	= ovl_setxattr,
-	.getxattr	= ovl_getxattr,
 	.listxattr	= ovl_listxattr,
-	.removexattr	= ovl_removexattr,
 };
 
 static const struct inode_operations ovl_symlink_inode_operations = {
@@ -380,10 +377,7 @@ static const struct inode_operations ovl_symlink_inode_operations = {
 	.get_link	= ovl_get_link,
 	.readlink	= ovl_readlink,
 	.getattr	= ovl_getattr,
-	.setxattr	= ovl_setxattr,
-	.getxattr	= ovl_getxattr,
 	.listxattr	= ovl_listxattr,
-	.removexattr	= ovl_removexattr,
 };
 
 struct inode *ovl_new_inode(struct super_block *sb, umode_t mode,

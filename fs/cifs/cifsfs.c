@@ -888,10 +888,7 @@ const struct inode_operations cifs_dir_inode_ops = {
 	.symlink = cifs_symlink,
 	.mknod   = cifs_mknod,
 #ifdef CONFIG_CIFS_XATTR
-	.setxattr = cifs_setxattr,
-	.getxattr = cifs_getxattr,
 	.listxattr = cifs_listxattr,
-	.removexattr = cifs_removexattr,
 #endif
 };
 
@@ -901,10 +898,7 @@ const struct inode_operations cifs_file_inode_ops = {
 	.getattr = cifs_getattr, /* do we need this anymore? */
 	.permission = cifs_permission,
 #ifdef CONFIG_CIFS_XATTR
-	.setxattr = cifs_setxattr,
-	.getxattr = cifs_getxattr,
 	.listxattr = cifs_listxattr,
-	.removexattr = cifs_removexattr,
 #endif
 };
 
@@ -916,10 +910,7 @@ const struct inode_operations cifs_symlink_inode_ops = {
 	/* revalidate: cifs_revalidate,
 	   setattr:    cifs_notify_change, *//* BB do we need notify change */
 #ifdef CONFIG_CIFS_XATTR
-	.setxattr = cifs_setxattr,
-	.getxattr = cifs_getxattr,
 	.listxattr = cifs_listxattr,
-	.removexattr = cifs_removexattr,
 #endif
 };
 
