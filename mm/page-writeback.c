@@ -2727,7 +2727,7 @@ int test_clear_page_writeback(struct page *page)
 	int ret;
 
 	memcg = mem_cgroup_begin_page_stat(page);
-	if (mapping) {
+	if (mapping && mapping_use_writeback_tags(mapping)) {
 		struct inode *inode = mapping->host;
 		struct backing_dev_info *bdi = inode_to_bdi(inode);
 		unsigned long flags;
@@ -2765,7 +2765,7 @@ int __test_set_page_writeback(struct page *page, bool keep_write)
 	int ret;
 
 	memcg = mem_cgroup_begin_page_stat(page);
-	if (mapping) {
+	if (mapping && mapping_use_writeback_tags(mapping)) {
 		struct inode *inode = mapping->host;
 		struct backing_dev_info *bdi = inode_to_bdi(inode);
 		unsigned long flags;
