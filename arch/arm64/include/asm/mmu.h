@@ -28,6 +28,7 @@
 typedef struct {
 	atomic64_t	id;
 	void		*vdso;
+	unsigned long	flags;
 } mm_context_t;
 
 /*
