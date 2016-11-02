@@ -361,6 +361,9 @@ static int brk_handler(unsigned long addr, unsigned int esr,
 	siginfo_t info;
 
 	if (user_mode(regs)) {
+		if (call_break_hook(regs, esr) == DBG_HOOK_HANDLED)
+			return 0;
+
 		info = (siginfo_t) {
 			.si_signo = SIGTRAP,
 			.si_errno = 0,
