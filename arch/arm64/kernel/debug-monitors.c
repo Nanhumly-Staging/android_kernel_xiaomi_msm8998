@@ -270,9 +270,12 @@ static int single_step_handler(unsigned long addr, unsigned int esr,
 		return 0;
 
 	if (user_mode(regs)) {
+		if (call_step_hook(regs, esr) == DBG_HOOK_HANDLED)
+			return 0;
+
 		info.si_signo = SIGTRAP;
 		info.si_errno = 0;
-		info.si_code  = TRAP_HWBKPT;
+		info.si_code  = TRAP_TRACE;
 		info.si_addr  = (void __user *)instruction_pointer(regs);
 		force_sig_info(SIGTRAP, &info, current);
 
