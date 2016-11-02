@@ -405,6 +405,8 @@ asmlinkage void do_notify_resume(struct pt_regs *regs,
 {
 	/* Check valid user FS if needed */
 	addr_limit_user_check();
+	if (thread_flags & _TIF_UPROBE)
+		uprobe_notify_resume(regs);
 
 	if (thread_flags & _TIF_SIGPENDING)
 		do_signal(regs);
