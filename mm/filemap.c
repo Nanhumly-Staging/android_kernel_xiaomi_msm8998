@@ -134,25 +134,10 @@ static int page_cache_tree_insert(struct address_space *mapping,
 		if (shadowp)
 			*shadowp = p;
 		mapping->nrexceptional--;
-		if (node)
-			workingset_node_shadows_dec(node);
 	}
-	radix_tree_replace_slot(&mapping->page_tree, slot, page);
+	__radix_tree_replace(&mapping->page_tree, node, slot, page,
+			     workingset_update_node, mapping);
 	mapping->nrpages++;
-	if (node) {
-		workingset_node_pages_inc(node);
-		/*
-		 * Don't track node that contains actual pages.
-		 *
-		 * Avoid acquiring the list_lru lock if already
-		 * untracked.  The list_empty() test is safe as
-		 * node->private_list is protected by
-		 * mapping->tree_lock.
-		 */
-		if (!list_empty(&node->private_list))
-			list_lru_del(&workingset_shadow_nodes,
-				     &node->private_list);
-	}
 	return 0;
 }
 
@@ -167,8 +152,6 @@ static void page_cache_tree_delete(struct address_space *mapping,
 	__radix_tree_lookup(&mapping->page_tree, page->index,
 				    &node, &slot);
 
-	radix_tree_clear_tags(&mapping->page_tree, node, slot);
-
 	if (!node) {
 		/*
 		 * We need a node to properly account shadow
@@ -177,30 +160,9 @@ static void page_cache_tree_delete(struct address_space *mapping,
 		shadow = NULL;
 	}
 
-	radix_tree_replace_slot(&mapping->page_tree, slot, shadow);
-
-	if (!node)
-		break;
-
-	workingset_node_pages_dec(node);
-	if (shadow)
-		workingset_node_shadows_inc(node);
-	else
-		if (__radix_tree_delete_node(&mapping->page_tree, node))
-			return;
-
-	/*
-	 * Track node that only contains shadow entries.
-	 *
-	 * Avoid acquiring the list_lru lock if already tracked.  The
-	 * list_empty() test is safe as node->private_list is
-	 * protected by mapping->tree_lock.
-	 */
-	if (!workingset_node_pages(node) &&
-	    list_empty(&node->private_list)) {
-		node->private_data = mapping;
-		list_lru_add(&workingset_shadow_nodes, &node->private_list);
-	}
+	radix_tree_clear_tags(&mapping->page_tree, node, slot);
+	__radix_tree_replace(&mapping->page_tree, node, slot, shadow,
+			     workingset_update_node, mapping);
 
 	if (shadow) {
 		mapping->nrexceptional++;
