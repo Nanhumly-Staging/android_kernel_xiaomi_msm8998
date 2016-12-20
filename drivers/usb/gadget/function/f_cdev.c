@@ -1522,7 +1522,7 @@ static struct f_cdev *f_cdev_alloc(char *func_name, int portno)
 	}
 
 	mutex_lock(&chardev_ida_lock);
-	if (idr_is_empty(&chardev_ida.idr)) {
+	if (ida_is_empty(&chardev_ida)) {
 		ret = usb_cser_alloc_chardev_region();
 		if (ret) {
 			mutex_unlock(&chardev_ida_lock);
@@ -1594,7 +1594,7 @@ err_alloc_chardev:
 static void usb_cser_chardev_deinit(void)
 {
 
-	if (idr_is_empty(&chardev_ida.idr)) {
+	if (ida_is_empty(&chardev_ida)) {
 
 		if (major) {
 			unregister_chrdev_region(MKDEV(major, 0), minors);

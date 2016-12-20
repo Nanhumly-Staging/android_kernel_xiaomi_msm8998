@@ -18,6 +18,7 @@
 
 #define printk printf
 #define pr_debug printk
+#define pr_cont printk
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
