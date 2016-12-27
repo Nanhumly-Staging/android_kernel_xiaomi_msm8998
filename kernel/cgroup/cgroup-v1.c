@@ -804,8 +804,8 @@ out_free:
 /*
  * cgroup_rename - Only allow simple rename of directories in place.
  */
-int cgroup_rename(struct kernfs_node *kn, struct kernfs_node *new_parent,
-		  const char *new_name_str)
+int cgroup1_rename(struct kernfs_node *kn, struct kernfs_node *new_parent,
+		   const char *new_name_str)
 {
 	struct cgroup *cgrp = kn->priv;
 	int ret;
@@ -818,13 +818,6 @@ int cgroup_rename(struct kernfs_node *kn, struct kernfs_node *new_parent,
 		return -ENOTDIR;
 	if (kn->parent != new_parent)
 		return -EIO;
-
-	/*
-	 * This isn't a proper migration and its usefulness is very
-	 * limited.  Disallow on the default hierarchy.
-	 */
-	if (cgroup_on_dfl(cgrp))
-		return -EPERM;
 
 	/*
 	 * We're gonna grab cgroup_mutex which nests outside kernfs

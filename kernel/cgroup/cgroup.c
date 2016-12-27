@@ -1212,6 +1212,7 @@ struct cgroup *task_cgroup_from_root(struct task_struct *task,
  * update of a tasks cgroup pointer by cgroup_attach_task()
  */
 
+static struct kernfs_syscall_ops cgroup1_kf_syscall_ops;
 static struct kernfs_syscall_ops cgroup_kf_syscall_ops;
 
 static char *cgroup_file_name(struct cgroup *cgrp, const struct cftype *cft,
@@ -1569,16 +1570,15 @@ static int cgroup_show_path(struct seq_file *sf, struct kernfs_node *kf_node,
 	return len;
 }
 
-static int cgroup_show_options(struct seq_file *seq, struct kernfs_root *kf_root)
+static int cgroup1_show_options(struct seq_file *seq, struct kernfs_root *kf_root)
 {
 	struct cgroup_root *root = cgroup_root_from_kf(kf_root);
 	struct cgroup_subsys *ss;
 	int ssid;
 
-	if (root != &cgrp_dfl_root)
-		for_each_subsys(ss, ssid)
-			if (root->subsys_mask & (1 << ssid))
-				seq_show_option(seq, ss->legacy_name, NULL);
+	for_each_subsys(ss, ssid)
+		if (root->subsys_mask & (1 << ssid))
+			seq_show_option(seq, ss->legacy_name, NULL);
 	if (root->flags & CGRP_ROOT_NOPREFIX)
 		seq_puts(seq, ",noprefix");
 	if (root->flags & CGRP_ROOT_XATTR)
@@ -1739,17 +1739,12 @@ static int parse_cgroupfs_options(char *data, struct cgroup_sb_opts *opts)
 	return 0;
 }
 
-static int cgroup_remount(struct kernfs_root *kf_root, int *flags, char *data)
+static int cgroup1_remount(struct kernfs_root *kf_root, int *flags, char *data)
 {
 	int ret = 0;
 	struct cgroup_root *root = cgroup_root_from_kf(kf_root);
 	struct cgroup_sb_opts opts;
 	u16 added_mask, removed_mask;
-
-	if (root == &cgrp_dfl_root) {
-		pr_err("remount is not allowed\n");
-		return -EINVAL;
-	}
 
 	cgroup_lock_and_drain_offline(&cgrp_dfl_root.cgrp);
 
@@ -1799,6 +1794,12 @@ static int cgroup_remount(struct kernfs_root *kf_root, int *flags, char *data)
 	kfree(opts.name);
 	mutex_unlock(&cgroup_mutex);
 	return ret;
+}
+
+static int cgroup_remount(struct kernfs_root *kf_root, int *flags, char *data)
+{
+	pr_err("remount is not allowed\n");
+	return -EINVAL;
 }
 
 /*
@@ -1903,6 +1904,7 @@ static int cgroup_setup_root(struct cgroup_root *root, u16 ss_mask)
 {
 	LIST_HEAD(tmp_links);
 	struct cgroup *root_cgrp = &root->cgrp;
+	struct kernfs_syscall_ops *kf_sops;
 	struct css_set *cset;
 	int i, ret;
 
@@ -1934,7 +1936,10 @@ static int cgroup_setup_root(struct cgroup_root *root, u16 ss_mask)
 	if (ret)
 		goto cancel_ref;
 
-	root->kf_root = kernfs_create_root(&cgroup_kf_syscall_ops,
+	kf_sops = root == &cgrp_dfl_root ?
+		&cgroup_kf_syscall_ops : &cgroup1_kf_syscall_ops;
+
+	root->kf_root = kernfs_create_root(kf_sops,
 					   KERNFS_ROOT_CREATE_DEACTIVATED,
 					   root_cgrp);
 	if (IS_ERR(root->kf_root)) {
@@ -4832,12 +4837,19 @@ static int cgroup_rmdir(struct kernfs_node *kn)
 	return ret;
 }
 
-static struct kernfs_syscall_ops cgroup_kf_syscall_ops = {
-	.remount_fs		= cgroup_remount,
-	.show_options		= cgroup_show_options,
+static struct kernfs_syscall_ops cgroup1_kf_syscall_ops = {
+	.remount_fs		= cgroup1_remount,
+	.show_options		= cgroup1_show_options,
+	.rename			= cgroup1_rename,
 	.mkdir			= cgroup_mkdir,
 	.rmdir			= cgroup_rmdir,
-	.rename			= cgroup_rename,
+	.show_path		= cgroup_show_path,
+};
+
+static struct kernfs_syscall_ops cgroup_kf_syscall_ops = {
+	.remount_fs		= cgroup_remount,
+	.mkdir			= cgroup_mkdir,
+	.rmdir			= cgroup_rmdir,
 	.show_path		= cgroup_show_path,
 };
 
