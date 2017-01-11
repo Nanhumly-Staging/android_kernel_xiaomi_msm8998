@@ -68,7 +68,7 @@ static struct bpf_map *array_map_alloc(union bpf_attr *attr)
 	    (percpu && numa_node != NUMA_NO_NODE))
 		return ERR_PTR(-EINVAL);
 
-	if (attr->value_size >= 1 << (KMALLOC_SHIFT_MAX - 1))
+	if (attr->value_size > KMALLOC_MAX_SIZE)
 		/* if value_size is bigger, the user space won't be able to
 		 * access the elements.
 		 */
