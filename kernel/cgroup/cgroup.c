@@ -2025,15 +2025,13 @@ struct task_struct *cgroup_taskset_next(struct cgroup_taskset *tset,
 /**
  * cgroup_taskset_migrate - migrate a taskset
  * @mgctx: migration context
- * @root: cgroup root the migration is taking place on
  *
  * Migrate tasks in @mgctx as setup by migration preparation functions.
  * This function fails iff one of the ->can_attach callbacks fails and
  * guarantees that either all or none of the tasks in @mgctx are migrated.
  * @mgctx is consumed regardless of success.
  */
-static int cgroup_migrate_execute(struct cgroup_mgctx *mgctx,
-				  struct cgroup_root *root)
+static int cgroup_migrate_execute(struct cgroup_mgctx *mgctx)
 {
 	struct cgroup_taskset *tset = &mgctx->tset;
 	struct cgroup_subsys *ss;
@@ -2046,7 +2044,7 @@ static int cgroup_migrate_execute(struct cgroup_mgctx *mgctx,
 		return 0;
 
 	/* check that we can legitimately attach to the cgroup */
-	do_each_subsys_mask(ss, ssid, root->subsys_mask) {
+	do_each_subsys_mask(ss, ssid, mgctx->ss_mask) {
 		if (ss->can_attach) {
 			tset->ssid = ssid;
 			ret = ss->can_attach(tset);
@@ -2082,7 +2080,7 @@ static int cgroup_migrate_execute(struct cgroup_mgctx *mgctx,
 	 */
 	tset->csets = &tset->dst_csets;
 
-	do_each_subsys_mask(ss, ssid, root->subsys_mask) {
+	do_each_subsys_mask(ss, ssid, mgctx->ss_mask) {
 		if (ss->attach) {
 			tset->ssid = ssid;
 			ss->attach(tset);
@@ -2093,7 +2091,7 @@ static int cgroup_migrate_execute(struct cgroup_mgctx *mgctx,
 	goto out_release_tset;
 
 out_cancel_attach:
-	do_each_subsys_mask(ss, ssid, root->subsys_mask) {
+	do_each_subsys_mask(ss, ssid, mgctx->ss_mask) {
 		if (ssid == failed_ssid)
 			break;
 		if (ss->cancel_attach) {
@@ -2229,6 +2227,8 @@ int cgroup_migrate_prepare_dst(struct cgroup_mgctx *mgctx)
 	list_for_each_entry_safe(src_cset, tmp_cset, &mgctx->preloaded_src_csets,
 				 mg_preload_node) {
 		struct css_set *dst_cset;
+		struct cgroup_subsys *ss;
+		int ssid;
 
 		dst_cset = find_css_set(src_cset, src_cset->mg_dst_cgrp);
 		if (!dst_cset)
@@ -2257,6 +2257,10 @@ int cgroup_migrate_prepare_dst(struct cgroup_mgctx *mgctx)
 				      &mgctx->preloaded_dst_csets);
 		else
 			put_css_set(dst_cset);
+
+		for_each_subsys(ss, ssid)
+			if (src_cset->subsys[ssid] != dst_cset->subsys[ssid])
+				mgctx->ss_mask |= 1 << ssid;
 	}
 
 	return 0;
@@ -2269,7 +2273,6 @@ err:
  * cgroup_migrate - migrate a process or task to a cgroup
  * @leader: the leader of the process or the task to migrate
  * @threadgroup: whether @leader points to the whole process or a single task
- * @root: cgroup root migration is taking place on
  * @mgctx: migration context
  *
  * Migrate a process or task denoted by @leader.  If migrating a process,
@@ -2285,7 +2288,7 @@ err:
  * actually starting migrating.
  */
 int cgroup_migrate(struct task_struct *leader, bool threadgroup,
-		   struct cgroup_mgctx *mgctx, struct cgroup_root *root)
+		   struct cgroup_mgctx *mgctx)
 {
 	struct task_struct *task;
 
@@ -2305,7 +2308,7 @@ int cgroup_migrate(struct task_struct *leader, bool threadgroup,
 	rcu_read_unlock();
 	spin_unlock_irq(&css_set_lock);
 
-	return cgroup_migrate_execute(mgctx, root);
+	return cgroup_migrate_execute(mgctx);
 }
 
 /**
@@ -2341,7 +2344,7 @@ int cgroup_attach_task(struct cgroup *dst_cgrp, struct task_struct *leader,
 	/* prepare dst csets and commit */
 	ret = cgroup_migrate_prepare_dst(&mgctx);
 	if (!ret)
-		ret = cgroup_migrate(leader, threadgroup, &mgctx, dst_cgrp->root);
+		ret = cgroup_migrate(leader, threadgroup, &mgctx);
 
 	cgroup_migrate_finish(&mgctx);
 
@@ -2547,7 +2550,7 @@ static int cgroup_update_dfl_csses(struct cgroup *cgrp)
 	}
 	spin_unlock_irq(&css_set_lock);
 
-	ret = cgroup_migrate_execute(&mgctx, cgrp->root);
+	ret = cgroup_migrate_execute(&mgctx);
 out_finish:
 	cgroup_migrate_finish(&mgctx);
 	percpu_up_write(&cgroup_threadgroup_rwsem);
