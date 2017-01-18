@@ -1885,7 +1885,7 @@ static void slab_destroy(struct kmem_cache *cachep, struct page *page)
 
 	freelist = page->freelist;
 	slab_destroy_debugcheck(cachep, page);
-	if (unlikely(cachep->flags & SLAB_DESTROY_BY_RCU))
+	if (unlikely(cachep->flags & SLAB_TYPESAFE_BY_RCU))
 		call_rcu(&page->rcu_head, kmem_rcu_free);
 	else
 		kmem_freepages(cachep, page);
@@ -2109,10 +2109,10 @@ __kmem_cache_create (struct kmem_cache *cachep, unsigned long flags)
 	if (size < 4096 || fls(size - 1) == fls(size-1 + REDZONE_ALIGN +
 						2 * sizeof(unsigned long long)))
 		flags |= SLAB_RED_ZONE | SLAB_STORE_USER;
-	if (!(flags & SLAB_DESTROY_BY_RCU))
+	if (!(flags & SLAB_TYPESAFE_BY_RCU))
 		flags |= SLAB_POISON;
 #endif
-	if (flags & SLAB_DESTROY_BY_RCU)
+	if (flags & SLAB_TYPESAFE_BY_RCU)
 		BUG_ON(flags & SLAB_POISON);
 #endif
 
