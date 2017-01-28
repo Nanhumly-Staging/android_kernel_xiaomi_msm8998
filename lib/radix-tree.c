@@ -1268,6 +1268,22 @@ int radix_tree_split(struct radix_tree_root *root, unsigned long index,
 }
 #endif
 
+static void node_tag_set(struct radix_tree_root *root,
+				struct radix_tree_node *node,
+				unsigned int tag, unsigned int offset)
+{
+	while (node) {
+		if (tag_get(node, tag, offset))
+			return;
+		tag_set(node, tag, offset);
+		offset = node->offset;
+		node = node->parent;
+	}
+
+	if (!root_tag_get(root, tag))
+		root_tag_set(root, tag);
+}
+
 /**
  *	radix_tree_tag_set - set a tag on a radix tree node
  *	@root:		radix tree root
@@ -1309,6 +1325,18 @@ void *radix_tree_tag_set(struct radix_tree_root *root,
 }
 EXPORT_SYMBOL(radix_tree_tag_set);
 
+/**
+ * radix_tree_iter_tag_set - set a tag on the current iterator entry
+ * @root:	radix tree root
+ * @iter:	iterator state
+ * @tag:	tag to set
+ */
+void radix_tree_iter_tag_set(struct radix_tree_root *root,
+			const struct radix_tree_iter *iter, unsigned int tag)
+{
+	node_tag_set(root, iter->node, tag, iter_offset(iter));
+}
+
 static void node_tag_clear(struct radix_tree_root *root,
 				struct radix_tree_node *node,
 				unsigned int tag, unsigned int offset)
@@ -1327,34 +1355,6 @@ static void node_tag_clear(struct radix_tree_root *root,
 	/* clear the root's tag bit */
 	if (root_tag_get(root, tag))
 		root_tag_clear(root, tag);
-}
-
-static void node_tag_set(struct radix_tree_root *root,
-				struct radix_tree_node *node,
-				unsigned int tag, unsigned int offset)
-{
-	while (node) {
-		if (tag_get(node, tag, offset))
-			return;
-		tag_set(node, tag, offset);
-		offset = node->offset;
-		node = node->parent;
-	}
-
-	if (!root_tag_get(root, tag))
-		root_tag_set(root, tag);
-}
-
-/**
- * radix_tree_iter_tag_set - set a tag on the current iterator entry
- * @root:	radix tree root
- * @iter:	iterator state
- * @tag:	tag to set
- */
-void radix_tree_iter_tag_set(struct radix_tree_root *root,
-			const struct radix_tree_iter *iter, unsigned int tag)
-{
-	node_tag_set(root, iter->node, tag, iter_offset(iter));
 }
 
 /**
@@ -1395,6 +1395,18 @@ void *radix_tree_tag_clear(struct radix_tree_root *root,
 	return node;
 }
 EXPORT_SYMBOL(radix_tree_tag_clear);
+
+/**
+  * radix_tree_iter_tag_clear - clear a tag on the current iterator entry
+  * @root: radix tree root
+  * @iter: iterator state
+  * @tag: tag to clear
+  */
+void radix_tree_iter_tag_clear(struct radix_tree_root *root,
+			const struct radix_tree_iter *iter, unsigned int tag)
+{
+	node_tag_clear(root, iter->node, tag, iter_offset(iter));
+}
 
 /**
  * radix_tree_tag_get - get a tag on a radix tree node
