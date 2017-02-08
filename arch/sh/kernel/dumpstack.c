@@ -16,6 +16,7 @@
 #include <linux/uaccess.h>
 #include <asm/unwinder.h>
 #include <asm/stacktrace.h>
+#include <linux/sched/task_stack.h>
 
 void dump_mem(const char *str, unsigned long bottom, unsigned long top)
 {

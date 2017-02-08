@@ -53,6 +53,7 @@
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/ipi.h>
+#include <linux/sched/task_stack.h>
 
 /*
  * as from 2.5, kernels no longer have an init_tasks structure

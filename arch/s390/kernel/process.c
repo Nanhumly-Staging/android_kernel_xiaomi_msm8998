@@ -34,6 +34,7 @@
 #include <asm/switch_to.h>
 #include <asm/runtime_instr.h>
 #include "entry.h"
+#include <linux/sched/task_stack.h>
 
 asmlinkage void ret_from_fork(void) asm ("ret_from_fork");
 

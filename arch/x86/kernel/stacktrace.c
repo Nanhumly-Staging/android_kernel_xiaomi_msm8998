@@ -8,6 +8,7 @@
 #include <linux/module.h>
 #include <linux/uaccess.h>
 #include <asm/stacktrace.h>
+#include <linux/sched/task_stack.h>
 
 static int save_stack_stack(void *data, char *name)
 {

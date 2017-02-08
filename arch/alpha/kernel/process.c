@@ -39,6 +39,7 @@
 
 #include "proto.h"
 #include "pci_impl.h"
+#include <linux/sched/task_stack.h>
 
 /*
  * Power off function, if any

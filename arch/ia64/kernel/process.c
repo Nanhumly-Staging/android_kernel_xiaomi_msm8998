@@ -52,6 +52,7 @@
 #endif
 
 #include "sigframe.h"
+#include <linux/sched/task_stack.h>
 
 void (*ia64_mark_idle)(int);
 

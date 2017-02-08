@@ -1648,6 +1648,7 @@ static int fill_files_note(struct memelfnote *note)
 
 #ifdef CORE_DUMP_USE_REGSET
 #include <linux/regset.h>
+#include <linux/sched/task_stack.h>
 
 struct elf_thread_core_info {
 	struct elf_thread_core_info *next;

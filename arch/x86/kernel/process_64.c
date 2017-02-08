@@ -51,6 +51,7 @@
 #include <asm/xen/hypervisor.h>
 
 #include "process.h"
+#include <linux/sched/task_stack.h>
 
 asmlinkage extern void ret_from_fork(void);
 

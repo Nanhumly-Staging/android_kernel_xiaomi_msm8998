@@ -28,6 +28,7 @@
 #include <linux/mm.h>
 #include <linux/ptrace.h>
 #include <linux/regset.h>
+#include <linux/sched/task_stack.h>
 
 #include <asm/uaccess.h>
 

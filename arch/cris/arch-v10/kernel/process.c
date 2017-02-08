@@ -18,6 +18,7 @@
 #include <linux/init.h>
 #include <arch/system.h>
 #include <linux/ptrace.h>
+#include <linux/sched/task_stack.h>
 
 #ifdef CONFIG_ETRAX_GPIO
 void etrax_gpio_wake_up_check(void); /* drivers/gpio.c */

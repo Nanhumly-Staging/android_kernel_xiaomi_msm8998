@@ -57,6 +57,7 @@
 #include <asm/code-patching.h>
 #include <linux/kprobes.h>
 #include <linux/kdebug.h>
+#include <linux/sched/task_stack.h>
 
 /* Transactional Memory debug */
 #ifdef TM_DEBUG_SW

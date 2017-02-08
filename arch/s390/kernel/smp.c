@@ -49,6 +49,7 @@
 #include <asm/sigp.h>
 #include <asm/idle.h>
 #include "entry.h"
+#include <linux/sched/task_stack.h>
 
 enum {
 	ec_schedule = 0,

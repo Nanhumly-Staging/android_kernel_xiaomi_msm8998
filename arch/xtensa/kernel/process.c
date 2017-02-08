@@ -43,6 +43,7 @@
 #include <linux/atomic.h>
 #include <asm/asm-offsets.h>
 #include <asm/regs.h>
+#include <linux/sched/task_stack.h>
 
 extern void ret_from_fork(void);
 extern void ret_from_kernel_thread(void);

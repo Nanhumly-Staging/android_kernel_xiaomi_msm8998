@@ -60,6 +60,7 @@
 #include <asm/tlbflush.h>
 #include <asm/unistd.h>
 #include <asm/hpsim.h>
+#include <linux/sched/task_stack.h>
 
 #if defined(CONFIG_SMP) && (IA64_CPU_SIZE > PAGE_SIZE)
 # error "struct cpuinfo_ia64 too big!"

@@ -179,6 +179,7 @@ int copy_thread(unsigned long clone_flags, unsigned long usp,
 
 #ifdef CONFIG_CC_STACKPROTECTOR
 #include <linux/stackprotector.h>
+#include <linux/sched/task_stack.h>
 unsigned long __stack_chk_guard __read_mostly;
 EXPORT_SYMBOL(__stack_chk_guard);
 #endif

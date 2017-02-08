@@ -34,6 +34,7 @@
 #include <asm/vdso.h>
 #include <arch/abi.h>
 #include <arch/interrupts.h>
+#include <linux/sched/task_stack.h>
 
 #define KBT_ONGOING	0  /* Backtrace still ongoing */
 #define KBT_DONE	1  /* Backtrace cleanly completed */

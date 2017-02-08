@@ -47,6 +47,7 @@
 #include <asm/edac.h>
 
 #include <trace/events/exception.h>
+#include <linux/sched/task_stack.h>
 
 static const char *handler[]= {
 	"Synchronous Abort",

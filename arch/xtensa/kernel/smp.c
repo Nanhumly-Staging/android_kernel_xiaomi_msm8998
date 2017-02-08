@@ -33,6 +33,7 @@
 #include <asm/platform.h>
 #include <asm/tlbflush.h>
 #include <asm/traps.h>
+#include <linux/sched/task_stack.h>
 
 #ifdef CONFIG_SMP
 # if XCHAL_HAVE_S32C1I == 0

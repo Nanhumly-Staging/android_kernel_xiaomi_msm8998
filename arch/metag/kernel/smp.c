@@ -39,6 +39,7 @@
 #include <asm/tlbflush.h>
 #include <asm/hwthread.h>
 #include <asm/traps.h>
+#include <linux/sched/task_stack.h>
 
 #define SYSC_DCPART(n)	(SYSC_DCPART0 + SYSC_xCPARTn_STRIDE * (n))
 #define SYSC_ICPART(n)	(SYSC_ICPART0 + SYSC_xCPARTn_STRIDE * (n))

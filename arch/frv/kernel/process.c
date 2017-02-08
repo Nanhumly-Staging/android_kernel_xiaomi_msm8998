@@ -41,6 +41,7 @@ asmlinkage void ret_from_fork(void);
 asmlinkage void ret_from_kernel_thread(void);
 
 #include <asm/pgalloc.h>
+#include <linux/sched/task_stack.h>
 
 void (*pm_power_off)(void);
 EXPORT_SYMBOL(pm_power_off);

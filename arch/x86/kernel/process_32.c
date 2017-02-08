@@ -56,6 +56,7 @@
 #include <asm/vm86.h>
 
 #include "process.h"
+#include <linux/sched/task_stack.h>
 
 asmlinkage void ret_from_fork(void) __asm__("ret_from_fork");
 asmlinkage void ret_from_kernel_thread(void) __asm__("ret_from_kernel_thread");

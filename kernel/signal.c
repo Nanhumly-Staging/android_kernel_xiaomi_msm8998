@@ -3863,6 +3863,7 @@ void __init signals_init(void)
 
 #ifdef CONFIG_KGDB_KDB
 #include <linux/kdb.h>
+#include <linux/sched/task_stack.h>
 /*
  * kdb_send_sig_info - Allows kdb to send signals without exposing
  * signal internals.  This function checks if the required locks are

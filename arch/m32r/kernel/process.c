@@ -35,6 +35,7 @@
 #include <asm/m32r.h>
 
 #include <linux/err.h>
+#include <linux/sched/task_stack.h>
 
 /*
  * Return saved PC of a blocked thread.

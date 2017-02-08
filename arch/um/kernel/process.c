@@ -30,6 +30,7 @@
 #include <os.h>
 #include <skas.h>
 #include <timer-internal.h>
+#include <linux/sched/task_stack.h>
 
 /*
  * This is a per-cpu array.  A processor only modifies its entry and it only

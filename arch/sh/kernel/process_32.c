@@ -28,6 +28,7 @@
 #include <asm/fpu.h>
 #include <asm/syscalls.h>
 #include <asm/switch_to.h>
+#include <linux/sched/task_stack.h>
 
 void show_regs(struct pt_regs * regs)
 {

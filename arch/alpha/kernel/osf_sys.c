@@ -44,6 +44,7 @@
 #include <asm/thread_info.h>
 #include <asm/hwrpb.h>
 #include <asm/processor.h>
+#include <linux/sched/task_stack.h>
 
 /*
  * Brk needs to return an error.  Still support Linux's brk(0) query idiom,

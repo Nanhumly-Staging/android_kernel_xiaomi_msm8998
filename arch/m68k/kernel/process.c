@@ -32,6 +32,7 @@
 #include <asm/machdep.h>
 #include <asm/setup.h>
 #include <asm/pgtable.h>
+#include <linux/sched/task_stack.h>
 
 
 asmlinkage void ret_from_fork(void);

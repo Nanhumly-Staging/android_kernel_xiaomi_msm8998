@@ -22,6 +22,7 @@
 #include <asm/syscalls.h>
 
 #include <mach/pm.h>
+#include <linux/sched/task_stack.h>
 
 void (*pm_power_off)(void);
 EXPORT_SYMBOL(pm_power_off);

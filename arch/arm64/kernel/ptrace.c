@@ -767,6 +767,7 @@ static const struct user_regset_view user_aarch64_view = {
 
 #ifdef CONFIG_COMPAT
 #include <linux/compat.h>
+#include <linux/sched/task_stack.h>
 
 enum compat_regset {
 	REGSET_COMPAT_GPR,

@@ -52,6 +52,7 @@
 #include <asm/pcr.h>
 
 #include "kstack.h"
+#include <linux/sched/task_stack.h>
 
 /* Idle loop support on sparc64. */
 void arch_cpu_idle(void)

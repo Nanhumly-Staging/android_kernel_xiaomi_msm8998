@@ -59,6 +59,7 @@
 #include <asm/pgalloc.h>
 #include <asm/unwind.h>
 #include <asm/sections.h>
+#include <linux/sched/task_stack.h>
 
 #define COMMAND_GLOBAL  F_EXTEND(0xfffe0030)
 #define CMD_RESET       5       /* reset any module */

@@ -38,6 +38,7 @@
 #include <asm/user_gateway.h>
 #include <asm/syscall.h>
 #include <asm/syscalls.h>
+#include <linux/sched/task_stack.h>
 
 /* Passing syscall arguments as long long is quicker. */
 typedef unsigned int (*LPSYSCALL) (unsigned long long,

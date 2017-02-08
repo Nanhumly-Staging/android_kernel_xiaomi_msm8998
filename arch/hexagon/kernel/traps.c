@@ -32,6 +32,7 @@
 #include <asm/registers.h>
 #include <asm/unistd.h>
 #include <asm/sections.h>
+#include <linux/sched/task_stack.h>
 #ifdef CONFIG_KGDB
 # include <linux/kgdb.h>
 #endif

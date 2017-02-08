@@ -89,6 +89,7 @@
 #include <asm/sections.h>
 #include <asm/cacheflush.h>
 #include <soc/qcom/boot_stats.h>
+#include <linux/sched/task_stack.h>
 static int kernel_init(void *);
 
 extern void init_IRQ(void);

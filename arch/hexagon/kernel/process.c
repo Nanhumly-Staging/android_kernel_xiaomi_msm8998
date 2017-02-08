@@ -25,6 +25,7 @@
 #include <linux/uaccess.h>
 #include <linux/slab.h>
 #include <linux/tracehook.h>
+#include <linux/sched/task_stack.h>
 
 /*
  * Program thread launch.  Often defined as a macro in processor.h,

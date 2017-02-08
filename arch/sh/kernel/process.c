@@ -5,6 +5,7 @@
 #include <linux/export.h>
 #include <linux/stackprotector.h>
 #include <asm/fpu.h>
+#include <linux/sched/task_stack.h>
 
 struct kmem_cache *task_xstate_cachep = NULL;
 unsigned int xstate_size;

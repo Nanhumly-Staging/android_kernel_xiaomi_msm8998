@@ -17,6 +17,7 @@
 #include <hwregs/timer_defs.h>
 #include <hwregs/intr_vect_defs.h>
 #include <linux/ptrace.h>
+#include <linux/sched/task_stack.h>
 
 extern void stop_watchdog(void);
 

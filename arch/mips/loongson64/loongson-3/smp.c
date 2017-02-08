@@ -28,6 +28,7 @@
 #include <workarounds.h>
 
 #include "smp.h"
+#include <linux/sched/task_stack.h>
 
 DEFINE_PER_CPU(int, cpu_state);
 

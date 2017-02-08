@@ -646,6 +646,7 @@ static int pfm_write_ibr_dbr(int mode, pfm_context_t *ctx, void *arg, int count,
 #include "perfmon_mckinley.h"
 #include "perfmon_montecito.h"
 #include "perfmon_generic.h"
+#include <linux/sched/task_stack.h>
 
 static pmu_config_t *pmu_confs[]={
 	&pmu_conf_mont,

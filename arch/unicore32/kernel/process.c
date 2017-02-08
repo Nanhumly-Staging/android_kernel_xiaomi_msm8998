@@ -37,6 +37,7 @@
 #include <asm/stacktrace.h>
 
 #include "setup.h"
+#include <linux/sched/task_stack.h>
 
 static const char * const processor_modes[] = {
 	"UK00", "UK01", "UK02", "UK03", "UK04", "UK05", "UK06", "UK07",

@@ -32,6 +32,7 @@
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/syscalls.h>
+#include <linux/sched/task_stack.h>
 
 #define REG_PC	15
 #define REG_PSR	16

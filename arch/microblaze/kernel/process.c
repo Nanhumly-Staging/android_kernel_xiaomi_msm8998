@@ -153,6 +153,7 @@ void start_thread(struct pt_regs *regs, unsigned long pc, unsigned long usp)
 
 #ifdef CONFIG_MMU
 #include <linux/elfcore.h>
+#include <linux/sched/task_stack.h>
 /*
  * Set up a thread for executing a new program
  */

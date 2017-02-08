@@ -3,6 +3,7 @@
 #include <asm/processor.h>
 #include <asm/fpu.h>
 #include <asm/traps.h>
+#include <linux/sched/task_stack.h>
 
 int init_fpu(struct task_struct *tsk)
 {

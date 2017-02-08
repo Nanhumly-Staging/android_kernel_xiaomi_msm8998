@@ -249,6 +249,7 @@ void start_thread(struct pt_regs *regs, unsigned long pc, unsigned long sp)
 }
 
 #include <linux/elfcore.h>
+#include <linux/sched/task_stack.h>
 
 /* Fill in the FPU structure for a core dump. */
 int dump_fpu(struct pt_regs *regs, elf_fpregset_t *r)

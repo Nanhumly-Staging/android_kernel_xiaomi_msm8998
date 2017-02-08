@@ -19,6 +19,7 @@
 
 #include <asm/shmparam.h>
 #include <asm/uaccess.h>
+#include <linux/sched/task_stack.h>
 
 unsigned long
 arch_get_unmapped_area (struct file *filp, unsigned long addr, unsigned long len,

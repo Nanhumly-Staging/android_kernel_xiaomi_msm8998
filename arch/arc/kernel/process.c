@@ -19,6 +19,7 @@
 #include <linux/syscalls.h>
 #include <linux/elf.h>
 #include <linux/tick.h>
+#include <linux/sched/task_stack.h>
 
 SYSCALL_DEFINE1(arc_settls, void *, user_tls_data_ptr)
 {

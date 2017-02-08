@@ -11,6 +11,7 @@
 #include <linux/module.h>
 #include <asm/unwinder.h>
 #include <asm/traps.h>
+#include <linux/sched/task_stack.h>
 
 static DEFINE_SPINLOCK(die_lock);
 

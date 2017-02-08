@@ -24,6 +24,7 @@
 #include <linux/kgdb.h>
 #include <linux/kprobes.h>
 #include <asm/traps.h>
+#include <linux/sched/task_stack.h>
 
 struct dbg_reg_def_t dbg_reg_def[DBG_MAX_REG_NUM] = {
 	{ "x0", 8, offsetof(struct pt_regs, regs[0])},

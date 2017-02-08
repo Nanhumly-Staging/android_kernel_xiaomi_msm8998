@@ -19,6 +19,7 @@
 #include <linux/reboot.h>
 
 #include <asm/syscalls.h>
+#include <linux/sched/task_stack.h>
 
 /* hooks for board specific support */
 void	(*c6x_restart)(void);

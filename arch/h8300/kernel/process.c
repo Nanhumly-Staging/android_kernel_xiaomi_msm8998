@@ -42,6 +42,7 @@
 #include <asm/traps.h>
 #include <asm/setup.h>
 #include <asm/pgtable.h>
+#include <linux/sched/task_stack.h>
 
 void (*pm_power_off)(void) = NULL;
 EXPORT_SYMBOL(pm_power_off);

@@ -28,6 +28,7 @@
 #include <asm/tcm.h>
 #include <asm/traps.h>
 #include <asm/switch_to.h>
+#include <linux/sched/task_stack.h>
 
 /*
  * Wait for the next interrupt and enable local interrupts

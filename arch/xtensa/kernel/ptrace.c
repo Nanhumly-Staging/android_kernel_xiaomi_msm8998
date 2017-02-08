@@ -28,6 +28,7 @@
 #include <asm/ptrace.h>
 #include <asm/elf.h>
 #include <asm/coprocessor.h>
+#include <linux/sched/task_stack.h>
 
 
 void user_enable_single_step(struct task_struct *child)
