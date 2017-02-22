@@ -58,6 +58,7 @@
 #include <linux/rmap.h>
 #include <linux/ksm.h>
 #include <linux/acct.h>
+#include <linux/userfaultfd_k.h>
 #include <linux/tsacct_kern.h>
 #include <linux/cn_proc.h>
 #include <linux/freezer.h>
@@ -424,6 +425,7 @@ static int dup_mmap(struct mm_struct *mm, struct mm_struct *oldmm)
 	struct rb_node **rb_link, *rb_parent;
 	int retval;
 	unsigned long charge;
+	LIST_HEAD(uf);
 
 	uprobe_start_dup_mmap();
 	down_write(&oldmm->mmap_sem);
@@ -478,6 +480,9 @@ static int dup_mmap(struct mm_struct *mm, struct mm_struct *oldmm)
 		if (retval)
 			goto fail_nomem_policy;
 		tmp->vm_mm = mm;
+		retval = dup_userfaultfd(tmp, &uf);
+		if (retval)
+			goto fail_nomem_anon_vma_fork;
 		if (tmp->vm_flags & VM_WIPEONFORK) {
 			/* VM_WIPEONFORK gets a clean slate in the child. */
 			tmp->anon_vma = NULL;
@@ -485,10 +490,7 @@ static int dup_mmap(struct mm_struct *mm, struct mm_struct *oldmm)
 				goto fail_nomem_anon_vma_fork;
 		} else if (anon_vma_fork(tmp, mpnt))
 			goto fail_nomem_anon_vma_fork;
-		tmp->vm_flags &=
-			~(VM_LOCKED|VM_LOCKONFAULT|VM_UFFD_MISSING|VM_UFFD_WP);
 		tmp->vm_next = tmp->vm_prev = NULL;
-		tmp->vm_userfaultfd_ctx = NULL_VM_UFFD_CTX;
 		file = tmp->vm_file;
 		if (file) {
 			struct inode *inode = file_inode(file);
@@ -545,6 +547,7 @@ out:
 	up_write(&mm->mmap_sem);
 	flush_tlb_mm(oldmm);
 	up_write(&oldmm->mmap_sem);
+	dup_userfaultfd_complete(&uf);
 	uprobe_end_dup_mmap();
 	return retval;
 fail_nomem_anon_vma_fork:
