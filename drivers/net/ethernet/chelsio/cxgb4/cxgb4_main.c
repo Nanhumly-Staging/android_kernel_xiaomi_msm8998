@@ -1137,27 +1137,6 @@ freeout:	t4_free_sge_resources(adap);
 	return 0;
 }
 
-/*
- * Allocate a chunk of memory using kmalloc or, if that fails, vmalloc.
- * The allocated memory is cleared.
- */
-void *t4_alloc_mem(size_t size)
-{
-	void *p = kzalloc(size, GFP_KERNEL | __GFP_NOWARN);
-
-	if (!p)
-		p = vzalloc(size);
-	return p;
-}
-
-/*
- * Free memory allocated through alloc_mem().
- */
-void t4_free_mem(void *addr)
-{
-	kvfree(addr);
-}
-
 /* Send a Work Request to write the filter at a specified index.  We construct
  * a Firmware Filter Work Request to have the work done and put the indicated
  * filter into "pending" mode which will prevent any further actions against
@@ -1704,7 +1683,7 @@ static int tid_init(struct tid_info *t)
 	       t->nftids * sizeof(*t->ftid_tab) +
 	       t->nsftids * sizeof(*t->ftid_tab);
 
-	t->tid_tab = t4_alloc_mem(size);
+	t->tid_tab = kvzalloc(size, GFP_KERNEL);
 	if (!t->tid_tab)
 		return -ENOMEM;
 
@@ -3748,7 +3727,7 @@ static int adap_init0(struct adapter *adap)
 		/* allocate memory to read the header of the firmware on the
 		 * card
 		 */
-		card_fw = t4_alloc_mem(sizeof(*card_fw));
+		card_fw = kvzalloc(sizeof(*card_fw), GFP_KERNEL);
 
 		/* Get FW from from /lib/firmware/ */
 		ret = request_firmware(&fw, fw_info->fw_mod_name,
@@ -3768,7 +3747,7 @@ static int adap_init0(struct adapter *adap)
 
 		/* Cleaning up */
 		release_firmware(fw);
-		t4_free_mem(card_fw);
+		kvfree(card_fw);
 
 		if (ret < 0)
 			goto bye;
@@ -4595,8 +4574,8 @@ static void free_some_resources(struct adapter *adapter)
 {
 	unsigned int i;
 
-	t4_free_mem(adapter->l2t);
-	t4_free_mem(adapter->tids.tid_tab);
+	kvfree(adapter->l2t);
+	kvfree(adapter->tids.tid_tab);
 	kfree(adapter->sge.egr_map);
 	kfree(adapter->sge.ingr_map);
 	kfree(adapter->sge.starving_fl);

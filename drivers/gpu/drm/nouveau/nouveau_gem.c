@@ -571,9 +571,7 @@ u_memcpya(uint64_t user, unsigned nmemb, unsigned size)
 
 	size *= nmemb;
 
-	mem = kmalloc(size, GFP_KERNEL | __GFP_NOWARN);
-	if (!mem)
-		mem = vmalloc(size);
+	mem = kvmalloc(size, GFP_KERNEL);
 	if (!mem)
 		return ERR_PTR(-ENOMEM);
 
