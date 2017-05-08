@@ -333,10 +333,8 @@ setxattr(struct dentry *d, const char __user *name, const void __user *value,
 
 	error = vfs_setxattr(d, kname, kvalue, size, flags);
 out:
-	if (vvalue)
-		vfree(vvalue);
-	else
-		kfree(kvalue);
+	kvfree(kvalue);
+
 	return error;
 }
 
@@ -432,10 +430,9 @@ getxattr(struct dentry *d, const char __user *name, void __user *value,
 		   than XATTR_SIZE_MAX bytes. Not possible. */
 		error = -E2BIG;
 	}
-	if (vvalue)
-		vfree(vvalue);
-	else
-		kfree(kvalue);
+
+	kvfree(kvalue);
+
 	return error;
 }
 
@@ -510,10 +507,9 @@ listxattr(struct dentry *d, char __user *list, size_t size)
 		   than XATTR_LIST_MAX bytes. Not possible. */
 		error = -E2BIG;
 	}
-	if (vlist)
-		vfree(vlist);
-	else
-		kfree(klist);
+
+	kvfree(klist);
+
 	return error;
 }
 
