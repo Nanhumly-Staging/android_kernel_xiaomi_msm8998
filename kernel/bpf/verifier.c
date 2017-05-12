@@ -1652,7 +1652,7 @@ add_imm:
 		dst_reg->id = ++env->id_gen;
 
 		/* something was added to pkt_ptr, set range to zero */
-		dst_reg->aux_off = dst_reg->off;
+		dst_reg->aux_off += dst_reg->off;
 		dst_reg->off = 0;
 		dst_reg->range = 0;
 		if (had_id)
