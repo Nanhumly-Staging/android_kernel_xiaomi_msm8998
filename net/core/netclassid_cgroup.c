@@ -75,7 +75,7 @@ static void update_classid(struct cgroup_subsys_state *css, void *v)
 	struct css_task_iter it;
 	struct task_struct *p;
 
-	css_task_iter_start(css, &it);
+	css_task_iter_start(css, 0, &it);
 	while ((p = css_task_iter_next(&it))) {
 		task_lock(p);
 		iterate_fd(p->files, 0, update_classid_sock, v);
