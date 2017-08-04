@@ -546,6 +546,25 @@ static DECLARE_BITMAP(enabled_perf_exit_syscalls, NR_syscalls);
 static int sys_perf_refcount_enter;
 static int sys_perf_refcount_exit;
 
+static int perf_call_bpf_enter(struct trace_event_call *call,
+			       struct pt_regs *regs,
+			       struct syscall_metadata *sys_data,
+			       struct syscall_trace_enter *rec)
+{
+	struct syscall_tp_t {
+		unsigned long long regs;
+		unsigned long syscall_nr;
+		unsigned long args[sys_data->nb_args];
+	} param;
+	int i;
+
+	*(struct pt_regs **)&param = regs;
+	param.syscall_nr = rec->nr;
+	for (i = 0; i < sys_data->nb_args; i++)
+		param.args[i] = rec->args[i];
+	return trace_call_bpf(call, &param);
+}
+
 static void perf_syscall_enter(void *ignore, struct pt_regs *regs, long id)
 {
 	struct syscall_metadata *sys_data;
@@ -583,6 +602,14 @@ static void perf_syscall_enter(void *ignore, struct pt_regs *regs, long id)
 	rec->nr = syscall_nr;
 	syscall_get_arguments(current, regs, 0, sys_data->nb_args,
 			       (unsigned long *)&rec->args);
+
+	if ((valid_prog_array &&
+	     !perf_call_bpf_enter(sys_data->enter_event, regs, sys_data, rec)) ||
+	    hlist_empty(head)) {
+		perf_swevent_put_recursion_context(rctx);
+		return;
+	}
+
 	perf_trace_buf_submit(rec, size, rctx,
 			      sys_data->enter_event->event.type, 1, regs,
 			      head, NULL);
@@ -623,6 +650,22 @@ static void perf_sysenter_disable(struct trace_event_call *call)
 	mutex_unlock(&syscall_trace_lock);
 }
 
+static int perf_call_bpf_exit(struct trace_event_call *call,
+			      struct pt_regs *regs,
+			      struct syscall_trace_exit *rec)
+{
+	struct syscall_tp_t {
+		unsigned long long regs;
+		unsigned long syscall_nr;
+		unsigned long ret;
+	} param;
+
+	*(struct pt_regs **)&param = regs;
+	param.syscall_nr = rec->nr;
+	param.ret = rec->ret;
+	return trace_call_bpf(call, &param);
+}
+
 static void perf_syscall_exit(void *ignore, struct pt_regs *regs, long ret)
 {
 	struct syscall_metadata *sys_data;
@@ -658,6 +701,14 @@ static void perf_syscall_exit(void *ignore, struct pt_regs *regs, long ret)
 
 	rec->nr = syscall_nr;
 	rec->ret = syscall_get_return_value(current, regs);
+
+	if ((valid_prog_array &&
+	     !perf_call_bpf_exit(sys_data->exit_event, regs, rec)) ||
+	    hlist_empty(head)) {
+		perf_swevent_put_recursion_context(rctx);
+		return;
+	}
+
 	perf_trace_buf_submit(rec, size, rctx, sys_data->exit_event->event.type,
 			      1, regs, head, NULL);
 }
