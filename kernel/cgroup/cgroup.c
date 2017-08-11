@@ -3310,7 +3310,7 @@ static int cgroup_events_show(struct seq_file *seq, void *v)
 	return 0;
 }
 
-static int cgroup_stats_show(struct seq_file *seq, void *v)
+static int cgroup_stat_show(struct seq_file *seq, void *v)
 {
 	struct cgroup *cgroup = seq_css(seq)->cgroup;
 
@@ -4439,7 +4439,7 @@ static struct cftype cgroup_base_files[] = {
 	},
 	{
 		.name = "cgroup.stat",
-		.seq_show = cgroup_stats_show,
+		.seq_show = cgroup_stat_show,
 	},
 	{ }	/* terminate */
 };
