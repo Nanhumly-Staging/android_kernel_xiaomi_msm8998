@@ -138,7 +138,7 @@ typedef struct user_fpsimd_state elf_fpregset_t;
  */
 #define ELF_PLAT_INIT(_r, load_addr)	(_r)->regs[0] = 0
 
-#define SET_PERSONALITY(ex) do { clear_bit(TIF_32BIT, &current->mm->context.flags); clear_thread_flag(TIF_32BIT); } while (0)
+#define SET_PERSONALITY(ex) do { current->mm->context.flags = 0; clear_thread_flag(TIF_32BIT); } while (0)
 
 /* update AT_VECTOR_SIZE_ARCH if the number of NEW_AUX_ENT entries changes */
 #define _SET_AUX_ENT_VDSO						\
@@ -186,7 +186,7 @@ typedef compat_elf_greg_t		compat_elf_gregset_t[COMPAT_ELF_NGREG];
 #define compat_start_thread		compat_start_thread
 #define COMPAT_SET_PERSONALITY(ex)					\
 do {									\
-	set_bit(TIF_32BIT, &current->mm->context.flags); \
+	current->mm->context.flags = MMCF_AARCH32; \
 	set_thread_flag(TIF_32BIT);					\
 } while (0)
 
