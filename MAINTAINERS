@@ -6125,6 +6125,12 @@ T:	git git://git.kernel.org/pub/scm/shuah/linux-kselftest
 S:	Maintained
 F:	tools/testing/selftests
 
+KERNEL USERMODE HELPER
+M:	"Luis R. Rodriguez" <mcgrof@kernel.org>
+L:	linux-kernel@vger.kernel.org
+S:	Maintained
+F:	kernel/umh.c
+
 KERNEL VIRTUAL MACHINE (KVM)
 M:	Gleb Natapov <gleb@kernel.org>
 M:	Paolo Bonzini <pbonzini@redhat.com>
