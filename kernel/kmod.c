@@ -47,7 +47,6 @@
 extern int max_threads;
 
 
-#ifdef CONFIG_MODULES
 
 /*
 	modprobe_path is set via /proc/sys.
@@ -180,4 +179,3 @@ int __request_module(bool wait, const char *fmt, ...)
 	return ret;
 }
 EXPORT_SYMBOL(__request_module);
-#endif /* CONFIG_MODULES */
