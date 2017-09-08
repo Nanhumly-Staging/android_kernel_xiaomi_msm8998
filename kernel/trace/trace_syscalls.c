@@ -554,7 +554,7 @@ static int perf_call_bpf_enter(struct trace_event_call *call,
 	struct syscall_tp_t {
 		unsigned long long regs;
 		unsigned long syscall_nr;
-		unsigned long args[sys_data->nb_args];
+		unsigned long args[SYSCALL_DEFINE_MAXARGS];
 	} param;
 	int i;
 
