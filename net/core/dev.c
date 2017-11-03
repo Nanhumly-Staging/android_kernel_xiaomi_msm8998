@@ -6342,10 +6342,10 @@ int dev_change_xdp_fd(struct net_device *dev, int fd)
 {
 	const struct net_device_ops *ops = dev->netdev_ops;
 	struct bpf_prog *prog = NULL;
-	struct netdev_xdp xdp = {};
+	struct netdev_bpf xdp = {};
 	int err;
 
-	if (!ops->ndo_xdp)
+	if (!ops->ndo_bpf)
 		return -EOPNOTSUPP;
 	if (fd >= 0) {
 		prog = bpf_prog_get_type(fd, BPF_PROG_TYPE_XDP);
@@ -6355,7 +6355,7 @@ int dev_change_xdp_fd(struct net_device *dev, int fd)
 
 	xdp.command = XDP_SETUP_PROG;
 	xdp.prog = prog;
-	err = ops->ndo_xdp(dev, &xdp);
+	err = ops->ndo_bpf(dev, &xdp);
 	if (err < 0 && prog)
 		bpf_prog_put(prog);
 
