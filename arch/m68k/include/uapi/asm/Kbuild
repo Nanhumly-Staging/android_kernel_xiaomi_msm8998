@@ -9,3 +9,4 @@ generic-y += socket.h
 generic-y += sockios.h
 generic-y += termbits.h
 generic-y += termios.h
+ngeneric-y
