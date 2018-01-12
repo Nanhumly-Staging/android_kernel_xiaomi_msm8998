@@ -187,6 +187,9 @@ config HAVE_OPTPROBES
 config HAVE_KPROBES_ON_FTRACE
 	bool
 
+config HAVE_FUNCTION_ERROR_INJECTION
+	bool
+
 config HAVE_NMI_WATCHDOG
 	bool
 #

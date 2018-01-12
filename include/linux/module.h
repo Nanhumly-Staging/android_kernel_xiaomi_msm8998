@@ -486,6 +486,11 @@ struct module {
 	ctor_fn_t *ctors;
 	unsigned int num_ctors;
 #endif
+
+#ifdef CONFIG_FUNCTION_ERROR_INJECTION
+	unsigned int num_ei_funcs;
+	unsigned long *ei_funcs;
+#endif
 } ____cacheline_aligned;
 #ifndef MODULE_ARCH_INIT
 #define MODULE_ARCH_INIT {}
