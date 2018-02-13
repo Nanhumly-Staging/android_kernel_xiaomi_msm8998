@@ -17,7 +17,6 @@
 #include <linux/cryptohash.h>
 #include <linux/kallsyms.h>
 
-#include <net/xdp.h>
 #include <net/sch_generic.h>
 
 #include <asm/byteorder.h>
@@ -30,6 +29,7 @@ struct sk_buff;
 struct sock;
 struct seccomp_data;
 struct bpf_prog_aux;
+struct xdp_rxq_info;
 struct ctl_table;
 struct ctl_table_header;
 struct sock_reuseport;
