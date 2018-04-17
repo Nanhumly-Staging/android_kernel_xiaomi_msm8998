@@ -458,6 +458,9 @@ config GRO_CELLS
 	bool
 	default n
 
+config PAGE_POOL
+       bool
+
 endif   # if NET
 
 # Used by archs to tell that they support BPF JIT compiler plus which flavour.
