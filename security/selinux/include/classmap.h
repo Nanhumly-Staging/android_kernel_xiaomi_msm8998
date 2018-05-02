@@ -170,5 +170,7 @@ struct security_class_mapping secclass_map[] = {
 	  { "map_create", "map_read", "map_write", "prog_load", "prog_run" } },
 	{ "can_socket",
 	  { COMMON_SOCK_PERMS, NULL } },
+	{ "xdp_socket",
+	  { COMMON_SOCK_PERMS, NULL } },
 	{ NULL }
   };
