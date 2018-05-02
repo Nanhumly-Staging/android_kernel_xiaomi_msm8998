@@ -927,7 +927,7 @@ struct bpf_prog *bpf_patch_insn_single(struct bpf_prog *prog, u32 off,
 int bpf_remove_insns(struct bpf_prog *prog, u32 off, u32 cnt);
 
 int xdp_do_generic_redirect(struct net_device *dev, struct sk_buff *skb,
-			    struct bpf_prog *prog);
+			    struct xdp_buff *xdp, struct bpf_prog *prog);
 
 /* The pair of xdp_do_redirect and xdp_do_flush_map MUST be called in the
  * same cpu context. Further for best results no more than a single map
