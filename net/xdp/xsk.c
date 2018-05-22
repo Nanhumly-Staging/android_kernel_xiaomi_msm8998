@@ -234,14 +234,6 @@ static int xsk_init_queue(u32 entries, struct xsk_queue **queue,
 	return 0;
 }
 
-static void __xsk_release(struct xdp_sock *xs)
-{
-	/* Wait for driver to stop using the xdp socket. */
-	synchronize_net();
-
-	dev_put(xs->dev);
-}
-
 static int xsk_release(struct socket *sock)
 {
 	struct sock *sk = sock->sk;
@@ -258,7 +250,9 @@ static int xsk_release(struct socket *sock)
 	local_bh_enable();
 
 	if (xs->dev) {
-		__xsk_release(xs);
+		/* Wait for driver to stop using the xdp socket. */
+		synchronize_net();
+		dev_put(xs->dev);
 		xs->dev = NULL;
 	}
 
@@ -292,9 +286,8 @@ static int xsk_bind(struct socket *sock, struct sockaddr *addr, int addr_len)
 {
 	struct sockaddr_xdp *sxdp = (struct sockaddr_xdp *)addr;
 	struct sock *sk = sock->sk;
-	struct net_device *dev, *dev_curr;
 	struct xdp_sock *xs = xdp_sk(sk);
-	struct xdp_umem *old_umem = NULL;
+	struct net_device *dev;
 	int err = 0;
 
 	if (addr_len < sizeof(struct sockaddr_xdp))
@@ -303,7 +296,11 @@ static int xsk_bind(struct socket *sock, struct sockaddr *addr, int addr_len)
 		return -EINVAL;
 
 	mutex_lock(&xs->mutex);
-	dev_curr = xs->dev;
+	if (xs->dev) {
+		err = -EBUSY;
+		goto out_release;
+	}
+
 	dev = dev_get_by_index(sock_net(sk), sxdp->sxdp_ifindex);
 	if (!dev) {
 		err = -ENODEV;
@@ -350,7 +347,6 @@ static int xsk_bind(struct socket *sock, struct sockaddr *addr, int addr_len)
 		}
 
 		xdp_get_umem(umem_xs->umem);
-		old_umem = xs->umem;
 		xs->umem = umem_xs->umem;
 		sockfd_put(sock);
 	} else if (!xs->umem || !xdp_umem_validate_queues(xs->umem)) {
@@ -360,14 +356,6 @@ static int xsk_bind(struct socket *sock, struct sockaddr *addr, int addr_len)
 		/* This xsk has its own umem. */
 		xskq_set_umem(xs->umem->fq, &xs->umem->props);
 		xskq_set_umem(xs->umem->cq, &xs->umem->props);
-	}
-
-	/* Rebind? */
-	if (dev_curr && (dev_curr != dev ||
-			 xs->queue_id != sxdp->sxdp_queue_id)) {
-		__xsk_release(xs);
-		if (old_umem)
-			xdp_put_umem(old_umem);
 	}
 
 	xs->dev = dev;
