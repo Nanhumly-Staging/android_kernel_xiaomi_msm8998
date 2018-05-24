@@ -17,7 +17,9 @@
 #include <linux/vmalloc.h>
 #include <linux/mmzone.h>
 #include <linux/anon_inodes.h>
+#include <linux/fdtable.h>
 #include <linux/file.h>
+#include <linux/fs.h>
 #include <linux/license.h>
 #include <linux/filter.h>
 #include <linux/version.h>
@@ -3424,7 +3426,6 @@ static int bpf_btf_get_fd_by_id(const union bpf_attr *attr)
 	return btf_get_fd_by_id(attr->btf_id);
 }
 
-#if 0 /* Not part of this 4.4 bpf_link backport. */
 static int bpf_task_fd_query_copy(const union bpf_attr *attr,
 				    union bpf_attr __user *uattr,
 				    u32 prog_id, u32 fd_type,
@@ -3494,9 +3495,7 @@ static int bpf_task_fd_query(const union bpf_attr *attr,
 	if (attr->task_fd_query.flags != 0)
 		return -EINVAL;
 
-	rcu_read_lock();
 	task = get_pid_task(find_vpid(pid), PIDTYPE_PID);
-	rcu_read_unlock();
 	if (!task)
 		return -ENOENT;
 
@@ -3559,8 +3558,6 @@ put_file:
 out:
 	return err;
 }
-
-#endif
 
 #define BPF_MAP_BATCH_LAST_FIELD batch.flags
 
@@ -3941,6 +3938,9 @@ SYSCALL_DEFINE3(bpf, int, cmd, union bpf_attr __user *, uattr, unsigned int, siz
 		break;
 	case BPF_BTF_GET_FD_BY_ID:
 		err = bpf_btf_get_fd_by_id(&attr);
+		break;
+	case BPF_TASK_FD_QUERY:
+		err = bpf_task_fd_query(&attr, uattr);
 		break;
 	case BPF_MAP_LOOKUP_AND_DELETE_ELEM:
 		err = map_lookup_and_delete_elem(&attr);
