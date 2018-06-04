@@ -17,8 +17,7 @@
 
 #include <linux/types.h>
 #include <linux/if_xdp.h>
-
-#include "xdp_umem_props.h"
+#include <net/xdp_sock.h>
 
 #define RX_BATCH_SIZE 16
 
