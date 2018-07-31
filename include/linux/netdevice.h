@@ -831,10 +831,10 @@ struct netdev_bpf {
 		struct {
 			struct bpf_offloaded_map *offmap;
 		};
-		/* XDP_SETUP_XSK_UMEM */
+		/* XDP_QUERY_XSK_UMEM, XDP_SETUP_XSK_UMEM */
 		struct {
-			struct xdp_umem *umem;
-			u16 queue_id;
+			struct xdp_umem *umem; /* out for query*/
+			u16 queue_id; /* in for query */
 		} xsk;
 	};
 };
@@ -3294,6 +3294,7 @@ struct sk_buff *dev_hard_start_xmit(struct sk_buff *skb, struct net_device *dev,
 typedef int (*bpf_op_t)(struct net_device *dev, struct netdev_bpf *bpf);
 int dev_change_xdp_fd(struct net_device *dev, int fd, u32 flags);
 u8 __dev_xdp_attached(struct net_device *dev, bpf_op_t xdp_op, u32 *prog_id);
+int xdp_umem_query(struct net_device *dev, u16 queue_id);
 
 int __dev_forward_skb(struct net_device *dev, struct sk_buff *skb);
 int dev_forward_skb(struct net_device *dev, struct sk_buff *skb);
