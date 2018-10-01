@@ -558,6 +558,8 @@ enum netdev_queue_state_t {
  * netif_xmit*stopped functions, they should only be using netif_tx_*.
  */
 
+struct xdp_umem;
+
 struct netdev_queue {
 /*
  * read mostly part
@@ -593,6 +595,9 @@ struct netdev_queue {
 	struct dql		dql;
 #endif
 	unsigned long		tx_maxrate;
+#ifdef CONFIG_XDP_SOCKETS
+	struct xdp_umem		*umem;
+#endif
 } ____cacheline_aligned_in_smp;
 
 static inline int netdev_queue_numa_node_read(const struct netdev_queue *q)
@@ -701,6 +706,9 @@ struct netdev_rx_queue {
 	struct kobject			kobj;
 	struct net_device		*dev;
 	struct xdp_rxq_info		xdp_rxq;
+#ifdef CONFIG_XDP_SOCKETS
+	struct xdp_umem			*umem;
+#endif
 } ____cacheline_aligned_in_smp;
 
 /*
@@ -812,7 +820,6 @@ enum bpf_netdev_command {
 
 struct bpf_prog_offload_ops;
 struct netlink_ext_ack;
-struct xdp_umem;
 
 struct netdev_bpf {
 	enum bpf_netdev_command command;
