@@ -360,7 +360,7 @@ enum bpf_link_type {
 
 #define BPF_OBJ_NAME_LEN 16U
 
-/* Flags for accessing BPF object */
+/* Flags for accessing BPF object from syscall side. */
 #define BPF_F_RDONLY		(1U << 3)
 #define BPF_F_WRONLY		(1U << 4)
 
@@ -372,6 +372,7 @@ enum bpf_link_type {
 
 /* Flags for accessing BPF object from program side. */
 #define BPF_F_RDONLY_PROG	(1U << 7)
+#define BPF_F_WRONLY_PROG	(1U << 8)
 
 /* Clone map from listener for newly accepted socket */
 #define BPF_F_CLONE		(1U << 9)
