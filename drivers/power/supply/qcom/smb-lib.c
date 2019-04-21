@@ -1896,7 +1896,7 @@ int smblib_set_prop_batt_capacity(struct smb_charger *chg,
 }
 
 #ifdef CONFIG_MACH_XIAOMI_MSM8998
-#define SCREEN_ON_ICL		1600000
+#define SCREEN_ON_ICL		3200000
 #define SCREEN_ON_CHECK_MS	90000
 #define SCREEN_OFF_CHECK_MS	5000
 static void smblib_fb_state_work(struct work_struct *work)
