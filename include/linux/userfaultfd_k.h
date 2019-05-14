@@ -27,6 +27,8 @@
 #define UFFD_SHARED_FCNTL_FLAGS (O_CLOEXEC | O_NONBLOCK)
 #define UFFD_FLAGS_SET (EFD_SHARED_FCNTL_FLAGS)
 
+extern int sysctl_unprivileged_userfaultfd;
+
 extern int handle_userfault(struct vm_area_struct *vma, unsigned long address,
 			    unsigned int flags, unsigned long reason);
 
