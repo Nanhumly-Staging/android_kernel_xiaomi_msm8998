@@ -59,6 +59,11 @@
 		#size-cells = <2>;
 		ranges;
 
+		pfc: pin-controller@e6060000 {
+			compatible = "renesas,pfc-r8a77470";
+			reg = <0 0xe6060000 0 0x118>;
+		};
+
 		rst: reset-controller@e6160000 {
 			compatible = "renesas,r8a77470-rst";
 			reg = <0 0xe6160000 0 0x100>;
