@@ -143,6 +143,21 @@ struct gpio_chip {
 	struct lock_class_key	*lock_key;
 #endif
 
+	/**
+	 * @need_valid_mask:
+	 *
+	 * If set core allocates @valid_mask with all bits set to one.
+	 */
+	bool need_valid_mask;
+
+	/**
+	 * @valid_mask:
+	 *
+	 * If not %NULL holds bitmask of GPIOs which are valid to be used
+	 * from the chip.
+	 */
+	unsigned long *valid_mask;
+
 #if defined(CONFIG_OF_GPIO)
 	/*
 	 * If CONFIG_OF is enabled, then all GPIO controllers described in the
@@ -184,6 +199,9 @@ extern struct gpio_chip *gpiochip_find(void *data,
 /* lock/unlock as IRQ */
 int gpiochip_lock_as_irq(struct gpio_chip *chip, unsigned int offset);
 void gpiochip_unlock_as_irq(struct gpio_chip *chip, unsigned int offset);
+
+/* */
+bool gpiochip_line_is_valid(const struct gpio_chip *chip, unsigned int offset);
 
 /* get driver data */
 static inline void *gpiochip_get_data(struct gpio_chip *chip)
