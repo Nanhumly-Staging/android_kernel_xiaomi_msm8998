@@ -268,6 +268,24 @@ static struct clk * __init cpg_adsp_clk_register(struct rcar_gen2_cpg *cpg)
 #define CPG_PLL_CONFIG_INDEX(md)	((((md) & BIT(14)) >> 12) | \
 					 (((md) & BIT(13)) >> 12) | \
 					 (((md) & BIT(19)) >> 19))
+
+/*
+ * This table is only valid for the RZ/G1C
+ *
+ *    MD	EXTAL		PLL0	PLL1	PLL3
+ * 14 13	(MHz)		*1	*2
+ *---------------------------------------------------
+ * 0  0		20 / 1		x80	x78	x50
+ * 0  1		26 / 1		x60	x60	x56
+ * 1  0		Prohibited setting
+ * 1  1		30 / 1		x52	x52	x50
+ *
+ * *1 :	Table 7.4 indicates VCO output (PLL0 = VCO)
+ * *2 :	Table 7.4 indicates VCO output (PLL1 = VCO)
+ */
+#define CPG_PLL_CONFIG_INDEX_RZG1C(md)	((((md) & BIT(14)) >> 13) | \
+					 (((md) & BIT(13)) >> 13))
+
 struct cpg_pll_config {
 	unsigned int extal_div;
 	unsigned int pll1_mult;
@@ -280,6 +298,14 @@ static const struct cpg_pll_config cpg_pll_configs[8] __initconst = {
 	{ 1, 156,  80, 150 }, { 1, 156,  66, 150 },
 	{ 2, 240, 122, 230 }, { 2, 240, 102, 230 },
 	{ 2, 208, 106, 200 }, { 2, 208,  88, 200 },
+};
+
+static const struct cpg_pll_config cpg_pll_configs_rzg1c[4] __initconst = {
+	/* EXTAL div	PLL1 mult x2	PLL3 mult */
+	{ 1,		156,		50,	},
+	{ 1,		120,		56,	},
+	{ /* Invalid*/				},
+	{ 1,		104,		50,	},
 };
 
 /* SDHI divisors */
@@ -307,6 +333,8 @@ static const char * const pll0_mult_match[] = {
 	"renesas,r8a7794-cpg-clocks",
 	NULL
 };
+
+static const char *r8a77470_compat = "renesas,r8a77470-cpg-clocks";
 
 static struct clk * __init
 rcar_gen2_cpg_register_clock(struct device_node *np, struct rcar_gen2_cpg *cpg,
@@ -357,10 +385,16 @@ rcar_gen2_cpg_register_clock(struct device_node *np, struct rcar_gen2_cpg *cpg,
 	} else if (!strcmp(name, "sd0")) {
 		parent_name = "pll1";
 		table = cpg_sd01_div_table;
+		if (of_device_is_compatible(np, r8a77470_compat))
+			table++;
+
 		shift = 4;
 	} else if (!strcmp(name, "sd1")) {
 		parent_name = "pll1";
 		table = cpg_sd01_div_table;
+		if (of_device_is_compatible(np, r8a77470_compat))
+			table++;
+
 		shift = 0;
 	} else if (!strcmp(name, "z")) {
 		return cpg_z_clk_register(cpg);
@@ -414,7 +448,10 @@ static void __init rcar_gen2_cpg_clocks_init(struct device_node *np)
 	if (WARN_ON(cpg->reg == NULL))
 		return;
 
-	config = &cpg_pll_configs[CPG_PLL_CONFIG_INDEX(cpg_mode)];
+	if (of_device_is_compatible(np, r8a77470_compat))
+		config = &cpg_pll_configs_rzg1c[CPG_PLL_CONFIG_INDEX_RZG1C(cpg_mode)];
+	else
+		config = &cpg_pll_configs[CPG_PLL_CONFIG_INDEX(cpg_mode)];
 
 	for (i = 0; i < num_clks; ++i) {
 		const char *name;
