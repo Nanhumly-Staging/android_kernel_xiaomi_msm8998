@@ -1024,6 +1024,7 @@ static int __gpiod_request(struct gpio_desc *desc, const char *label)
 	struct gpio_chip	*chip = desc->chip;
 	int			status;
 	unsigned long		flags;
+	unsigned		offset;
 
 	spin_lock_irqsave(&gpio_lock, flags);
 
@@ -1042,7 +1043,11 @@ static int __gpiod_request(struct gpio_desc *desc, const char *label)
 	if (chip->request) {
 		/* chip->request may sleep */
 		spin_unlock_irqrestore(&gpio_lock, flags);
-		status = chip->request(chip, gpio_chip_hwgpio(desc));
+		offset = gpio_chip_hwgpio(desc);
+		if (gpiochip_line_is_valid(chip, offset))
+			status = chip->request(chip, offset);
+		else
+			status = -EINVAL;
 		spin_lock_irqsave(&gpio_lock, flags);
 
 		if (status < 0) {
