@@ -160,7 +160,13 @@ void __xsk_map_flush(struct bpf_map *map)
 
 static void *xsk_map_lookup_elem(struct bpf_map *map, void *key)
 {
-	return NULL;
+	WARN_ON_ONCE(!rcu_read_lock_held());
+	return __xsk_map_lookup_elem(map, *(u32 *)key);
+}
+
+static void *xsk_map_lookup_elem_sys_only(struct bpf_map *map, void *key)
+{
+	return ERR_PTR(-EOPNOTSUPP);
 }
 
 static int xsk_map_update_elem(struct bpf_map *map, void *key, void *value,
@@ -232,8 +238,8 @@ const struct bpf_map_ops xsk_map_ops = {
 	.map_free = xsk_map_free,
 	.map_get_next_key = xsk_map_get_next_key,
 	.map_lookup_elem = xsk_map_lookup_elem,
+	.map_lookup_elem_sys_only = xsk_map_lookup_elem_sys_only,
 	.map_update_elem = xsk_map_update_elem,
 	.map_delete_elem = xsk_map_delete_elem,
 };
-
 
