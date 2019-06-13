@@ -1722,6 +1722,10 @@ static u64 numa_get_avg_runtime(struct task_struct *p, u64 *period)
 	if (p->last_task_numa_placement) {
 		delta = runtime - p->last_sum_exec_runtime;
 		*period = now - p->last_task_numa_placement;
+
+		/* Avoid time going backwards, prevent potential divide error: */
+		if (unlikely((s64)*period < 0))
+			*period = 0;
 	} else {
 		delta = p->se.avg.load_sum / p->se.load.weight;
 		*period = LOAD_AVG_MAX;
@@ -2841,6 +2845,27 @@ dequeue_entity_load_avg(struct cfs_rq *cfs_rq, struct sched_entity *se)
 		max_t(s64,  cfs_rq->runnable_load_sum - se->avg.load_sum, 0);
 }
 
+#ifndef CONFIG_64BIT
+static inline u64 cfs_rq_last_update_time(struct cfs_rq *cfs_rq)
+{
+	u64 last_update_time_copy;
+	u64 last_update_time;
+
+	do {
+		last_update_time_copy = cfs_rq->load_last_update_time_copy;
+		smp_rmb();
+		last_update_time = cfs_rq->avg.last_update_time;
+	} while (last_update_time != last_update_time_copy);
+
+	return last_update_time;
+}
+#else
+static inline u64 cfs_rq_last_update_time(struct cfs_rq *cfs_rq)
+{
+	return cfs_rq->avg.last_update_time;
+}
+#endif
+
 /*
  * Task first catches up with cfs_rq, and then subtract
  * itself from the cfs_rq (task must be off the queue now).
@@ -2850,17 +2875,14 @@ void remove_entity_load_avg(struct sched_entity *se)
 	struct cfs_rq *cfs_rq = cfs_rq_of(se);
 	u64 last_update_time;
 
-#ifndef CONFIG_64BIT
-	u64 last_update_time_copy;
+	/*
+	 * Newly created task or never used group entity should not be removed
+	 * from its (source) cfs_rq
+	 */
+	if (se->avg.last_update_time == 0)
+		return;
 
-	do {
-		last_update_time_copy = cfs_rq->load_last_update_time_copy;
-		smp_rmb();
-		last_update_time = cfs_rq->avg.last_update_time;
-	} while (last_update_time != last_update_time_copy);
-#else
-	last_update_time = cfs_rq->avg.last_update_time;
-#endif
+	last_update_time = cfs_rq_last_update_time(cfs_rq);
 
 	__update_load_avg(last_update_time, cpu_of(rq_of(cfs_rq)), &se->avg, 0, 0, NULL);
 	atomic_long_add(se->avg.load_avg, &cfs_rq->removed_load_avg);
@@ -3998,18 +4020,43 @@ static enum hrtimer_restart sched_cfs_slack_timer(struct hrtimer *timer)
 	return HRTIMER_NORESTART;
 }
 
+extern const u64 max_cfs_quota_period;
+
 static enum hrtimer_restart sched_cfs_period_timer(struct hrtimer *timer)
 {
 	struct cfs_bandwidth *cfs_b =
 		container_of(timer, struct cfs_bandwidth, period_timer);
 	int overrun;
 	int idle = 0;
+	int count = 0;
 
 	raw_spin_lock(&cfs_b->lock);
 	for (;;) {
 		overrun = hrtimer_forward_now(timer, cfs_b->period);
 		if (!overrun)
 			break;
+
+		if (++count > 3) {
+			u64 new, old = ktime_to_ns(cfs_b->period);
+
+			new = (old * 147) / 128; /* ~115% */
+			new = min(new, max_cfs_quota_period);
+
+			cfs_b->period = ns_to_ktime(new);
+
+			/* since max is 1s, this is limited to 1e9^2, which fits in u64 */
+			cfs_b->quota *= new;
+			cfs_b->quota = div64_u64(cfs_b->quota, old);
+
+			pr_warn_ratelimited(
+        "cfs_period_timer[cpu%d]: period too short, scaling up (new cfs_period_us %lld, cfs_quota_us = %lld)\n",
+	                        smp_processor_id(),
+	                        div_u64(new, NSEC_PER_USEC),
+                                div_u64(cfs_b->quota, NSEC_PER_USEC));
+
+			/* reset count so we don't come right back in here */
+			count = 0;
+		}
 
 		idle = do_sched_cfs_period_timer(cfs_b, overrun);
 	}
@@ -6004,10 +6051,10 @@ static void update_cfs_rq_h_load(struct cfs_rq *cfs_rq)
 	if (cfs_rq->last_h_load_update == now)
 		return;
 
-	cfs_rq->h_load_next = NULL;
+	WRITE_ONCE(cfs_rq->h_load_next, NULL);
 	for_each_sched_entity(se) {
 		cfs_rq = cfs_rq_of(se);
-		cfs_rq->h_load_next = se;
+		WRITE_ONCE(cfs_rq->h_load_next, se);
 		if (cfs_rq->last_h_load_update == now)
 			break;
 	}
@@ -6017,7 +6064,7 @@ static void update_cfs_rq_h_load(struct cfs_rq *cfs_rq)
 		cfs_rq->last_h_load_update = now;
 	}
 
-	while ((se = cfs_rq->h_load_next) != NULL) {
+	while ((se = READ_ONCE(cfs_rq->h_load_next)) != NULL) {
 		load = cfs_rq->h_load;
 		load = div64_ul(load * se->avg.load_avg,
 			cfs_rq_load_avg(cfs_rq) + 1);
