@@ -2586,7 +2586,10 @@ int xdp_do_redirect_map(struct net_device *dev, struct xdp_buff *xdp,
 	ri->ifindex = 0;
 	ri->map = NULL;
 
-	fwd = __dev_map_lookup_elem(map, index);
+	if (map->map_type == BPF_MAP_TYPE_DEVMAP)
+		fwd = __dev_map_lookup_elem(map, index);
+	else if (map->map_type == BPF_MAP_TYPE_DEVMAP_HASH)
+		fwd = __dev_map_hash_lookup_elem(map, index);
 	if (!fwd)
 		goto out;
 
