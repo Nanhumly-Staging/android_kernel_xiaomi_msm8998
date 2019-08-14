@@ -57,8 +57,8 @@ static void xdp_reg_umem_at_qid(struct net_device *dev, struct xdp_umem *umem,
 		dev->_tx[queue_id].umem = umem;
 }
 
-static struct xdp_umem *xdp_get_umem_from_qid(struct net_device *dev,
-					      u16 queue_id)
+struct xdp_umem *xdp_get_umem_from_qid(struct net_device *dev,
+				       u16 queue_id)
 {
 	if (queue_id < dev->real_num_rx_queues)
 		return dev->_rx[queue_id].umem;
@@ -101,6 +101,17 @@ int xdp_umem_assign_dev(struct xdp_umem *umem, struct net_device *dev,
 	xdp_reg_umem_at_qid(dev, umem, queue_id);
 	umem->dev = dev;
 	umem->queue_id = queue_id;
+
+	if (flags & XDP_USE_NEED_WAKEUP) {
+		umem->flags |= XDP_UMEM_USES_NEED_WAKEUP;
+		/* Tx needs to be explicitly woken up the first time.
+		 * Also for supporting drivers that do not implement this
+		 * feature. They will always have to call sendto().
+		 */
+		xsk_set_tx_need_wakeup(umem);
+	}
+
+	dev_hold(dev);
 	if (force_copy)
 		/* For copy-mode, we are done. */
 		goto out_rtnl_unlock;
@@ -119,14 +130,14 @@ int xdp_umem_assign_dev(struct xdp_umem *umem, struct net_device *dev,
 		goto err_unreg_umem;
 	rtnl_unlock();
 
-	dev_hold(dev);
 	umem->zc = true;
 	return 0;
 
 err_unreg_umem:
-	xdp_clear_umem_at_qid(dev, queue_id);
 	if (!force_zc)
 		err = 0; /* fallback to copy mode */
+	if (err)
+		xdp_clear_umem_at_qid(dev, queue_id);
 out_rtnl_unlock:
 	rtnl_unlock();
 	return err;
@@ -155,10 +166,9 @@ void xdp_umem_clear_dev(struct xdp_umem *umem)
 
 	xdp_clear_umem_at_qid(umem->dev, umem->queue_id);
 
-	if (umem->zc) {
-		dev_put(umem->dev);
+	dev_put(umem->dev);
+	if (umem->zc)
 		umem->zc = false;
-	}
 }
 
 static void xdp_umem_unpin_pages(struct xdp_umem *umem)
