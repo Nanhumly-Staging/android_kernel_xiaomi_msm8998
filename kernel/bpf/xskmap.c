@@ -234,8 +234,6 @@ static int xsk_map_update_elem(struct bpf_map *map, void *key, void *value,
 		return -EINVAL;
 	if (unlikely(i >= m->map.max_entries))
 		return -E2BIG;
-	if (unlikely(map_flags == BPF_NOEXIST))
-		return -EEXIST;
 
 	sock = sockfd_lookup(fd, &err);
 	if (!sock)
@@ -264,6 +262,12 @@ static int xsk_map_update_elem(struct bpf_map *map, void *key, void *value,
 	old_xs = READ_ONCE(*map_entry);
 	if (old_xs == xs) {
 		err = 0;
+		goto out;
+	} else if (old_xs && map_flags == BPF_NOEXIST) {
+		err = -EEXIST;
+		goto out;
+	} else if (!old_xs && map_flags == BPF_EXIST) {
+		err = -ENOENT;
 		goto out;
 	}
 	xsk_map_sock_add(xs, node);
