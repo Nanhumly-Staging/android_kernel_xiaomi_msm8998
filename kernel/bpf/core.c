@@ -279,12 +279,20 @@ EXPORT_SYMBOL(arch_bpf_jit_check_func);
 
 void *__weak bpf_jit_alloc_exec(unsigned long size)
 {
+#ifdef CONFIG_MODULES
 	return module_alloc(size);
+#else
+	return vmalloc_exec(size);
+#endif
 }
 
 void __weak bpf_jit_free_exec(void *addr)
 {
+#ifdef CONFIG_MODULES
 	module_memfree(addr);
+#else
+	vfree(addr);
+#endif
 }
 
 struct bpf_binary_header *
