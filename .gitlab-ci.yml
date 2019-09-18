@@ -44,8 +44,8 @@ arm_renesas_shmobile_defconfig:
     BUILD_ARCH: arm
     CONFIG: renesas_shmobile_defconfig
     CONFIG_LOC: cip-kernel-config
-    DEVICES: r8a7743-iwg20d-q7 r8a7745-iwg22d-sodimm
-    DTBS: r8a7743-iwg20d-q7-dbcm-ca.dtb r8a7745-iwg22d-sodimm-dbhd-ca.dtb
+    DEVICES: r8a7743-iwg20d-q7 r8a7745-iwg22d-sodimm r8a77470-iwg23s-sbc
+    DTBS: r8a7743-iwg20d-q7-dbcm-ca.dtb r8a7745-iwg22d-sodimm-dbhd-ca.dtb r8a77470-iwg23s-sbc.dtb
   script:
     - /opt/build_kernel.sh
   artifacts:
@@ -270,8 +270,8 @@ arm_shmobile_defconfig:
     BUILD_ARCH: arm
     CONFIG: shmobile_defconfig
     CONFIG_LOC: intree
-    DEVICES: r8a7743-iwg20d-q7 r8a7745-iwg22d-sodimm
-    DTBS: r8a7743-iwg20d-q7-dbcm-ca.dtb r8a7745-iwg22d-sodimm-dbhd-ca.dtb
+    DEVICES: r8a7743-iwg20d-q7 r8a7745-iwg22d-sodimm r8a77470-iwg23s-sbc
+    DTBS: r8a7743-iwg20d-q7-dbcm-ca.dtb r8a7745-iwg22d-sodimm-dbhd-ca.dtb r8a77470-iwg23s-sbc.dtb
   script:
     - /opt/build_kernel.sh
   artifacts:
