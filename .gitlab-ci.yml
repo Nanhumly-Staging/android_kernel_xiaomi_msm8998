@@ -17,7 +17,7 @@ arm_hitachi_omap_defconfig:
     - /opt/build_kernel.sh
   artifacts:
     name: "$CI_JOB_NAME"
-    when: on_success
+    when: always
     paths:
       - output
 
@@ -33,7 +33,7 @@ arm_moxa_mxc_defconfig:
     - /opt/build_kernel.sh
   artifacts:
     name: "$CI_JOB_NAME"
-    when: on_success
+    when: always
     paths:
       - output
 
@@ -50,7 +50,7 @@ arm_renesas_shmobile_defconfig:
     - /opt/build_kernel.sh
   artifacts:
     name: "$CI_JOB_NAME"
-    when: on_success
+    when: always
     paths:
       - output
 
@@ -66,7 +66,7 @@ arm_siemens_am335x-axm2_defconfig:
     - /opt/build_kernel.sh
   artifacts:
     name: "$CI_JOB_NAME"
-    when: on_success
+    when: always
     paths:
       - output
 
@@ -82,7 +82,7 @@ arm_siemens_am335x-draco_defconfig:
     - /opt/build_kernel.sh
   artifacts:
     name: "$CI_JOB_NAME"
-    when: on_success
+    when: always
     paths:
       - output
 
@@ -98,7 +98,7 @@ arm_siemens_am335x-dxr2_defconfig:
     - /opt/build_kernel.sh
   artifacts:
     name: "$CI_JOB_NAME"
-    when: on_success
+    when: always
     paths:
       - output
 
@@ -114,7 +114,7 @@ arm_siemens_am335x-etamin_defconfig:
     - /opt/build_kernel.sh
   artifacts:
     name: "$CI_JOB_NAME"
-    when: on_success
+    when: always
     paths:
       - output
 
@@ -130,7 +130,7 @@ arm_siemens_am57xx-pxm3.config:
     - /opt/build_kernel.sh
   artifacts:
     name: "$CI_JOB_NAME"
-    when: on_success
+    when: always
     paths:
       - output
 
@@ -146,7 +146,7 @@ arm_siemens_dcu2.config:
     - /opt/build_kernel.sh
   artifacts:
     name: "$CI_JOB_NAME"
-    when: on_success
+    when: always
     paths:
       - output
 
@@ -162,7 +162,7 @@ arm_siemens_imx6_defconfig:
     - /opt/build_kernel.sh
   artifacts:
     name: "$CI_JOB_NAME"
-    when: on_success
+    when: always
     paths:
       - output
 
@@ -178,7 +178,7 @@ arm_toshiba_tegra_defconfig:
     - /opt/build_kernel.sh
   artifacts:
     name: "$CI_JOB_NAME"
-    when: on_success
+    when: always
     paths:
       - output
 
@@ -194,7 +194,7 @@ arm_toshiba_zynq_defconfig:
     - /opt/build_kernel.sh
   artifacts:
     name: "$CI_JOB_NAME"
-    when: on_success
+    when: always
     paths:
       - output
 
@@ -210,7 +210,7 @@ x86_plathome_obsvx1.config:
     - /opt/build_kernel.sh
   artifacts:
     name: "$CI_JOB_NAME"
-    when: on_success
+    when: always
     paths:
       - output
 
@@ -226,7 +226,7 @@ x86_siemens_iot2000.config:
     - /opt/build_kernel.sh
   artifacts:
     name: "$CI_JOB_NAME"
-    when: on_success
+    when: always
     paths:
       - output
 
@@ -242,7 +242,7 @@ x86_siemens_server_defconfig:
     - /opt/build_kernel.sh
   artifacts:
     name: "$CI_JOB_NAME"
-    when: on_success
+    when: always
     paths:
       - output
 
@@ -258,7 +258,7 @@ x86_toshiba_defconfig:
     - /opt/build_kernel.sh
   artifacts:
     name: "$CI_JOB_NAME"
-    when: on_success
+    when: always
     paths:
       - output
 
@@ -276,7 +276,7 @@ arm_shmobile_defconfig:
     - /opt/build_kernel.sh
   artifacts:
     name: "$CI_JOB_NAME"
-    when: on_success
+    when: always
     paths:
       - output
 
@@ -292,5 +292,6 @@ run_tests:
     - /opt/submit_tests.sh
   artifacts:
     name: "$CI_JOB_NAME"
+    when: always
     paths:
       - output
