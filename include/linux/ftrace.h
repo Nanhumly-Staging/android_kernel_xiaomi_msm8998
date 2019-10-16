@@ -117,6 +117,8 @@ ftrace_func_t ftrace_ops_get_func(struct ftrace_ops *ops);
  *            for any of the functions that this ops will be registered for, then
  *            this ops will fail to register or set_filter_ip.
  * PID     - Is affected by set_ftrace_pid (allows filtering on those pids)
+ * PERMANENT - Set when the ops is permanent and should not be affected by
+ *             ftrace_enabled.
  */
 enum {
 	FTRACE_OPS_FL_ENABLED			= 1 << 0,
@@ -134,6 +136,7 @@ enum {
 	FTRACE_OPS_FL_ALLOC_TRAMP		= 1 << 12,
 	FTRACE_OPS_FL_IPMODIFY			= 1 << 13,
 	FTRACE_OPS_FL_PID			= 1 << 14,
+	FTRACE_OPS_FL_PERMANENT                 = 1 << 15,
 };
 
 #ifdef CONFIG_DYNAMIC_FTRACE
