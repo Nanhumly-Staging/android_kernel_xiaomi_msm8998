@@ -2985,7 +2985,8 @@ static int __bpf_tx_xdp_map(struct net_device *dev_rx, void *fwd,
 	int err;
 
 	switch (map->map_type) {
-	case BPF_MAP_TYPE_DEVMAP: {
+	case BPF_MAP_TYPE_DEVMAP:
+	case BPF_MAP_TYPE_DEVMAP_HASH: {
 		struct net_device *dev = fwd;
 
 		if (!dev->netdev_ops->ndo_xdp_xmit)
@@ -3027,6 +3028,7 @@ void xdp_do_flush_map(void)
 	if (map) {
 		switch (map->map_type) {
 		case BPF_MAP_TYPE_DEVMAP:
+		case BPF_MAP_TYPE_DEVMAP_HASH:
 			__dev_map_flush(map);
 			break;
 		case BPF_MAP_TYPE_CPUMAP:
@@ -3082,10 +3084,10 @@ static int xdp_do_redirect_map(struct net_device *dev, struct xdp_buff *xdp,
 		goto err;
 	}
 
-	if (map->map_type == BPF_MAP_TYPE_DEVMAP)
-		fwd = __xdp_map_lookup_elem(map, index);
-	else if (map->map_type == BPF_MAP_TYPE_DEVMAP_HASH)
+	if (map->map_type == BPF_MAP_TYPE_DEVMAP_HASH)
 		fwd = __dev_map_hash_lookup_elem(map, index);
+	else
+		fwd = __xdp_map_lookup_elem(map, index);
 	if (!fwd) {
 		err = -EINVAL;
 		goto err;
