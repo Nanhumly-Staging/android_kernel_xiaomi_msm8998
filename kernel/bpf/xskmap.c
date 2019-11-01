@@ -15,14 +15,15 @@
 #include <linux/bpf.h>
 #include <linux/capability.h>
 #include <net/xdp_sock.h>
+#include <linux/overflow.h>
 #include <linux/slab.h>
 #include <linux/sched.h>
 
 struct xsk_map {
 	struct bpf_map map;
-	struct xdp_sock **xsk_map;
 	struct list_head __percpu *flush_list;
 	spinlock_t lock; /* Synchronize map updates */
+	struct xdp_sock *xsk_map[];
 };
 
 int xsk_map_inc(struct xsk_map *map)
@@ -89,9 +90,9 @@ static void xsk_map_sock_delete(struct xdp_sock *xs,
 
 static struct bpf_map *xsk_map_alloc(union bpf_attr *attr)
 {
-	int cpu, err = -EINVAL;
+	int cpu, err = -EINVAL, numa_node;
 	struct xsk_map *m;
-	u64 cost;
+	u64 cost, size;
 
 	if (!capable(CAP_NET_ADMIN))
 		return ERR_PTR(-EPERM);
@@ -101,15 +102,16 @@ static struct bpf_map *xsk_map_alloc(union bpf_attr *attr)
 	    attr->map_flags & ~(BPF_F_NUMA_NODE | BPF_F_RDONLY | BPF_F_WRONLY))
 		return ERR_PTR(-EINVAL);
 
-	m = kzalloc(sizeof(*m), GFP_USER);
+	numa_node = bpf_map_attr_numa_node(attr);
+	size = struct_size(m, xsk_map, attr->max_entries);
+	m = bpf_map_area_alloc(size, numa_node);
 	if (!m)
 		return ERR_PTR(-ENOMEM);
 
 	bpf_map_init_from_attr(&m->map, attr);
 	spin_lock_init(&m->lock);
 
-	cost = (u64)m->map.max_entries * sizeof(struct xdp_sock *);
-	cost += sizeof(struct list_head) * num_possible_cpus();
+	cost = size + sizeof(struct list_head) * num_possible_cpus();
 	if (cost >= U32_MAX - PAGE_SIZE)
 		goto free_m;
 
@@ -120,6 +122,7 @@ static struct bpf_map *xsk_map_alloc(union bpf_attr *attr)
 	if (err)
 		goto free_m;
 
+	err = -ENOMEM;
 	m->flush_list = alloc_percpu(struct list_head);
 	if (!m->flush_list)
 		goto free_m;
@@ -127,17 +130,10 @@ static struct bpf_map *xsk_map_alloc(union bpf_attr *attr)
 	for_each_possible_cpu(cpu)
 		INIT_LIST_HEAD(per_cpu_ptr(m->flush_list, cpu));
 
-	m->xsk_map = bpf_map_area_alloc(m->map.max_entries *
-					sizeof(struct xdp_sock *),
-					m->map.numa_node);
-	if (!m->xsk_map)
-		goto free_percpu;
 	return &m->map;
 
-free_percpu:
-	free_percpu(m->flush_list);
 free_m:
-	kfree(m);
+	bpf_map_area_free(m);
 	return ERR_PTR(err);
 }
 
@@ -147,8 +143,7 @@ static void xsk_map_free(struct bpf_map *map)
 
 	synchronize_net();
 	free_percpu(m->flush_list);
-	bpf_map_area_free(m->xsk_map);
-	kfree(m);
+	bpf_map_area_free(m);
 }
 
 static int xsk_map_get_next_key(struct bpf_map *map, void *key, void *next_key)
