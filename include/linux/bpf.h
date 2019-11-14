@@ -1182,4 +1182,11 @@ static inline u32 bpf_tcp_sock_convert_ctx_access(enum bpf_access_type type,
 
 struct btf_id_set;
 bool btf_id_set_contains(const struct btf_id_set *set, u32 id);
+
+enum bpf_text_poke_type {
+	BPF_MOD_CALL,
+	BPF_MOD_JUMP,
+};
+int bpf_arch_text_poke(void *ip, enum bpf_text_poke_type t,
+       void *addr1, void *addr2);
 #endif /* _LINUX_BPF_H */
