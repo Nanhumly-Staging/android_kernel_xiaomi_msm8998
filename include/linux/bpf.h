@@ -393,6 +393,10 @@ struct bpf_prog_stats {
 	struct u64_stats_sync syncp;
 };
 
+struct bpf_func_info_aux {
+	bool unreliable;
+};
+
 struct bpf_prog_aux {
 	atomic64_t refcnt;
 	u32 used_map_cnt;
@@ -428,6 +432,7 @@ struct bpf_prog_aux {
 	struct bpf_prog_offload *offload;
 	struct btf *btf;
 	struct bpf_func_info *func_info;
+	struct bpf_func_info_aux *func_info_aux;
 	/* bpf_line_info loaded from userspace.  linfo->insn_off
 	 * has the xlated insn offset.
 	 * Both the main and sub prog share the same linfo.
@@ -523,6 +528,7 @@ int btf_struct_access(struct bpf_verifier_log *log,
 		      enum bpf_access_type atype,
 		      u32 *next_btf_id);
 u32 btf_resolve_helper_id(struct bpf_verifier_log *log, void *, int);
+int btf_check_func_arg_match(struct bpf_verifier_env *env, int subprog);
 
 /* an array of programs to be executed under rcu_lock.
  *
