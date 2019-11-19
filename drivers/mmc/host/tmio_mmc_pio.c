@@ -723,7 +723,7 @@ static bool tmio_mmc_sdio_irq(int irq, void *devid)
 		return false;
 
 	status = sd_ctrl_read16(host, CTL_SDIO_STATUS);
-	ireg = status & TMIO_SDIO_MASK_ALL & ~host->sdcard_irq_mask;
+	ireg = status & TMIO_SDIO_MASK_ALL & ~host->sdio_irq_mask;
 
 	sdio_status = status & ~TMIO_SDIO_MASK_ALL;
 	if (pdata->flags & TMIO_MMC_SDIO_STATUS_QUIRK)
