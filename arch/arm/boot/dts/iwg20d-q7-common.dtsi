@@ -119,6 +119,10 @@
 	status = "okay";
 };
 
+&cmt0 {
+	status = "okay";
+};
+
 &hsusb {
 	status = "okay";
 	pinctrl-0 = <&usb0_pins>;
@@ -225,6 +229,11 @@
 			capture = <&ssi0 &src2 &dvc0>;
 		};
 	};
+};
+
+&rwdt {
+	timeout-sec = <60>;
+	status = "okay";
 };
 
 &scif0 {
