@@ -565,7 +565,7 @@ config MMC_SDHI
 	select MMC_TMIO_CORE
 	help
 	  This provides support for the SDHI SD/SDIO controller found in
-	  SuperH and ARM SH-Mobile SoCs
+	  Renesas SuperH, ARM and ARM64 based SoCs
 
 config MMC_CB710
 	tristate "ENE CB710 MMC/SD Interface support"
