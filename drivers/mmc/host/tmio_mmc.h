@@ -120,6 +120,7 @@ struct tmio_mmc_dma_ops {
 			struct tmio_mmc_data *pdata);
 	void (*release)(struct tmio_mmc_host *host);
 	void (*abort)(struct tmio_mmc_host *host);
+	void (*dataend)(struct tmio_mmc_host *host);
 };
 
 struct tmio_mmc_host {
