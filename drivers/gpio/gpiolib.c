@@ -296,7 +296,7 @@ static int gpiochip_init_valid_mask(struct gpio_chip *gpiochip)
 {
 #ifdef CONFIG_OF_GPIO
 	int size;
-	struct device_node *np = gpiochip->dev->of_node;
+	struct device_node *np = gpiochip->of_node;
 
 	size = of_property_count_u32_elems(np,  "gpio-reserved-ranges");
 	if (size > 0 && size % 2 == 0)
@@ -359,6 +359,11 @@ int gpiochip_add_data(struct gpio_chip *chip, void *data)
 		return -ENOMEM;
 
 	chip->data = data;
+
+#ifdef CONFIG_OF_GPIO
+	if ((!chip->of_node) && (chip->dev))
+		chip->of_node = chip->dev->of_node;
+#endif
 
 	spin_lock_irqsave(&gpio_lock, flags);
 

@@ -338,7 +338,7 @@ static void of_gpiochip_init_valid_mask(struct gpio_chip *chip)
 {
 	int len, i;
 	u32 start, count;
-	struct device_node *np = chip->dev->of_node;
+	struct device_node *np = chip->of_node;
 
 	len = of_property_count_u32_elems(np,  "gpio-reserved-ranges");
 	if (len < 0 || len % 2 != 0)
