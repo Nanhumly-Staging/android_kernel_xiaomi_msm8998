@@ -3010,7 +3010,7 @@ static int __bpf_tx_xdp_map(struct net_device *dev_rx, void *fwd,
 	case BPF_MAP_TYPE_XSKMAP: {
 		struct xdp_sock *xs = fwd;
 
-		err = __xsk_map_redirect(map, xdp, xs);
+		err = __xsk_map_redirect(xs, xdp);
 		return err;
 	}
 	default:
@@ -3035,7 +3035,7 @@ void xdp_do_flush_map(void)
 			__cpu_map_flush(map);
 			break;
 		case BPF_MAP_TYPE_XSKMAP:
-			__xsk_map_flush(map);
+			__xsk_map_flush();
 			break;
 		default:
 			break;

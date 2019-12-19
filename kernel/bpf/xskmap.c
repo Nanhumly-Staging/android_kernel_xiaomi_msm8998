@@ -83,9 +83,9 @@ static void xsk_map_sock_delete(struct xdp_sock *xs,
 
 static struct bpf_map *xsk_map_alloc(union bpf_attr *attr)
 {
-	int cpu, err = -EINVAL, numa_node;
+	int err = -EINVAL, numa_node;
 	struct xsk_map *m;
-	u64 cost, size;
+	u64 size;
 
 	if (!capable(CAP_NET_ADMIN))
 		return ERR_PTR(-EPERM);
@@ -104,24 +104,15 @@ static struct bpf_map *xsk_map_alloc(union bpf_attr *attr)
 	bpf_map_init_from_attr(&m->map, attr);
 	spin_lock_init(&m->lock);
 
-	cost = size + sizeof(struct list_head) * num_possible_cpus();
-	if (cost >= U32_MAX - PAGE_SIZE)
+	if (size >= U32_MAX - PAGE_SIZE)
 		goto free_m;
 
-	m->map.pages = round_up(cost, PAGE_SIZE) >> PAGE_SHIFT;
+	m->map.pages = round_up(size, PAGE_SIZE) >> PAGE_SHIFT;
 
 	/* Notice returns -EPERM on if map size is larger than memlock limit */
 	err = bpf_map_precharge_memlock(m->map.pages);
 	if (err)
 		goto free_m;
-
-	err = -ENOMEM;
-	m->flush_list = alloc_percpu(struct list_head);
-	if (!m->flush_list)
-		goto free_m;
-
-	for_each_possible_cpu(cpu)
-		INIT_LIST_HEAD(per_cpu_ptr(m->flush_list, cpu));
 
 	return &m->map;
 
@@ -135,7 +126,6 @@ static void xsk_map_free(struct bpf_map *map)
 	struct xsk_map *m = container_of(map, struct xsk_map, map);
 
 	synchronize_net();
-	free_percpu(m->flush_list);
 	bpf_map_area_free(m);
 }
 
