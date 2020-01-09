@@ -181,11 +181,6 @@
  */
 #define BTF_MAX_SIZE (16 * 1024 * 1024)
 
-#define for_each_member(i, struct_type, member)			\
-	for (i = 0, member = btf_type_member(struct_type);	\
-	     i < btf_type_vlen(struct_type);			\
-	     i++, member++)
-
 #define for_each_member_from(i, from, struct_type, member)		\
 	for (i = from, member = btf_type_member(struct_type) + from;	\
 	     i < btf_type_vlen(struct_type);				\
@@ -383,6 +378,65 @@ static bool btf_type_is_datasec(const struct btf_type *t)
 	return BTF_INFO_KIND(t->info) == BTF_KIND_DATASEC;
 }
 
+s32 btf_find_by_name_kind(const struct btf *btf, const char *name, u8 kind)
+{
+	const struct btf_type *t;
+	const char *tname;
+	u32 i;
+
+	for (i = 1; i <= btf->nr_types; i++) {
+		t = btf->types[i];
+		if (BTF_INFO_KIND(t->info) != kind)
+			continue;
+
+		tname = btf_name_by_offset(btf, t->name_off);
+		if (!strcmp(tname, name))
+			return i;
+	}
+
+	return -ENOENT;
+}
+
+const struct btf_type *btf_type_skip_modifiers(const struct btf *btf,
+					       u32 id, u32 *res_id)
+{
+	const struct btf_type *t = btf_type_by_id(btf, id);
+
+	while (btf_type_is_modifier(t)) {
+		id = t->type;
+		t = btf_type_by_id(btf, t->type);
+	}
+
+	if (res_id)
+		*res_id = id;
+
+	return t;
+}
+
+const struct btf_type *btf_type_resolve_ptr(const struct btf *btf,
+					    u32 id, u32 *res_id)
+{
+	const struct btf_type *t;
+
+	t = btf_type_skip_modifiers(btf, id, NULL);
+	if (!btf_type_is_ptr(t))
+		return NULL;
+
+	return btf_type_skip_modifiers(btf, t->type, res_id);
+}
+
+const struct btf_type *btf_type_resolve_func_ptr(const struct btf *btf,
+						 u32 id, u32 *res_id)
+{
+	const struct btf_type *ptype;
+
+	ptype = btf_type_resolve_ptr(btf, id, res_id);
+	if (ptype && btf_type_is_func_proto(ptype))
+		return ptype;
+
+	return NULL;
+}
+
 /* Types that act only as a source, not sink or intermediate
  * type when resolving.
  */
@@ -447,30 +501,6 @@ static const char *btf_int_encoding_str(u8 encoding)
 		return "UNKN";
 }
 
-static u16 btf_type_vlen(const struct btf_type *t)
-{
-	return BTF_INFO_VLEN(t->info);
-}
-
-static bool btf_type_kflag(const struct btf_type *t)
-{
-	return BTF_INFO_KFLAG(t->info);
-}
-
-static u32 btf_member_bit_offset(const struct btf_type *struct_type,
-			     const struct btf_member *member)
-{
-	return btf_type_kflag(struct_type) ? BTF_MEMBER_BIT_OFFSET(member->offset)
-					   : member->offset;
-}
-
-static u32 btf_member_bitfield_size(const struct btf_type *struct_type,
-				    const struct btf_member *member)
-{
-	return btf_type_kflag(struct_type) ? BTF_MEMBER_BITFIELD_SIZE(member->offset)
-					   : 0;
-}
-
 static u32 btf_type_int(const struct btf_type *t)
 {
 	return *(u32 *)(t + 1);
@@ -479,11 +509,6 @@ static u32 btf_type_int(const struct btf_type *t)
 static const struct btf_array *btf_type_array(const struct btf_type *t)
 {
 	return (const struct btf_array *)(t + 1);
-}
-
-static const struct btf_member *btf_type_member(const struct btf_type *t)
-{
-	return (const struct btf_member *)(t + 1);
 }
 
 static const struct btf_enum *btf_type_enum(const struct btf_type *t)
@@ -1056,7 +1081,7 @@ static const struct resolve_vertex *env_stack_peak(struct btf_verifier_env *env)
  * *elem_type: same as return type ("struct X")
  * *total_nelems: 1
  */
-static const struct btf_type *
+const struct btf_type *
 btf_resolve_size(const struct btf *btf, const struct btf_type *type,
 		 u32 *type_size, const struct btf_type **elem_type,
 		 u32 *total_nelems)
@@ -1110,8 +1135,10 @@ resolved:
 		return ERR_PTR(-EINVAL);
 
 	*type_size = nelems * size;
-	*total_nelems = nelems;
-	*elem_type = type;
+	if (total_nelems)
+		*total_nelems = nelems;
+	if (elem_type)
+		*elem_type = type;
 
 	return array_type ? : type;
 }
@@ -1804,7 +1831,10 @@ static void btf_modifier_seq_show(const struct btf *btf,
 				  u32 type_id, void *data,
 				  u8 bits_offset, struct seq_file *m)
 {
-	t = btf_type_id_resolve(btf, &type_id);
+	if (btf->resolved_ids)
+		t = btf_type_id_resolve(btf, &type_id);
+	else
+		t = btf_type_skip_modifiers(btf, type_id, NULL);
 
 	btf_type_ops(t)->seq_show(btf, t, type_id, data, bits_offset, m);
 }
