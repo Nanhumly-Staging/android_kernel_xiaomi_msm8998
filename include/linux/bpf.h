@@ -394,6 +394,7 @@ struct bpf_prog_stats {
 };
 
 struct bpf_func_info_aux {
+	u16 linkage;
 	bool unreliable;
 };
 
@@ -528,7 +529,11 @@ int btf_struct_access(struct bpf_verifier_log *log,
 		      enum bpf_access_type atype,
 		      u32 *next_btf_id);
 u32 btf_resolve_helper_id(struct bpf_verifier_log *log, void *, int);
-int btf_check_func_arg_match(struct bpf_verifier_env *env, int subprog);
+struct bpf_reg_state;
+int btf_check_func_arg_match(struct bpf_verifier_env *env, int subprog,
+			     struct bpf_reg_state *regs);
+int btf_prepare_func_args(struct bpf_verifier_env *env, int subprog,
+			  struct bpf_reg_state *reg);
 
 /* an array of programs to be executed under rcu_lock.
  *
