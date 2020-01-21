@@ -477,7 +477,8 @@ void notrace __bpf_prog_exit(struct bpf_prog *prog, u64 start);
 enum bpf_tramp_prog_type {
 	BPF_TRAMP_FENTRY,
 	BPF_TRAMP_FEXIT,
-	BPF_TRAMP_MAX
+	BPF_TRAMP_MAX,
+	BPF_TRAMP_REPLACE, /* more than MAX */
 };
 
 struct bpf_trampoline {
@@ -492,6 +493,11 @@ struct bpf_trampoline {
 		void *addr;
 		bool ftrace_managed;
 	} func;
+	/* if !NULL this is BPF_PROG_TYPE_EXT program that extends another BPF
+	 * program by replacing one of its functions. func.addr is the address
+	 * of the function it replaced.
+	 */
+	struct bpf_prog *extension_prog;
 	/* list of BPF programs using this trampoline */
 	struct hlist_head progs_hlist[BPF_TRAMP_MAX];
 	/* Number of attached programs. A counter per kind. */
@@ -946,6 +952,11 @@ int btf_distill_func_proto(struct bpf_verifier_log *log, struct btf *btf,
                            const struct btf_type *func_proto,
                            const char *func_name, struct btf_func_model *m);
 u32 btf_resolve_helper_id(struct bpf_verifier_log *log, void *fn, int arg);
+
+struct bpf_reg_state;
+int btf_check_type_match(struct bpf_verifier_env *env, struct bpf_prog *prog,
+                         struct btf *btf, const struct btf_type *t);
+struct bpf_prog *bpf_prog_by_id(u32 id);
 #else /* !CONFIG_BPF_SYSCALL */
 static inline struct bpf_prog *bpf_prog_get(u32 ufd)
 {
