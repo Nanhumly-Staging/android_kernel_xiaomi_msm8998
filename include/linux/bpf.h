@@ -466,7 +466,8 @@ struct btf_func_model {
  *      fentry = a set of program to run before calling original function
  *      fexit = a set of program to run after original function
  */
-int arch_prepare_bpf_trampoline(void *image, struct btf_func_model *m, u32 flags,
+int arch_prepare_bpf_trampoline(void *image, void *image_end,
+                            struct btf_func_model *m, u32 flags,
 				struct bpf_prog **fentry_progs, int fentry_cnt,
 				struct bpf_prog **fexit_progs, int fexit_cnt,
 				void *orig_call);

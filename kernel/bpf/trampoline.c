@@ -167,7 +167,17 @@ static int bpf_trampoline_update(struct bpf_trampoline *tr)
 	if (fexit_cnt)
 		flags = BPF_TRAMP_F_CALL_ORIG | BPF_TRAMP_F_SKIP_FRAME;
 
-	err = arch_prepare_bpf_trampoline(new_image, &tr->func.model, flags,
+	/* Though the second half of trampoline page is unused a task could be
+	 * preempted in the middle of the first half of trampoline and two
+	 * updates to trampoline would change the code from underneath the
+	 * preempted task. Hence wait for tasks to voluntarily schedule or go
+	 * to userspace.
+	 */
+	synchronize_rcu_tasks();
+
+	err = arch_prepare_bpf_trampoline(new_image, new_image + PAGE_SIZE / 2,
+					  &tr->func.model, flags,
+
 					  fentry, fentry_cnt,
 					  fexit, fexit_cnt,
 					  tr->func.addr);
@@ -287,6 +297,8 @@ void bpf_trampoline_put(struct bpf_trampoline *tr)
 		goto out;
 	if (WARN_ON_ONCE(!hlist_empty(&tr->progs_hlist[BPF_TRAMP_FEXIT])))
 		goto out;
+	/* wait for tasks to get out of trampoline before freeing it */
+	synchronize_rcu_tasks();
 	bpf_jit_free_exec(tr->image);
 	hlist_del(&tr->hlist);
 	kfree(tr);
@@ -333,7 +345,8 @@ void notrace __bpf_prog_exit(struct bpf_prog *prog, u64 start)
 }
 
 int __weak
-arch_prepare_bpf_trampoline(void *image, struct btf_func_model *m, u32 flags,
+arch_prepare_bpf_trampoline(void *image, void *image_end,
+                            struct btf_func_model *m, u32 flags,
 			    struct bpf_prog **fentry_progs, int fentry_cnt,
 			    struct bpf_prog **fexit_progs, int fexit_cnt,
 			    void *orig_call)
