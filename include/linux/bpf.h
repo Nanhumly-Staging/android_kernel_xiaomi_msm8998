@@ -512,7 +512,13 @@ struct bpf_trampoline *bpf_trampoline_lookup(u64 key);
 int bpf_trampoline_link_prog(struct bpf_prog *prog);
 int bpf_trampoline_unlink_prog(struct bpf_prog *prog);
 void bpf_trampoline_put(struct bpf_trampoline *tr);
-void *bpf_jit_alloc_exec_page(void);
+struct bpf_image {
+	struct latch_tree_node tnode;
+	unsigned char data[];
+};
+#define BPF_IMAGE_SIZE (PAGE_SIZE - sizeof(struct bpf_image))
+bool is_bpf_image_address(unsigned long address);
+void *bpf_image_alloc(void);
 #else
 static inline struct bpf_trampoline *bpf_trampoline_lookup(u64 key)
 {
@@ -527,6 +533,10 @@ static inline int bpf_trampoline_unlink_prog(struct bpf_prog *prog)
 	return -ENOTSUPP;
 }
 static inline void bpf_trampoline_put(struct bpf_trampoline *tr) {}
+static inline bool is_bpf_image_address(unsigned long address)
+{
+	return false;
+}
 #endif
 
 struct bpf_prog_aux {
