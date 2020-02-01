@@ -3803,6 +3803,7 @@ again:
 
 		if (btf_type_is_ptr(mtype)) {
 			const struct btf_type *stype;
+			u32 id;
 
 			if (msize != size || off != moff) {
 				bpf_log(log,
@@ -3811,12 +3812,9 @@ again:
 				return -EACCES;
 			}
 
-			stype = btf_type_by_id(btf_vmlinux, mtype->type);
-			/* skip modifiers */
-			while (btf_type_is_modifier(stype))
-				stype = btf_type_by_id(btf_vmlinux, stype->type);
+			stype = btf_type_skip_modifiers(btf_vmlinux, mtype->type, &id);
 			if (btf_type_is_struct(stype)) {
-				*next_btf_id = mtype->type;
+				*next_btf_id = id;
 				return PTR_TO_BTF_ID;
 			}
 		}
