@@ -91,14 +91,6 @@ struct dss_module_power {
 	struct dss_clk *clk_config;
 };
 
-#ifdef CONFIG_MACH_XIAOMI_MSM8998
-bool mdss_panel_is_prim(void *fbinfo);
-bool mdss_prim_panel_is_dead(void);
-void mdss_panel_reset_skip_enable(bool enable);
-void mdss_dsi_ulps_enable(bool enable);
-void mdss_dsi_ulps_suspend_enable(bool enable);
-#endif
-
 int msm_dss_ioremap_byname(struct platform_device *pdev,
 	struct dss_io_data *io_data, const char *name);
 void msm_dss_iounmap(struct dss_io_data *io_data);
@@ -119,5 +111,17 @@ int mdss_i2c_byte_read(struct i2c_client *client, uint8_t slave_addr,
 		       uint8_t reg_offset, uint8_t *read_buf);
 int mdss_i2c_byte_write(struct i2c_client *client, uint8_t slave_addr,
 			uint8_t reg_offset, uint8_t *value);
+#ifdef CONFIG_MACH_XIAOMI
+bool mdss_panel_is_prim(void *fbinfo);
+bool mdss_prim_panel_is_dead(void);
+void mdss_panel_reset_skip_enable(bool enable);
+void mdss_dsi_ulps_enable(bool enable);
+void mdss_dsi_ulps_suspend_enable(bool enable);
+int mdss_prim_panel_fb_unblank(int timeout);
+void mdss_fb_prim_panel_recover(void);
+
+int mdss_prim_panel_fb_unblank(int timeout);
+void mdss_fb_prim_panel_recover(void);
+#endif
 
 #endif /* __MDSS_IO_UTIL_H__ */

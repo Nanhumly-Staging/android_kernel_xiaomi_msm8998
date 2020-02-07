@@ -1,4 +1,5 @@
 /* Copyright (c) 2012-2018, 2020, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2019 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -35,7 +36,14 @@
 
 DEFINE_LED_TRIGGER(bl_led_trigger);
 
-#ifdef CONFIG_MACH_XIAOMI_MSM8998
+#ifdef CONFIG_MACH_XIAOMI
+#define PANEL_DIMMING_ON_CMD 0xF00
+#define DISPLAY_OFF_MODE 0x60000
+#define DISPLAY_ON_MODE 0x70000
+
+#define PANEL_READ_CNT    32
+#define ESD_CHECK_CMD 3
+
 static bool mdss_panel_reset_skip;
 static struct mdss_panel_info *mdss_pinfo;
 
@@ -418,7 +426,7 @@ int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 
 	pinfo = &(ctrl_pdata->panel_data.panel_info);
 
-#ifdef CONFIG_MACH_XIAOMI_MSM8998
+#ifdef CONFIG_MACH_XIAOMI
 	/* For TDDI ddic panel, LCD shares reset pin with touch.
 	 * If gesture wakeup feature is enabled, the reset pin
 	 * should be controlled by touch. In this case, reset pin
@@ -428,6 +436,19 @@ int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 	if (mdss_panel_reset_skip && !pinfo->panel_dead) {
 		pr_info("%s: panel reset skip\n", __func__);
 		return rc;
+	}
+	
+	/* For some TDDI ddic panel, LCD RST and TP RST need control Individually.
+	 * so reset TPRST pin before LCD reset
+	 * it should be according to panel's request
+	 */
+	if (pdata->panel_info.tp_rst_seq_len) {
+		for (i = 0; i < pdata->panel_info.tp_rst_seq_len; ++i) {
+			gpio_set_value((ctrl_pdata->tp_rst_gpio),
+				pdata->panel_info.tp_rst_seq[i]);
+			if (pdata->panel_info.tp_rst_seq[++i])
+				usleep_range(pinfo->tp_rst_seq[i] * 1000, pinfo->tp_rst_seq[i] * 1000);
+		}
 	}
 #endif
 
@@ -546,6 +567,17 @@ int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 			gpio_set_value(ctrl_pdata->lcd_mode_sel_gpio, 0);
 			gpio_free(ctrl_pdata->lcd_mode_sel_gpio);
 		}
+
+#ifdef CONFIG_MACH_XIAOMI
+		/* For some TDDI ddic panel, LCD RST and TP RST need control Individually.
+		* so pull low TPRST pin after LCD RST pin pull low
+		* it should be according to panel's request
+		*/
+		if (pdata->panel_info.tp_rst_seq_len) {
+			usleep_range(5000, 5000);
+			gpio_set_value((ctrl_pdata->tp_rst_gpio), 0);
+		}
+#endif
 	}
 
 exit:
@@ -802,6 +834,43 @@ end:
 	return 0;
 }
 
+#ifdef CONFIG_MACH_XIAOMI
+static inline void mdss_panel_disparam_set(struct mdss_dsi_ctrl_pdata *ctrl, uint32_t param)
+{
+	uint32_t temp = 0;
+
+	temp = param & 0x000F0000;
+	switch (temp) {
+	case DISPLAY_OFF_MODE:
+		if (ctrl->displayoff_cmds.cmd_cnt) {
+			pr_info("display off mode\n");
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->displayoff_cmds, CMD_REQ_COMMIT);
+		}
+		break;
+	case DISPLAY_ON_MODE:
+		if (ctrl->displayon_cmds.cmd_cnt) {
+			pr_info("display on mode\n");
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->displayon_cmds, CMD_REQ_COMMIT);
+		}
+		break;
+	default:
+		break;
+	}
+
+	temp = param & 0x00000F00;
+	switch (temp) {
+	case 0xF00:		/*dimming*/
+		if (ctrl->dispparam_dimmingon_cmds.cmd_cnt) {
+			pr_info("dimmingon\n");
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->dispparam_dimmingon_cmds, CMD_REQ_COMMIT);
+		}
+		break;
+	default:
+		break;
+	}
+}
+#endif
+
 static int mdss_dsi_panel_apply_display_setting(struct mdss_panel_data *pdata,
 							u32 mode)
 {
@@ -918,6 +987,19 @@ static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
 	if ((bl_level < pdata->panel_info.bl_min) && (bl_level != 0))
 		bl_level = pdata->panel_info.bl_min;
 
+#ifdef CONFIG_MACH_XIAOMI
+	if (bl_level == 0) {
+		pr_debug("%s: set display off when bl_level=0\n", __func__);
+		mdss_panel_disparam_set(ctrl_pdata, DISPLAY_OFF_MODE);
+		ctrl_pdata->dsi_panel_off_mode = true;
+	} else {
+		if (ctrl_pdata->bklt_level == 0 && ctrl_pdata->dsi_panel_off_mode == true) {
+			pr_debug("%s: set display on when bklt_level=0\n", __func__);
+			mdss_panel_disparam_set(ctrl_pdata, DISPLAY_ON_MODE);
+		}
+	}
+#endif
+
 	/* enable the backlight gpio if present */
 	mdss_dsi_bl_gpio_ctrl(pdata, bl_level);
 
@@ -957,7 +1039,46 @@ static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
 			__func__);
 		break;
 	}
+	
+#ifdef CONFIG_MACH_XIAOMI
+	if (ctrl_pdata->bklt_level == 0 && bl_level) {
+		if (pdata->panel_info.panel_on_dimming_delay)
+			schedule_delayed_work(&ctrl_pdata->cmds_work,
+				msecs_to_jiffies(pdata->panel_info.panel_on_dimming_delay));
+	}
+	ctrl_pdata->bklt_level = bl_level;
+#endif
 }
+
+#ifdef CONFIG_MACH_XIAOMI
+static void panelon_dimming_enable_delayed_work(struct work_struct *work)
+{
+	struct mdss_dsi_ctrl_pdata *ctrl = container_of(work,
+				struct mdss_dsi_ctrl_pdata, cmds_work.work);
+	mdss_panel_disparam_set(ctrl, PANEL_DIMMING_ON_CMD);
+}
+
+static char rbuf[PANEL_READ_CNT];
+static void mdss_dsi_initial_read_cb(u32 cb_result)
+{
+	u32 i;
+
+	pr_info("%s: 0x%x. \n", __func__, cb_result);
+	for (i = 0; i < cb_result; i++)
+		pr_err("ESD - initial, 0A:0x%x ", rbuf[i]);
+}
+
+static void panel_dead_report_delayed_work(struct work_struct *work)
+{
+	struct mdss_dsi_ctrl_pdata *ctrl = container_of(work,
+				struct mdss_dsi_ctrl_pdata, panel_dead_report_work.work);
+
+	if (ctrl && ctrl->panel_data.panel_dead_report) {
+		pr_info("%s: panel dead at the time of unblank\n", __func__);
+		ctrl->panel_data.panel_dead_report();
+	}
+}
+#endif
 
 static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 {
@@ -994,6 +1115,24 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	if (on_cmds->cmd_cnt)
 		mdss_dsi_panel_cmds_send(ctrl, on_cmds, CMD_REQ_COMMIT);
 
+#ifdef CONFIG_MACH_XIAOMI
+	if (pinfo->panel_dead && pinfo->initial_esd_check.check_cmd
+		&& pinfo->initial_esd_check.check_value) {
+		memset((void *)rbuf, 0, PANEL_READ_CNT);
+		mdss_dsi_panel_cmd_read(ctrl, pinfo->initial_esd_check.check_cmd,
+			0x00, (void *)mdss_dsi_initial_read_cb, rbuf, 1);
+		if (rbuf[0] != pinfo->initial_esd_check.check_value) {
+			pr_info("%s: read panel fail, ret:%d\n", __func__, ret);
+			if (pinfo->initial_esd_check.panel_dead_report_delay)
+				schedule_delayed_work(&ctrl->panel_dead_report_work,
+					msecs_to_jiffies(pinfo->initial_esd_check.panel_dead_report_delay));
+		}
+	}
+
+	if (!pinfo->panel_on_dimming_delay)
+		mdss_panel_disparam_set(ctrl, PANEL_DIMMING_ON_CMD);
+#endif
+
 	if (pinfo->compression_mode == COMPRESSION_DSC)
 		mdss_dsi_panel_dsc_pps_send(ctrl, pinfo);
 
@@ -1002,6 +1141,10 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 
 	/* Ensure low persistence mode is set as before */
 	mdss_dsi_panel_apply_display_setting(pdata, pinfo->persist_mode);
+
+#ifdef CONFIG_MACH_XIAOMI
+	ctrl->dsi_panel_off_mode = false;
+#endif
 
 	if (pdata->event_handler)
 		pdata->event_handler(pdata, MDSS_EVENT_UPDATE_LIVEDISPLAY,
@@ -1028,6 +1171,11 @@ static int mdss_dsi_post_panel_on(struct mdss_panel_data *pdata)
 				panel_data);
 
 	pr_debug("%s: ctrl=%pK ndx=%d\n", __func__, ctrl, ctrl->ndx);
+
+#ifdef CONFIG_MACH_XIAOMI
+	cancel_delayed_work_sync(&ctrl->cmds_work);
+	cancel_delayed_work_sync(&ctrl->panel_dead_report_work);
+#endif
 
 	pinfo = &pdata->panel_info;
 	if (pinfo->dcs_cmd_by_left && ctrl->ndx != DSI_CTRL_LEFT)
@@ -2069,10 +2217,48 @@ static void mdss_dsi_parse_esd_params(struct device_node *np,
 {
 	u32 tmp;
 	u32 i, status_len, *lenp;
+#ifdef CONFIG_MACH_XIAOMI
+	u32 esd_check_cmd[ESD_CHECK_CMD];
+#endif
 	int rc;
 	struct property *data;
 	const char *string;
 	struct mdss_panel_info *pinfo = &ctrl->panel_data.panel_info;
+#ifdef CONFIG_MACH_XIAOMI
+	enum of_gpio_flags esd_interrupt_flags = 0;
+
+	pinfo->esd_err_irq = 0;
+	pinfo->esd_err_irq_gpio = of_get_named_gpio_flags(np,
+		"qcom,esd-err-irq-gpio", 0, &esd_interrupt_flags);
+	pinfo->esd_interrupt_flags = (u32)esd_interrupt_flags;
+
+	if (gpio_is_valid(pinfo->esd_err_irq_gpio)) {
+		pinfo->esd_err_irq = gpio_to_irq(pinfo->esd_err_irq_gpio);
+
+		rc = gpio_request(pinfo->esd_err_irq_gpio, "esd_err_irq_gpio");
+		if (rc) {
+			pr_err("%s: Failed to get gpio %d (code: %d)",
+				__func__, pinfo->esd_err_irq_gpio, rc);
+		} else {
+			gpio_direction_input(pinfo->esd_err_irq_gpio);
+		}
+	}
+
+	rc = of_property_read_u32_array(np, "qcom,initial-esd-check-cmd",
+		esd_check_cmd, ESD_CHECK_CMD);
+	if (rc) {
+		pr_debug("%s:%d, Unable to read reset esd check cmd\n",
+		       __func__, __LINE__);
+	} else {
+		pinfo->initial_esd_check.check_cmd = esd_check_cmd[0];
+		pinfo->initial_esd_check.check_value = esd_check_cmd[1];
+		pinfo->initial_esd_check.panel_dead_report_delay = esd_check_cmd[2];
+		pr_info("%s, initial check cmd:0x%x, check value:0x%x, delay:%d\n",
+		       __func__, pinfo->initial_esd_check.check_cmd,
+		       pinfo->initial_esd_check.check_value,
+		       pinfo->initial_esd_check.panel_dead_report_delay);
+	}
+#endif
 
 	pinfo->esd_check_enabled = of_property_read_bool(np,
 		"qcom,esd-check-enabled");
@@ -2992,6 +3178,18 @@ static int mdss_panel_parse_dt(struct device_node *np,
 	pinfo->mipi.force_clk_lane_hs = of_property_read_bool(np,
 		"qcom,mdss-dsi-force-clock-lane-hs");
 
+#ifdef CONFIG_MACH_XIAOMI
+	mdss_dsi_parse_reset_seq(np, pinfo->tp_rst_seq, &(pinfo->tp_rst_seq_len),
+		"qcom,mdss-dsi-tp-reset-sequence");
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->dispparam_dimmingon_cmds,
+		"qcom,mdss-dsi-dispparam-dimmingon-command", "qcom,mdss-dsi-dispparam-dimmingon-command-state");
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->displayoff_cmds,
+		"qcom,mdss-dsi-displayoff-command", "qcom,mdss-dsi-displayoff-command-state");
+
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->displayon_cmds,
+		"qcom,mdss-dsi-displayon-command", "qcom,mdss-dsi-displayon-command-state");
+#endif
+
 	rc = mdss_dsi_parse_panel_features(np, ctrl_pdata);
 	if (rc) {
 		pr_err("%s: failed to parse panel features\n", __func__);
@@ -3050,7 +3248,7 @@ int mdss_dsi_panel_init(struct device_node *node,
 
 	pinfo = &ctrl_pdata->panel_data.panel_info;
 
-#ifdef CONFIG_MACH_XIAOMI_MSM8998
+#ifdef CONFIG_MACH_XIAOMI
 	mdss_pinfo = pinfo;
 #endif
 
@@ -3069,6 +3267,18 @@ int mdss_dsi_panel_init(struct device_node *node,
 		pr_err("%s:%d panel dt parse failed\n", __func__, __LINE__);
 		return rc;
 	}
+
+#ifdef CONFIG_MACH_XIAOMI
+	INIT_DELAYED_WORK(&ctrl_pdata->cmds_work, panelon_dimming_enable_delayed_work);
+	INIT_DELAYED_WORK(&ctrl_pdata->panel_dead_report_work, panel_dead_report_delayed_work);
+
+	rc = of_property_read_u32(node, "qcom,mdss-panel-on-dimming-delay", &pinfo->panel_on_dimming_delay);
+	if (rc) {
+		pinfo->panel_on_dimming_delay = 0;
+		pr_info("Panel on dimming delay disabled\n");
+	} else
+		pr_info("Panel on dimming delay %d ms\n", pinfo->panel_on_dimming_delay);
+#endif
 
 	pinfo->dynamic_switch_pending = false;
 	pinfo->is_lpm_mode = false;
