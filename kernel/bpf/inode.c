@@ -27,6 +27,7 @@ enum bpf_type {
 	BPF_TYPE_UNSPEC	= 0,
 	BPF_TYPE_PROG,
 	BPF_TYPE_MAP,
+	BPF_TYPE_LINK,
 };
 
 static void *bpf_any_get(void *raw, enum bpf_type type)
@@ -37,6 +38,9 @@ static void *bpf_any_get(void *raw, enum bpf_type type)
 		break;
 	case BPF_TYPE_MAP:
 		bpf_map_inc_with_uref(raw);
+		break;
+	case BPF_TYPE_LINK:
+		bpf_link_inc(raw);
 		break;
 	default:
 		WARN_ON_ONCE(1);
@@ -55,6 +59,9 @@ static void bpf_any_put(void *raw, enum bpf_type type)
 	case BPF_TYPE_MAP:
 		bpf_map_put_with_uref(raw);
 		break;
+	case BPF_TYPE_LINK:
+		bpf_link_put(raw);
+		break;
 	default:
 		WARN_ON_ONCE(1);
 		break;
@@ -65,20 +72,32 @@ static void *bpf_fd_probe_obj(u32 ufd, enum bpf_type *type)
 {
 	void *raw;
 
-	*type = BPF_TYPE_MAP;
 	raw = bpf_map_get_with_uref(ufd);
-	if (IS_ERR(raw)) {
-		*type = BPF_TYPE_PROG;
-		raw = bpf_prog_get(ufd);
+	if (!IS_ERR(raw)) {
+		*type = BPF_TYPE_MAP;
+		return raw;
 	}
 
-	return raw;
+	raw = bpf_prog_get(ufd);
+	if (!IS_ERR(raw)) {
+		*type = BPF_TYPE_PROG;
+		return raw;
+	}
+
+	raw = bpf_link_get_from_fd(ufd);
+	if (!IS_ERR(raw)) {
+		*type = BPF_TYPE_LINK;
+		return raw;
+	}
+
+	return ERR_PTR(-EINVAL);
 }
 
 static const struct inode_operations bpf_dir_iops;
 
 static const struct inode_operations bpf_prog_iops = { };
 static const struct inode_operations bpf_map_iops  = { };
+static const struct inode_operations bpf_link_iops  = { };
 
 static struct inode *bpf_get_inode(struct super_block *sb,
 				   const struct inode *dir,
@@ -116,6 +135,8 @@ static int bpf_inode_type(const struct inode *inode, enum bpf_type *type)
 		*type = BPF_TYPE_PROG;
 	else if (inode->i_op == &bpf_map_iops)
 		*type = BPF_TYPE_MAP;
+	else if (inode->i_op == &bpf_link_iops)
+		*type = BPF_TYPE_LINK;
 	else
 		return -EACCES;
 
@@ -329,6 +350,8 @@ static int bpf_mkobj(struct inode *dir, struct dentry *dentry, umode_t mode,
 		return bpf_mkobj_ops(dir, dentry, mode, &bpf_prog_iops, NULL);
 	case BPF_TYPE_MAP:
 		return bpf_mkobj_ops(dir, dentry, mode, &bpf_map_iops, NULL);
+	case BPF_TYPE_LINK:
+		return bpf_mkobj_ops(dir, dentry, mode, &bpf_link_iops, NULL);
 	default:
 		return -EPERM;
 	}
@@ -504,6 +527,8 @@ int bpf_obj_get_user(const char __user *pathname, int flags)
 		ret = bpf_prog_new_fd(raw);
 	else if (type == BPF_TYPE_MAP)
 		ret = bpf_map_new_fd(raw, f_flags);
+	else if (type == BPF_TYPE_LINK)
+		ret = bpf_link_new_fd(raw);
 	else
 		goto out;
 
@@ -529,6 +554,8 @@ static struct bpf_prog *__get_prog_inode(struct inode *inode, enum bpf_prog_type
 		return ERR_PTR(ret);
 
 	if (inode->i_op == &bpf_map_iops)
+		return ERR_PTR(-EINVAL);
+	if (inode->i_op == &bpf_link_iops)
 		return ERR_PTR(-EINVAL);
 	if (inode->i_op != &bpf_prog_iops)
 		return ERR_PTR(-EACCES);
