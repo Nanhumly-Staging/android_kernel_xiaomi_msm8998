@@ -2133,24 +2133,55 @@ static int bpf_obj_get(const union bpf_attr *attr)
 				attr->file_flags);
 }
 
-static int bpf_tracing_prog_release(struct inode *inode, struct file *filp)
-{
-        struct bpf_prog *prog = filp->private_data;
+struct bpf_tracing_link {
+	struct bpf_link link;
+	enum bpf_attach_type attach_type;
+};
 
-        WARN_ON_ONCE(bpf_trampoline_unlink_prog(prog));
-        bpf_prog_put(prog);
-        return 0;
+static void bpf_tracing_link_release(struct bpf_link *link)
+{
+	WARN_ON_ONCE(bpf_trampoline_unlink_prog(link->prog));
 }
 
-static const struct file_operations bpf_tracing_prog_fops = {
-        .release = bpf_tracing_prog_release,
-        .read = bpf_dummy_read,
-        .write = bpf_dummy_write,
+static void bpf_tracing_link_dealloc(struct bpf_link *link)
+{
+	struct bpf_tracing_link *tr_link =
+		container_of(link, struct bpf_tracing_link, link);
+
+	kfree(tr_link);
+}
+
+static void bpf_tracing_link_show_fdinfo(const struct bpf_link *link,
+					 struct seq_file *seq)
+{
+	struct bpf_tracing_link *tr_link =
+		container_of(link, struct bpf_tracing_link, link);
+
+	seq_printf(seq, "attach_type:\t%d\n", tr_link->attach_type);
+}
+
+static int bpf_tracing_link_fill_link_info(const struct bpf_link *link,
+					   struct bpf_link_info *info)
+{
+	struct bpf_tracing_link *tr_link =
+		container_of(link, struct bpf_tracing_link, link);
+
+	info->tracing.attach_type = tr_link->attach_type;
+	return 0;
+}
+
+static const struct bpf_link_ops bpf_tracing_link_lops = {
+	.release = bpf_tracing_link_release,
+	.dealloc = bpf_tracing_link_dealloc,
+	.show_fdinfo = bpf_tracing_link_show_fdinfo,
+	.fill_link_info = bpf_tracing_link_fill_link_info,
 };
 
 static int bpf_tracing_prog_attach(struct bpf_prog *prog)
 {
-        int tr_fd, err;
+	struct bpf_link_primer link_primer;
+	struct bpf_tracing_link *link;
+	int err;
 
 	if (prog->expected_attach_type != BPF_TRACE_FENTRY &&
 	    prog->expected_attach_type != BPF_TRACE_FEXIT &&
@@ -2160,23 +2191,33 @@ static int bpf_tracing_prog_attach(struct bpf_prog *prog)
 		goto out_put_prog;
 	}
 
-	err = bpf_trampoline_link_prog(prog);
-	if (err)
-		goto out_put_prog;
-
-	tr_fd = anon_inode_getfd("bpf-tracing-prog", &bpf_tracing_prog_fops,
-				 prog, O_CLOEXEC);
-	if (tr_fd < 0) {
-		WARN_ON_ONCE(bpf_trampoline_unlink_prog(prog));
-		err = tr_fd;
+	link = kzalloc(sizeof(*link), GFP_USER);
+	if (!link) {
+		err = -ENOMEM;
 		goto out_put_prog;
 	}
-	return tr_fd;
 
+	bpf_link_init(&link->link, BPF_LINK_TYPE_TRACING,
+		      &bpf_tracing_link_lops, prog);
+	link->attach_type = prog->expected_attach_type;
+
+	err = bpf_link_prime(&link->link, &link_primer);
+	if (err) {
+		kfree(link);
+		goto out_put_prog;
+	}
+
+	err = bpf_trampoline_link_prog(prog);
+	if (err) {
+		bpf_link_cleanup(&link_primer);
+		goto out_put_prog;
+	}
+
+	return bpf_link_settle(&link_primer);
 
 out_put_prog:
-        bpf_prog_put(prog);
-        return err;
+	bpf_prog_put(prog);
+	return err;
 }
 
 static int bpf_prog_attach_check_attach_type(const struct bpf_prog *prog,
