@@ -333,12 +333,13 @@ EXPORT_SYMBOL_GPL(__udp6_lib_lookup);
 
 static struct sock *__udp6_lib_lookup_skb(struct sk_buff *skb,
 					  __be16 sport, __be16 dport,
-					  struct udp_table *udptable)
+					  struct udp_table *udptable,
+					  bool *refcounted)
 {
 	struct sock *sk;
 	const struct ipv6hdr *iph = ipv6_hdr(skb);
 
-	sk = skb_steal_sock(skb);
+	sk = skb_steal_sock(skb, refcounted);
 	if (unlikely(sk))
 		return sk;
 	return __udp6_lib_lookup(dev_net(skb_dst(skb)->dev), &iph->saddr, sport,
@@ -812,6 +813,7 @@ int __udp6_lib_rcv(struct sk_buff *skb, struct udp_table *udptable,
 	struct net *net = dev_net(skb->dev);
 	struct udphdr *uh;
 	struct sock *sk;
+	bool refcounted;
 	u32 ulen = 0;
 
 	if (!pskb_may_pull(skb, sizeof(struct udphdr)))
@@ -860,11 +862,14 @@ int __udp6_lib_rcv(struct sk_buff *skb, struct udp_table *udptable,
 	 * check socket cache ... must talk to Alan about his plans
 	 * for sock caches... i'll skip this for now.
 	 */
-	sk = __udp6_lib_lookup_skb(skb, uh->source, uh->dest, udptable);
+	sk = __udp6_lib_lookup_skb(skb, uh->source, uh->dest, udptable,
+				   &refcounted);
 	if (sk) {
 		int ret;
 
 		if (!uh->check && !udp_sk(sk)->no_check6_rx) {
+			if (refcounted)
+				sock_put(sk);
 			udp6_csum_zero_error(skb);
 			goto csum_error;
 		}
@@ -874,6 +879,8 @@ int __udp6_lib_rcv(struct sk_buff *skb, struct udp_table *udptable,
 						 ip6_compute_pseudo);
 
 		ret = udpv6_queue_rcv_skb(sk, skb);
+		if (refcounted)
+			sock_put(sk);
 
 		/* a return value > 0 means to resubmit the input */
 		if (ret > 0)

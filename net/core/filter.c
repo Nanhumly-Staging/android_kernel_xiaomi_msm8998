@@ -4333,7 +4333,7 @@ static const struct bpf_func_proto bpf_sk_lookup_udp_proto = {
 
 BPF_CALL_1(bpf_sk_release, struct sock *, sk)
 {
-	if (sk && !sock_flag(sk, SOCK_RCU_FREE))
+	if (sk_is_refcounted(sk))
 		sock_gen_put(sk);
 	return 0;
 }
@@ -4929,7 +4929,8 @@ BPF_CALL_3(bpf_sk_assign, struct sk_buff *, skb, struct sock *, sk, u64, flags)
 		return -ENETUNREACH;
 	if (unlikely(sk->sk_reuseport))
 		return -ESOCKTNOSUPPORT;
-	if (unlikely(!atomic_inc_not_zero(&sk->sk_refcnt)))
+	if (sk_is_refcounted(sk) &&
+	    unlikely(!atomic_inc_not_zero(&sk->sk_refcnt)))
 		return -ENOENT;
 
 	skb_orphan(skb);
