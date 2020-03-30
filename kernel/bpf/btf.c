@@ -3658,13 +3658,22 @@ bool btf_ctx_access(int off, int size, enum bpf_access_type type,
 		nr_args--;
 	}
 
+	if (arg > nr_args) {
+		bpf_log(log, "func '%s' doesn't have %d-th argument\n",
+			tname, arg + 1);
+		return false;
+	}
+
 	if (arg == nr_args) {
-		if (prog->expected_attach_type == BPF_TRACE_FEXIT) {
+		switch (prog->expected_attach_type) {
+		case BPF_LSM_MAC:
+		case BPF_TRACE_FEXIT:
 			if (!t)
 				return true;
 			t = btf_type_by_id(btf, t->type);
-		} else if (prog->expected_attach_type == BPF_MODIFY_RETURN) {
-			/* For now the BPF_MODIFY_RETURN can only be attached to
+			break;
+		case BPF_MODIFY_RETURN:
+			/* For now BPF_MODIFY_RETURN can only be attached to
 			 * functions that return an int.
 			 */
 			if (!t)
@@ -3677,11 +3686,12 @@ bool btf_ctx_access(int off, int size, enum bpf_access_type type,
 					btf_kind_str[BTF_INFO_KIND(t->info)]);
 				return false;
 			}
+			break;
+		default:
+			bpf_log(log, "func '%s' doesn't have %d-th argument\n",
+				tname, arg + 1);
+			return false;
 		}
-	} else if (arg >= nr_args) {
-		bpf_log(log, "func '%s' doesn't have %d-th argument\n",
-			tname, arg + 1);
-		return false;
 	} else {
 		if (!t)
 			/* Default prog with 5 args */
