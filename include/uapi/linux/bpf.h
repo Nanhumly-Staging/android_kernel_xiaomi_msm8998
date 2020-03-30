@@ -105,6 +105,7 @@ enum bpf_cmd {
 	BPF_MAP_LOOKUP_AND_DELETE_ELEM = 21,
 	BPF_MAP_FREEZE,
 	BPF_BTF_GET_NEXT_ID,
+	BPF_LINK_CREATE = 28,
 };
 
 enum bpf_map_type {
@@ -491,9 +492,9 @@ union bpf_attr {
 	} query;
 
 	struct {
- 		__u64 name;
- 		__u32 prog_fd;
- 	} raw_tracepoint;
+		__u64 name;
+		__u32 prog_fd;
+	} raw_tracepoint;
 
 	struct { /* anonymous struct for BPF_BTF_LOAD */
 		__aligned_u64	btf;
@@ -502,6 +503,12 @@ union bpf_attr {
 		__u32		btf_log_size;
 		__u32		btf_log_level;
 	};
+	struct { /* struct used by BPF_LINK_CREATE command */
+		__u32		prog_fd;	/* eBPF program to attach */
+		__u32		target_fd;	/* object to attach to */
+		__u32		attach_type;	/* attach type */
+		__u32		flags;		/* extra flags */
+	} link_create;
 } __attribute__((aligned(8)));
 
 /* BPF helper function descriptions:
