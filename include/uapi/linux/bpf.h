@@ -109,6 +109,7 @@ enum bpf_cmd {
 	BPF_LINK_UPDATE = 29,
 	BPF_LINK_GET_FD_BY_ID = 30,
 	BPF_LINK_GET_NEXT_ID = 31,
+	BPF_ENABLE_STATS = 32,
 };
 
 enum bpf_map_type {
@@ -366,6 +367,12 @@ enum bpf_link_type {
 /* flags for BPF_PROG_QUERY */
 #define BPF_F_QUERY_EFFECTIVE	(1U << 0)
 
+/* type for BPF_ENABLE_STATS */
+enum bpf_stats_type {
+	/* enabled run_time_ns and run_cnt */
+	BPF_STATS_RUN_TIME = 0,
+};
+
 enum bpf_stack_build_id_status {
 	/* user space need an empty entry to identify end of a trace */
 	BPF_STACK_BUILD_ID_EMPTY = 0,
@@ -532,6 +539,10 @@ union bpf_attr {
 		 * BPF_F_REPLACE flag is set in flags */
 		__u32		old_prog_fd;
 	} link_update;
+
+	struct { /* struct used by BPF_ENABLE_STATS command */
+		__u32		type;
+	} enable_stats;
 
 } __attribute__((aligned(8)));
 
