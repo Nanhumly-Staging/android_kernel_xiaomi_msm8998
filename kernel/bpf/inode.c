@@ -350,8 +350,13 @@ static int bpf_mkobj(struct inode *dir, struct dentry *dentry, umode_t mode,
 		return bpf_mkobj_ops(dir, dentry, mode, &bpf_prog_iops, NULL);
 	case BPF_TYPE_MAP:
 		return bpf_mkobj_ops(dir, dentry, mode, &bpf_map_iops, NULL);
-	case BPF_TYPE_LINK:
-		return bpf_mkobj_ops(dir, dentry, mode, &bpf_link_iops, NULL);
+	case BPF_TYPE_LINK: {
+		struct bpf_link *link = dentry->d_fsdata;
+
+		return bpf_mkobj_ops(dir, dentry, mode, &bpf_link_iops,
+				     bpf_link_is_iter(link) ?
+				     &bpf_iter_fops : NULL);
+	}
 	default:
 		return -EPERM;
 	}
