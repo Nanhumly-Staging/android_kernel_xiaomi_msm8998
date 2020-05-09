@@ -110,6 +110,7 @@ enum bpf_cmd {
 	BPF_LINK_GET_FD_BY_ID = 30,
 	BPF_LINK_GET_NEXT_ID = 31,
 	BPF_ENABLE_STATS = 32,
+	BPF_ITER_CREATE = 33,
 };
 
 enum bpf_map_type {
@@ -549,6 +550,11 @@ union bpf_attr {
 	struct { /* struct used by BPF_ENABLE_STATS command */
 		__u32		type;
 	} enable_stats;
+
+	struct { /* struct used by BPF_ITER_CREATE command */
+		__u32		link_fd;
+		__u32		flags;
+	} iter_create;
 
 } __attribute__((aligned(8)));
 
