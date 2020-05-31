@@ -7,6 +7,9 @@
 #include <linux/string.h>
 #include <uapi/linux/if_ether.h>
 
+struct bpf_prog;
+struct net;
+
 /**
  * struct flow_dissector_key_control:
  * @thoff: Transport header offset
@@ -185,6 +188,10 @@ static inline bool flow_keys_have_l4(struct flow_keys *keys)
 }
 
 u32 flow_hash_from_keys(struct flow_keys *keys);
+
+#ifdef CONFIG_BPF_SYSCALL
+int flow_dissector_bpf_prog_attach(struct net *net, struct bpf_prog *prog);
+#endif /* CONFIG_BPF_SYSCALL */
 
 static inline void
 flow_dissector_init_keys(struct flow_dissector_key_control *key_control,
