@@ -3602,6 +3602,14 @@ static inline void __skb_incr_checksum_unnecessary(struct sk_buff *skb)
 	}
 }
 
+static inline void __skb_reset_checksum_unnecessary(struct sk_buff *skb)
+{
+	if (skb->ip_summed == CHECKSUM_UNNECESSARY) {
+		skb->ip_summed = CHECKSUM_NONE;
+		skb->csum_level = 0;
+	}
+}
+
 static inline void __skb_mark_checksum_bad(struct sk_buff *skb)
 {
 	/* Mark current checksum as bad (typically called from GRO
