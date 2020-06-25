@@ -84,10 +84,10 @@ int flow_dissector_bpf_prog_attach_check(struct net *net,
 		for_each_net(ns) {
 			if (ns == &init_net)
 				continue;
-			if (rcu_access_pointer(ns->bpf.progs[type]))
+			if (rcu_access_pointer(ns->bpf.run_array[type]))
 				return -EEXIST;
 		}
-	} else if (rcu_access_pointer(init_net.bpf.progs[type])) {
+	} else if (rcu_access_pointer(init_net.bpf.run_array[type])) {
 		return -EEXIST;
 	}
 
@@ -278,7 +278,7 @@ bool __skb_flow_dissect(const struct sk_buff *skb,
 	if (skb) {
 		enum netns_bpf_attach_type type = NETNS_BPF_FLOW_DISSECTOR;
 		struct bpf_flow_keys flow_keys;
-		struct bpf_prog *attached = NULL;
+		struct bpf_prog_array *run_array;
 		struct net *net = NULL;
 
 		rcu_read_lock();
@@ -290,11 +290,14 @@ bool __skb_flow_dissect(const struct sk_buff *skb,
 		else
 			WARN_ON_ONCE(1);
 
-		attached = rcu_dereference(init_net.bpf.progs[type]);
-		if (!attached && net)
-			attached = rcu_dereference(net->bpf.progs[type]);
-		if (attached) {
-			ret = __skb_flow_bpf_dissect(attached, skb,
+		run_array = rcu_dereference(init_net.bpf.run_array[type]);
+		if (!run_array && net)
+			run_array = rcu_dereference(net->bpf.run_array[type]);
+		if (run_array) {
+			struct bpf_prog *prog;
+
+			prog = READ_ONCE(run_array->items[0].prog);
+			ret = __skb_flow_bpf_dissect(prog, skb,
 						     flow_dissector,
 						     &flow_keys);
 			__skb_flow_bpf_to_target(&flow_keys, flow_dissector,
