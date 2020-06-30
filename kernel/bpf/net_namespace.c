@@ -43,10 +43,12 @@ static void bpf_netns_link_release(struct bpf_link *link)
 	enum netns_bpf_attach_type type = net_link->netns_type;
 	struct net *net;
 
-	if (!net_link->net)
-		return;
-
 	mutex_lock(&netns_bpf_mutex);
+
+	/* We can race with cleanup_net, but if we see a non-NULL
+	 * struct net pointer, pre_exit has not run yet and waits for
+	 * netns_bpf_mutex.
+	 */
 	net = net_link->net;
 	if (!net)
 		goto out_unlock;
