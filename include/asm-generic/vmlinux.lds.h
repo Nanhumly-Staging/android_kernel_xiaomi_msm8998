@@ -554,6 +554,10 @@
 		VMLINUX_SYMBOL(__start_BTF) = .;			\
 		*(.BTF)							\
 		VMLINUX_SYMBOL(__stop_BTF) = .;			        \
+	}								\
+	. = ALIGN(4);							\
+	.BTF_ids : AT(ADDR(.BTF_ids) - LOAD_OFFSET) {			\
+		*(.BTF_ids)						\
 	}
 #else
 #define BTF
