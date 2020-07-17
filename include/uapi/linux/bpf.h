@@ -184,6 +184,7 @@ enum bpf_prog_type {
 	BPF_PROG_TYPE_TRACING = 26,
 	BPF_PROG_TYPE_STRUCT_OPS = 27,
 	BPF_PROG_TYPE_EXT = 28,
+	BPF_PROG_TYPE_SK_LOOKUP = 30,
 };
 
 enum bpf_attach_type {
@@ -216,6 +217,7 @@ enum bpf_attach_type {
 	BPF_LSM_MAC = 27,
 	BPF_TRACE_ITER = 28,
 	BPF_CGROUP_INET_SOCK_RELEASE = 34,
+	BPF_SK_LOOKUP = 36,
 	__MAX_BPF_ATTACH_TYPE
 };
 
@@ -2072,6 +2074,12 @@ enum {
 	BPF_RINGBUF_HDR_SZ		= 8,
 };
 
+/* BPF_FUNC_sk_assign flags in bpf_sk_lookup context. */
+enum {
+	BPF_SK_LOOKUP_F_REPLACE		= (1ULL << 0),
+	BPF_SK_LOOKUP_F_NO_REUSEPORT	= (1ULL << 1),
+};
+
 /* Mode for BPF_FUNC_skb_adjust_room helper. */
 enum bpf_adj_room_mode {
 	BPF_ADJ_ROOM_NET,
@@ -2639,6 +2647,20 @@ struct bpf_flow_keys {
  			__u32	ipv6_dst[4];	/* in6_addr; network order */
  		};
  	};
+};
+
+/* User accessible data for SK_LOOKUP programs. Add new fields at the end. */
+struct bpf_sk_lookup {
+	__bpf_md_ptr(struct bpf_sock *, sk); /* Selected socket */
+
+	__u32 family;		/* Protocol family (AF_INET, AF_INET6) */
+	__u32 protocol;		/* IP protocol (IPPROTO_TCP, IPPROTO_UDP) */
+	__u32 remote_ip4;	/* Network byte order */
+	__u32 remote_ip6[4];	/* Network byte order */
+	__u32 remote_port;	/* Network byte order */
+	__u32 local_ip4;	/* Network byte order */
+	__u32 local_ip6[4];	/* Network byte order */
+	__u32 local_port;	/* Host byte order */
 };
 
 enum bpf_task_fd_type {

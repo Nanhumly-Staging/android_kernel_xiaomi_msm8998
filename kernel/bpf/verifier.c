@@ -396,7 +396,8 @@ static bool arg_type_may_be_null(enum bpf_arg_type type)
 	return type == ARG_PTR_TO_MAP_VALUE_OR_NULL ||
 	       type == ARG_PTR_TO_MEM_OR_NULL ||
 	       type == ARG_PTR_TO_CTX_OR_NULL ||
-	       type == ARG_PTR_TO_ALLOC_MEM_OR_NULL;
+	       type == ARG_PTR_TO_ALLOC_MEM_OR_NULL ||
+	       type == ARG_PTR_TO_SOCKET_OR_NULL;
 }
 
 /* Determine whether the function releases some resources allocated by another
@@ -3663,6 +3664,7 @@ static const struct bpf_reg_types *compatible_reg_types[__BPF_ARG_TYPE_MAX] = {
 	[ARG_PTR_TO_BTF_ID_SOCK_COMMON]	= &btf_id_sock_common_types,
 #endif
 	[ARG_PTR_TO_SOCKET]		= &fullsock_types,
+	[ARG_PTR_TO_SOCKET_OR_NULL]	= &fullsock_types,
 	[ARG_PTR_TO_BTF_ID]		= &btf_ptr_types,
 	[ARG_PTR_TO_SPIN_LOCK]		= &spin_lock_types,
 	[ARG_PTR_TO_MEM]		= &mem_types,
@@ -7115,6 +7117,9 @@ static int check_return_code(struct bpf_verifier_env *env)
 		default:
 			return -ENOTSUPP;
 		}
+		break;
+	case BPF_PROG_TYPE_SK_LOOKUP:
+		range = tnum_range(SK_DROP, SK_PASS);
 		break;
 	case BPF_PROG_TYPE_EXT:
 		/* freplace program can return anything as its return value
