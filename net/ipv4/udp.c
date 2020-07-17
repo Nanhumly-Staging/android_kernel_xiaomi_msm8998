@@ -514,6 +514,20 @@ static u32 udp_ehashfn(const struct net *net, const __be32 laddr,
 			      udp_ehash_secret + net_hash_mix(net));
 }
 
+struct sock *lookup_reuseport(struct net *net, struct sock *sk,
+			      struct sk_buff *skb,
+			      __be32 saddr, __be16 sport,
+			      __be32 daddr, unsigned short hnum)
+{
+	u32 hash;
+
+	if (!sk->sk_reuseport || sk->sk_state == TCP_ESTABLISHED)
+		return NULL;
+
+	hash = udp_ehashfn(net, daddr, hnum, saddr, sport);
+	return reuseport_select_sock(sk, hash, skb, sizeof(struct udphdr));
+}
+
 /* called with read_rcu_lock() */
 static struct sock *udp4_lib_lookup2(struct net *net,
 				     __be32 saddr, __be16 sport,

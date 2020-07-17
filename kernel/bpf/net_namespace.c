@@ -24,6 +24,28 @@ struct bpf_netns_link {
 /* Protects updates to netns_bpf */
 DEFINE_MUTEX(netns_bpf_mutex);
 
+static void netns_bpf_attach_type_unneed(enum netns_bpf_attach_type type)
+{
+	switch (type) {
+	case NETNS_BPF_SK_LOOKUP:
+		static_branch_dec(&bpf_sk_lookup_enabled);
+		break;
+	default:
+		break;
+	}
+}
+
+static void netns_bpf_attach_type_need(enum netns_bpf_attach_type type)
+{
+	switch (type) {
+	case NETNS_BPF_SK_LOOKUP:
+		static_branch_inc(&bpf_sk_lookup_enabled);
+		break;
+	default:
+		break;
+	}
+}
+
 /* Must be called with netns_bpf_mutex held. */
 static void netns_bpf_run_array_detach(struct net *net,
 				       enum netns_bpf_attach_type type)
@@ -91,6 +113,10 @@ static void bpf_netns_link_release(struct bpf_link *link)
 	if (!net)
 		goto out_unlock;
 
+	/* Mark attach point as unused */
+	netns_bpf_attach_type_unneed(type);
+
+	/* Remember link position in case of safe delete */
 	idx = link_index(net, type, net_link);
 	list_del(&net_link->node);
 
@@ -404,6 +430,9 @@ static int netns_bpf_link_attach(struct net *net, struct bpf_link *link,
 	rcu_assign_pointer(net->bpf.run_array[type], run_array);
 	bpf_prog_array_free(old_array);
 
+	/* Mark attach point as used */
+	netns_bpf_attach_type_need(type);
+
 out_unlock:
 	mutex_unlock(&netns_bpf_mutex);
 	return err;
@@ -479,8 +508,10 @@ static void __net_exit netns_bpf_pernet_pre_exit(struct net *net)
 	mutex_lock(&netns_bpf_mutex);
 	for (type = 0; type < MAX_NETNS_BPF_ATTACH_TYPE; type++) {
 		netns_bpf_run_array_detach(net, type);
-		list_for_each_entry(net_link, &net->bpf.links[type], node)
+		list_for_each_entry(net_link, &net->bpf.links[type], node) {
 			net_link->net = NULL; /* auto-detach link */
+			netns_bpf_attach_type_unneed(type);
+		}
 		if (net->bpf.progs[type])
 			bpf_prog_put(net->bpf.progs[type]);
 	}
