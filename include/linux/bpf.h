@@ -573,6 +573,7 @@ static inline bool is_bpf_image_address(unsigned long address)
 struct bpf_ctx_arg_aux {
 	u32 offset;
 	enum bpf_reg_type reg_type;
+	u32 btf_id;
 };
 
 struct bpf_prog_aux {
