@@ -6654,35 +6654,94 @@ int dev_change_proto_down(struct net_device *dev, bool proto_down)
 }
 EXPORT_SYMBOL(dev_change_proto_down);
 
-u8 __dev_xdp_attached(struct net_device *dev, bpf_op_t bpf_op, u32 *prog_id)
+static enum bpf_xdp_mode dev_xdp_mode(u32 flags)
 {
-	struct netdev_bpf xdp;
-
-	memset(&xdp, 0, sizeof(xdp));
-	xdp.command = XDP_QUERY_PROG;
-
-	/* Query must always succeed. */
-	WARN_ON(bpf_op(dev, &xdp) < 0);
-	if (prog_id)
-		*prog_id = xdp.prog_id;
-
-	return xdp.prog_attached;
+	if (flags & XDP_FLAGS_HW_MODE)
+		return XDP_MODE_HW;
+	if (flags & XDP_FLAGS_DRV_MODE)
+		return XDP_MODE_DRV;
+	return XDP_MODE_SKB;
 }
 
-static int dev_xdp_install(struct net_device *dev, bpf_op_t bpf_op,
-			   u32 flags, struct bpf_prog *prog)
+static bpf_op_t dev_xdp_bpf_op(struct net_device *dev, enum bpf_xdp_mode mode)
+{
+	switch (mode) {
+	case XDP_MODE_SKB:
+		return generic_xdp_install;
+	case XDP_MODE_DRV:
+	case XDP_MODE_HW:
+		return dev->netdev_ops->ndo_bpf;
+	default:
+		return NULL;
+	}
+}
+
+static struct bpf_prog *dev_xdp_prog(struct net_device *dev,
+				     enum bpf_xdp_mode mode)
+{
+	return dev->xdp_state[mode].prog;
+}
+
+u32 dev_xdp_prog_id(struct net_device *dev, enum bpf_xdp_mode mode)
+{
+	struct bpf_prog *prog = dev_xdp_prog(dev, mode);
+
+	return prog ? prog->aux->id : 0;
+}
+
+static void dev_xdp_set_prog(struct net_device *dev, enum bpf_xdp_mode mode,
+			     struct bpf_prog *prog)
+{
+	dev->xdp_state[mode].prog = prog;
+}
+
+static int dev_xdp_install(struct net_device *dev, enum bpf_xdp_mode mode,
+			   bpf_op_t bpf_op, u32 flags, struct bpf_prog *prog)
 {
 	struct netdev_bpf xdp;
+	int err;
 
 	memset(&xdp, 0, sizeof(xdp));
-	if (flags & XDP_FLAGS_HW_MODE)
+	if (mode == XDP_MODE_HW)
 		xdp.command = XDP_SETUP_PROG_HW;
 	else
 		xdp.command = XDP_SETUP_PROG;
 	xdp.flags = flags;
 	xdp.prog = prog;
 
-	return bpf_op(dev, &xdp);
+	if (prog)
+		bpf_prog_inc(prog);
+	err = bpf_op(dev, &xdp);
+	if (err) {
+		if (prog)
+			bpf_prog_put(prog);
+		return err;
+	}
+
+	return 0;
+}
+
+static void dev_xdp_uninstall(struct net_device *dev)
+{
+	struct bpf_prog *prog;
+	enum bpf_xdp_mode mode;
+	bpf_op_t bpf_op;
+
+	ASSERT_RTNL();
+
+	for (mode = XDP_MODE_SKB; mode < __MAX_XDP_MODE; mode++) {
+		prog = dev_xdp_prog(dev, mode);
+		if (!prog)
+			continue;
+
+		bpf_op = dev_xdp_bpf_op(dev, mode);
+		if (!bpf_op)
+			continue;
+
+		WARN_ON(dev_xdp_install(dev, mode, bpf_op, 0, NULL));
+		bpf_prog_put(prog);
+		dev_xdp_set_prog(dev, mode, NULL);
+	}
 }
 
 /**
@@ -6695,30 +6754,30 @@ static int dev_xdp_install(struct net_device *dev, bpf_op_t bpf_op,
  */
 int dev_change_xdp_fd(struct net_device *dev, int fd, u32 flags)
 {
-	const struct net_device_ops *ops = dev->netdev_ops;
+	enum bpf_xdp_mode mode = dev_xdp_mode(flags);
+	bool offload = mode == XDP_MODE_HW;
 	struct bpf_prog *prog = NULL;
-	bpf_op_t bpf_op, bpf_chk;
+	bpf_op_t bpf_op;
 	int err;
 
 	ASSERT_RTNL();
 
-	bpf_op = bpf_chk = ops->ndo_bpf;
-	if (!bpf_op && (flags & (XDP_FLAGS_DRV_MODE | XDP_FLAGS_HW_MODE)))
+	bpf_op = dev_xdp_bpf_op(dev, mode);
+	if (!bpf_op)
 		return -EOPNOTSUPP;
-	if (!bpf_op || (flags & XDP_FLAGS_SKB_MODE))
-		bpf_op = generic_xdp_install;
-	if (bpf_op == bpf_chk)
-		bpf_chk = generic_xdp_install;
 
 	if (fd >= 0) {
-		if (bpf_chk && __dev_xdp_attached(dev, bpf_chk, NULL))
+		enum bpf_xdp_mode other_mode = mode == XDP_MODE_SKB
+					       ? XDP_MODE_DRV : XDP_MODE_SKB;
+
+		if (!offload && dev_xdp_prog_id(dev, other_mode))
 			return -EEXIST;
 		if ((flags & XDP_FLAGS_UPDATE_IF_NOEXIST) &&
-		    __dev_xdp_attached(dev, bpf_op, NULL))
+		    dev_xdp_prog_id(dev, mode))
 			return -EBUSY;
 
 		prog = bpf_prog_get_type_dev(fd, BPF_PROG_TYPE_XDP,
-					     bpf_op == ops->ndo_bpf);
+					     mode != XDP_MODE_SKB);
 		if (IS_ERR(prog))
 			return PTR_ERR(prog);
 
@@ -6730,11 +6789,14 @@ int dev_change_xdp_fd(struct net_device *dev, int fd, u32 flags)
 		}
 	}
 
-	err = dev_xdp_install(dev, bpf_op, flags, prog);
-	if (err < 0 && prog)
+	err = dev_xdp_install(dev, mode, bpf_op, flags, prog);
+	if (err < 0 && prog) {
 		bpf_prog_put(prog);
+		return err;
+	}
+	dev_xdp_set_prog(dev, mode, prog);
 
-	return err;
+	return 0;
 }
 
 /**
@@ -6828,6 +6890,8 @@ static void rollback_registered_many(struct list_head *head)
 		 */
 		dev_uc_flush(dev);
 		dev_mc_flush(dev);
+
+		dev_xdp_uninstall(dev);
 
 		if (dev->netdev_ops->ndo_uninit)
 			dev->netdev_ops->ndo_uninit(dev);
