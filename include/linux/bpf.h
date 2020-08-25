@@ -546,6 +546,8 @@ int btf_struct_access(struct bpf_verifier_log *log,
 		      const struct btf_type *t, int off, int size,
 		      enum bpf_access_type atype,
 		      u32 *next_btf_id);
+bool btf_struct_ids_match(struct bpf_verifier_log *log,
+			  int off, u32 id, u32 need_type_id);
 u32 btf_resolve_helper_id(struct bpf_verifier_log *log, void *, int);
 struct bpf_reg_state;
 int btf_check_func_arg_match(struct bpf_verifier_env *env, int subprog,
