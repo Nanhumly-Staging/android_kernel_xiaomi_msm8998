@@ -274,6 +274,7 @@ struct bpf_func_proto {
 						    * for this argument.
 						    */
 	u32 *ret_btf_id; /* return value btf_id */
+	bool (*allowed)(const struct bpf_prog *prog);
 };
 
 /* bpf_context is intentionally undefined structure. Pointer to bpf_context is
@@ -1158,4 +1159,6 @@ static inline u32 bpf_tcp_sock_convert_ctx_access(enum bpf_access_type type,
 }
 #endif /* CONFIG_INET */
 
+struct btf_id_set;
+bool btf_id_set_contains(struct btf_id_set *set, u32 id);
 #endif /* _LINUX_BPF_H */
