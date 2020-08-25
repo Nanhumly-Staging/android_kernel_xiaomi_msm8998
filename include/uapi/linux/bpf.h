@@ -1998,8 +1998,10 @@ enum {
 /* BPF_FUNC_sysctl_get_name flags. */
 #define BPF_F_SYSCTL_BASE_NAME		(1ULL << 0)
 
-/* BPF_FUNC_sk_storage_get flags */
-#define BPF_SK_STORAGE_GET_F_CREATE	(1ULL << 0)
+/* BPF_FUNC_<kernel_obj>_storage_get flags */
+#define BPF_LOCAL_STORAGE_GET_F_CREATE (1ULL << 0)
+/* BPF_SK_STORAGE_GET_F_CREATE is kept for backward compatibility. */
+#define BPF_SK_STORAGE_GET_F_CREATE BPF_LOCAL_STORAGE_GET_F_CREATE
 
 /* BPF_FUNC_bpf_ringbuf_commit, BPF_FUNC_bpf_ringbuf_discard, and
  * BPF_FUNC_bpf_ringbuf_output flags.
