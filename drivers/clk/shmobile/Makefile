@@ -2,6 +2,7 @@ obj-$(CONFIG_ARCH_EMEV2)		+= clk-emev2.o
 obj-$(CONFIG_ARCH_R7S72100)		+= clk-rz.o
 obj-$(CONFIG_ARCH_R8A73A4)		+= clk-r8a73a4.o
 obj-$(CONFIG_ARCH_R8A7740)		+= clk-r8a7740.o
+obj-$(CONFIG_ARCH_R8A7742)		+= clk-rcar-gen2.o
 obj-$(CONFIG_ARCH_R8A7743)		+= clk-rcar-gen2.o
 obj-$(CONFIG_ARCH_R8A7744)		+= clk-rcar-gen2.o
 obj-$(CONFIG_ARCH_R8A7745)		+= clk-rcar-gen2.o
