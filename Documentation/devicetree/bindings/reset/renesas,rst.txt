@@ -6,6 +6,7 @@ Required properties:
   - compatible: Should be
 		  - "renesas,<soctype>-rst" for R-Car Gen2 and RZ/G
 		Examples with soctypes are:
+		  - "renesas,r8a7742-rst" (RZ/G1H)
 		  - "renesas,r8a7743-rst" (RZ/G1M)
 		  - "renesas,r8a7744-rst" (RZ/G1N)
 		  - "renesas,r8a7745-rst" (RZ/G1E)
