@@ -207,6 +207,7 @@ DT_MACHINE_START(RCAR_GEN2_DT, "Generic R-Car Gen2 (Flattened Device Tree)")
 MACHINE_END
 
 static const char * const rz_g1_boards_compat_dt[] __initconst = {
+	"renesas,r8a7742",
 	"renesas,r8a7743",
 	"renesas,r8a7744",
 	"renesas,r8a7745",
