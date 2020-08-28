@@ -8,6 +8,7 @@ CPG Module Stop (MSTP) Clocks.
 Required Properties:
 
   - compatible: Must be one of
+    - "renesas,r8a7742-cpg-clocks" for the r8a7742 CPG
     - "renesas,r8a7743-cpg-clocks" for the r8a7743 CPG
     - "renesas,r8a7744-cpg-clocks" for the r8a7744 CPG
     - "renesas,r8a7745-cpg-clocks" for the r8a7745 CPG
