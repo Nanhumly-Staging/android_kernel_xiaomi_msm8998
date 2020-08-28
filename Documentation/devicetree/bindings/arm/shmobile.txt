@@ -61,6 +61,8 @@ Boards:
     compatible = "iwave,g22d", "iwave,g22m", "renesas,r8a7745"
   - iWave Systems RZ/G1E SODIMM System On Module (iW-RainboW-G22M-SM)
     compatible = "iwave,g22m", "renesas,r8a7745"
+  - iWave Systems RZ/G1H Qseven Development Platform (iW-RainboW-G21D-Qseven)
+    compatible = "iwave,g21d", "iwave,g21m", "renesas,r8a7742"
   - iWave Systems RZ/G1H Qseven System On Module (iW-RainboW-G21M-Qseven)
     compatible = "iwave,g21m", "renesas,r8a7742"
   - iWave Systems RZ/G1M Qseven Development Platform (iW-RainboW-G20D-Qseven)
