@@ -6,6 +6,7 @@ Required properties:
 			   "renesas,rcar-thermal" (without thermal-zone) as fallback.
 			  Examples with soctypes are:
 			    - "renesas,thermal-r8a73a4" (R-Mobile APE6)
+			    - "renesas,thermal-r8a7742" (RZ/G1H)
 			    - "renesas,thermal-r8a7743" (RZ/G1M)
 			    - "renesas,thermal-r8a7744" (RZ/G1N)
 			    - "renesas,thermal-r8a7779" (R-Car H1)
