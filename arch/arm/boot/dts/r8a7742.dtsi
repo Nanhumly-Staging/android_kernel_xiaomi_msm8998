@@ -963,7 +963,7 @@
 
 		scifa2: serial@e6c60000 {
 			compatible = "renesas,scifa-r8a7742",
-				     "renesas,rcar-gen2-scifa", "renesas,scifa";
+				     "renesas,scifa";
 			reg = <0 0xe6c60000 0 0x40>;
 			interrupts = <GIC_SPI 151 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&mstp2_clks R8A7742_CLK_SCIFA2>;
