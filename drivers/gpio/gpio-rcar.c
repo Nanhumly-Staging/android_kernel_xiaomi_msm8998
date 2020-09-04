@@ -352,7 +352,7 @@ static void gpio_rcar_set(struct gpio_chip *chip, unsigned offset, int value)
 static void gpio_rcar_set_multiple(struct gpio_chip *chip, unsigned long *mask,
 				   unsigned long *bits)
 {
-	struct gpio_rcar_priv *p = gpiochip_get_data(chip);
+	struct gpio_rcar_priv *p = gpio_to_priv(chip);
 	unsigned long flags;
 	u32 val, bankmask;
 
