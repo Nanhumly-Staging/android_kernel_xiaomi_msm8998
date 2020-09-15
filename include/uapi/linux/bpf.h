@@ -117,6 +117,7 @@ enum bpf_cmd {
 	BPF_ENABLE_STATS = 32,
 	BPF_ITER_CREATE = 33,
 	BPF_LINK_DETACH = 34,
+	BPF_PROG_BIND_MAP = 35,
 };
 
 enum bpf_map_type {
@@ -612,6 +613,12 @@ union bpf_attr {
 		__u32		link_fd;
 		__u32		flags;
 	} iter_create;
+
+	struct { /* struct used by BPF_PROG_BIND_MAP command */
+		__u32		prog_fd;
+		__u32		map_fd;
+		__u32		flags;		/* extra flags */
+	} prog_bind_map;
 
 } __attribute__((aligned(8)));
 
