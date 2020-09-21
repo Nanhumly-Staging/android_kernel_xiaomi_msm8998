@@ -13,6 +13,7 @@
 #include <linux/filter.h>
 #include <linux/uaccess.h>
 #include <linux/ctype.h>
+#include <linux/btf_ids.h>
 #include "trace.h"
 
 #ifdef CONFIG_MODULES
@@ -648,17 +649,16 @@ static bool bpf_d_path_allowed(const struct bpf_prog *prog)
 	return btf_id_set_contains(&btf_allowlist_d_path, prog->aux->attach_btf_id);
 }
 
-BTF_ID_LIST(bpf_d_path_btf_ids)
-BTF_ID(struct, path)
+BTF_ID_LIST_SINGLE(bpf_d_path_btf_ids, struct, path)
 
 static const struct bpf_func_proto bpf_d_path_proto = {
 	.func		= bpf_d_path,
 	.gpl_only	= false,
 	.ret_type	= RET_INTEGER,
 	.arg1_type	= ARG_PTR_TO_BTF_ID,
+	.arg1_btf_id	= &bpf_d_path_btf_ids[0],
 	.arg2_type	= ARG_PTR_TO_MEM,
 	.arg3_type	= ARG_CONST_SIZE_OR_ZERO,
-	.btf_id		= bpf_d_path_btf_ids,
 	.allowed	= bpf_d_path_allowed,
 };
 
