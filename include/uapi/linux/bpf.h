@@ -1675,7 +1675,7 @@ union bpf_attr {
  *
  *		**-EPROTONOSUPPORT** IP packet version is not 4 or 6
  *
- * int bpf_sk_assign(struct sk_buff *skb, struct bpf_sock *sk, u64 flags)
+ * long bpf_sk_assign(struct sk_buff *skb, void *sk, u64 flags)
  *	Description
  *		Assign the *sk* to the *skb*. When combined with appropriate
  *		routing configuration to receive the packet towards the socket,
