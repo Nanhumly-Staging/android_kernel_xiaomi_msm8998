@@ -1406,6 +1406,7 @@ union bpf_attr {
  *		0 on success.
  *
  *		**-ENOENT** if the bpf-local-storage cannot be found.
+ *		**-EINVAL** if sk is not a fullsock (e.g. a request_sock).
  *
  * int bpf_msg_push_data(struct sk_buff *skb, u32 start, u32 len, u64 flags)
  *	Description

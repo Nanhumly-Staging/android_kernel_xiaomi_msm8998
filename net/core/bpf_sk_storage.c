@@ -927,7 +927,7 @@ BPF_CALL_4(bpf_sk_storage_get, struct bpf_map *, map, struct sock *, sk,
 {
 	struct bpf_local_storage_data *sdata;
 
-	if (flags > BPF_SK_STORAGE_GET_F_CREATE)
+	if (!sk || !sk_fullsock(sk) || flags > BPF_SK_STORAGE_GET_F_CREATE)
 		return (unsigned long)NULL;
 
 	sdata = sk_storage_lookup(sk, map, true);
@@ -957,6 +957,9 @@ BPF_CALL_4(bpf_sk_storage_get, struct bpf_map *, map, struct sock *, sk,
 
 BPF_CALL_2(bpf_sk_storage_delete, struct bpf_map *, map, struct sock *, sk)
 {
+	if (!sk || !sk_fullsock(sk))
+		return -EINVAL;
+
 	if (atomic_inc_not_zero(&sk->sk_refcnt)) {
 		int err;
 
@@ -1009,7 +1012,7 @@ const struct bpf_func_proto bpf_sk_storage_get_proto = {
 	.gpl_only	= false,
 	.ret_type	= RET_PTR_TO_MAP_VALUE_OR_NULL,
 	.arg1_type	= ARG_CONST_MAP_PTR,
-	.arg2_type	= ARG_PTR_TO_SOCKET,
+	.arg2_type	= ARG_PTR_TO_BTF_ID_SOCK_COMMON,
 	.arg3_type	= ARG_PTR_TO_MAP_VALUE_OR_NULL,
 	.arg4_type	= ARG_ANYTHING,
 };
@@ -1029,5 +1032,5 @@ const struct bpf_func_proto bpf_sk_storage_delete_proto = {
 	.gpl_only	= false,
 	.ret_type	= RET_INTEGER,
 	.arg1_type	= ARG_CONST_MAP_PTR,
-	.arg2_type	= ARG_PTR_TO_SOCKET,
+	.arg2_type	= ARG_PTR_TO_BTF_ID_SOCK_COMMON,
 };
