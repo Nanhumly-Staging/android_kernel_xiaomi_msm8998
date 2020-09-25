@@ -1193,7 +1193,7 @@ union bpf_attr {
  *		failure. For sockets with reuseport option, **struct bpf_sock**
  *		return is from **reuse->socks**\ [] using hash of the packet.
  *
- * int bpf_sk_release(struct bpf_sock *sock)
+ * long bpf_sk_release(void *sock)
  *	Description
  *		Release the reference held by *sock*. *sock* must be a
  *		non-**NULL** pointer that was returned from
@@ -1696,11 +1696,11 @@ union bpf_attr {
  *					call from outside of TC ingress.
  *		* **-ESOCKTNOSUPPORT**	Socket type not supported (reuseport).
  *
- * u64 bpf_sk_cgroup_id(struct bpf_sock *sk)
+ * u64 bpf_sk_cgroup_id(void *sk)
  *	Description
  *		Return the cgroup v2 id of the socket *sk*.
  *
- *		*sk* must be a non-**NULL** pointer to a full socket, e.g. one
+ *		*sk* must be a non-**NULL** pointer to a socket, e.g. one
  *		returned from **bpf_sk_lookup_xxx**\ (),
  *		**bpf_sk_fullsock**\ (), etc. The format of returned id is
  *		same as in **bpf_skb_cgroup_id**\ ().
@@ -1710,7 +1710,7 @@ union bpf_attr {
  *	Return
  *		The id is returned or 0 in case the id could not be retrieved.
  *
- * u64 bpf_sk_ancestor_cgroup_id(struct bpf_sock *sk, int ancestor_level)
+ * u64 bpf_sk_ancestor_cgroup_id(void *sk, int ancestor_level)
  *	Description
  *		Return id of cgroup v2 that is ancestor of cgroup associated
  *		with the *sk* at the *ancestor_level*.  The root cgroup is at
