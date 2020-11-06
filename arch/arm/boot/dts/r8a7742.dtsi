@@ -1557,6 +1557,26 @@
 			status = "disabled";
 		};
 
+		sata0: sata@ee300000 {
+			compatible = "renesas,sata-r8a7742",
+				     "renesas,rcar-gen2-sata";
+			reg = <0 0xee300000 0 0x200000>;
+			interrupts = <GIC_SPI 105 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp8_clks R8A7742_CLK_SATA0>;
+			power-domains = <&cpg_clocks>;
+			status = "disabled";
+		};
+
+		sata1: sata@ee500000 {
+			compatible = "renesas,sata-r8a7742",
+				     "renesas,rcar-gen2-sata";
+			reg = <0 0xee500000 0 0x200000>;
+			interrupts = <GIC_SPI 106 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp8_clks R8A7742_CLK_SATA1>;
+			power-domains = <&cpg_clocks>;
+			status = "disabled";
+		};
+
 		gic: interrupt-controller@f1001000 {
 			compatible = "arm,gic-400";
 			#interrupt-cells = <3>;
