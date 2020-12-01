@@ -72,6 +72,7 @@ config ARCH_R8A7742
 config ARCH_R8A7743
 	bool "RZ/G1M (R8A77430)"
 	select ARCH_RCAR_GEN2
+	select SOC_BUS
 
 config ARCH_R8A7744
 	bool "RZ/G1N (R8A77440)"
@@ -81,6 +82,7 @@ config ARCH_R8A7744
 config ARCH_R8A7745
 	bool "RZ/G1E (R8A77450)"
 	select ARCH_RCAR_GEN2
+	select SOC_BUS
 
 config ARCH_R8A77470
 	bool "RZ/G1C (R8A77470)"
