@@ -89,6 +89,7 @@ config ARCH_R8A7745
 config ARCH_R8A77470
 	bool "RZ/G1C (R8A77470)"
 	select ARCH_RCAR_GEN2
+	select SOC_BUS
 
 config ARCH_R8A7778
 	bool "R-Car M1A (R8A77781)"
