@@ -1,5 +1,6 @@
 config SDFAT_FS
-	tristate "sdFAT filesystem support"
+	tristate "sdFAT fs support"
+	default y
 	select NLS
 	select NLS_UTF8
 	select NLS_CODEPAGE_437
@@ -68,15 +69,18 @@ config SDFAT_CHECK_RO_ATTR
 
 config SDFAT_ALIGNED_MPAGE_WRITE
 	bool "Enable supporting aligned mpage_write"
-	default y
+	default y if SDFAT_FS=y
+	default n if SDFAT_FS=m
 	depends on SDFAT_FS
 
 config SDFAT_VIRTUAL_XATTR
 	bool "Virtual xattr support for sdFAT"
-	default y
+	default n
 	depends on SDFAT_FS
 	help
-	  To support virtual xattr.
+	  If you enable this feature, it supports virtual xattr.
+	  This feature will be deprecated because it might be the same with
+	  "context" mount option.
 
 config SDFAT_VIRTUAL_XATTR_SELINUX_LABEL
 	string "Default string for SELinux label"
@@ -91,32 +95,32 @@ config SDFAT_SUPPORT_STLOG
 	depends on SDFAT_FS && PROC_STLOG
 
 config SDFAT_DEBUG
-	bool "enable debug features"
+	bool "Enable debug features"
 	depends on SDFAT_FS
 	default y
 
 config SDFAT_DBG_IOCTL
-	bool "enable debug-ioctl features"
+	bool "Enable debug-ioctl features"
 	depends on SDFAT_FS && SDFAT_DEBUG
 	default n
 
 config SDFAT_DBG_MSG
-	bool "enable debug messages"
+	bool "Enable debug messages"
 	depends on SDFAT_FS && SDFAT_DEBUG
 	default y
 
 config SDFAT_DBG_BUGON
-	bool "enable strict BUG_ON() for debugging"
+	bool "Enable strict BUG_ON() for debugging"
 	depends on SDFAT_FS && SDFAT_DEBUG
 	default n
 
 config SDFAT_DBG_WARNON
-	bool "enable strict WARN_ON() for debugging"
+	bool "Enable strict WARN_ON() for debugging"
 	depends on SDFAT_FS && SDFAT_DEBUG
 	default n
 
 config SDFAT_STATISTICS
-	bool "enable statistics for bigdata"
+	bool "Enable statistics for bigdata"
 	depends on SDFAT_FS
 	default y
 
