@@ -341,6 +341,13 @@ int handle_userfault(struct vm_area_struct *vma, unsigned long address,
 	ret = VM_FAULT_RETRY;
 	if (flags & FAULT_FLAG_RETRY_NOWAIT)
 		goto out;
+	if ((flags & FAULT_FLAG_USER) == 0 &&
+	    ctx->flags & UFFD_USER_MODE_ONLY) {
+		printk_once(KERN_WARNING "uffd: Set unprivileged_userfaultfd "
+			"sysctl knob to 1 if kernel faults must be handled "
+			"without obtaining CAP_SYS_PTRACE capability\n");
+		goto out;
+	}
 
 	/* take the reference before dropping the mmap_sem */
 	userfaultfd_ctx_get(ctx);
@@ -1639,11 +1646,12 @@ static struct file *userfaultfd_file_create(int flags)
 	BUG_ON(!current->mm);
 
 	/* Check the UFFD_* constants for consistency.  */
+	BUILD_BUG_ON(UFFD_USER_MODE_ONLY & UFFD_SHARED_FCNTL_FLAGS);
 	BUILD_BUG_ON(UFFD_CLOEXEC != O_CLOEXEC);
 	BUILD_BUG_ON(UFFD_NONBLOCK != O_NONBLOCK);
 
 	file = ERR_PTR(-EINVAL);
-	if (flags & ~UFFD_SHARED_FCNTL_FLAGS)
+	if (flags & ~(UFFD_SHARED_FCNTL_FLAGS | UFFD_USER_MODE_ONLY))
 		goto out;
 
 	file = ERR_PTR(-ENOMEM);
