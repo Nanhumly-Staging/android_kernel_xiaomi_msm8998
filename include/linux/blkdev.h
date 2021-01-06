@@ -1460,35 +1460,31 @@ int kblockd_schedule_delayed_work_on(int cpu, struct delayed_work *dwork, unsign
  */
 static inline void set_start_time_ns(struct request *req)
 {
-	preempt_disable();
-	req->start_time_ns = sched_clock();
-	preempt_enable();
+	req->start_time_ns = ktime_get_ns();
 }
 
 static inline void set_io_start_time_ns(struct request *req)
 {
-	preempt_disable();
-	req->io_start_time_ns = sched_clock();
-	preempt_enable();
+	req->io_start_time_ns = ktime_get_ns();
 }
 
-static inline uint64_t rq_start_time_ns(struct request *req)
+static inline u64 rq_start_time_ns(struct request *req)
 {
         return req->start_time_ns;
 }
 
-static inline uint64_t rq_io_start_time_ns(struct request *req)
+static inline u64 rq_io_start_time_ns(struct request *req)
 {
         return req->io_start_time_ns;
 }
 #else
 static inline void set_start_time_ns(struct request *req) {}
 static inline void set_io_start_time_ns(struct request *req) {}
-static inline uint64_t rq_start_time_ns(struct request *req)
+static inline u64 rq_start_time_ns(struct request *req)
 {
 	return 0;
 }
-static inline uint64_t rq_io_start_time_ns(struct request *req)
+static inline u64 rq_io_start_time_ns(struct request *req)
 {
 	return 0;
 }
