@@ -51,6 +51,41 @@
 		clock-frequency = <26000000>;
 	};
 
+	lcd_backlight: backlight {
+		compatible = "pwm-backlight";
+		pwms = <&tpu 2 5000000 0>;
+		brightness-levels = <0 4 8 16 32 64 128 255>;
+		pinctrl-0 = <&backlight_pins>;
+		pinctrl-names = "default";
+		default-brightness-level = <7>;
+		enable-gpios = <&gpio3 11 GPIO_ACTIVE_HIGH>;
+	};
+
+	panel {
+		compatible = "edt,etm0700g0dh6";
+		backlight = <&lcd_backlight>;
+
+		port {
+			panel_in: endpoint {
+				remote-endpoint = <&du_out_lvds0>;
+			};
+		};
+
+		panel-timing {
+			clock-frequency = <33260>;
+			hactive = <800>;
+			vactive = <480>;
+
+			hfront-porch = <40>;
+			hback-porch = <88>;
+			hsync-len = <128>;
+
+			vback-porch = <33>;
+			vfront-porch = <10>;
+			vsync-len = <2>;
+		};
+	};
+
 	reg_1p5v: 1p5v {
 		compatible = "regulator-fixed";
 		regulator-name = "1P5V";
@@ -128,6 +163,15 @@
 		VDDIO-supply = <&reg_3p3v>;
 		VDDD-supply = <&reg_1p5v>;
 	};
+
+	touch: touchpanel@38 {
+		compatible = "edt,edt-ft5406";
+		reg = <0x38>;
+		interrupt-parent = <&gpio0>;
+		interrupts = <24 IRQ_TYPE_EDGE_FALLING>;
+		/* GP1_29 is also shared with audio codec reset pin */
+		reset-gpios = <&gpio1 29 GPIO_ACTIVE_LOW>;
+	};
 };
 
 &can1 {
@@ -139,6 +183,26 @@
 
 &cmt0 {
 	status = "okay";
+};
+
+&du {
+	status = "okay";
+
+	ports {
+		port@1 {
+			endpoint {
+				remote-endpoint = <&panel_in>;
+			};
+		};
+	};
+};
+
+&gpio0 {
+	touch-interrupt {
+		gpio-hog;
+		gpios = <24 GPIO_ACTIVE_LOW>;
+		input;
+	};
 };
 
 &gpio1 {
@@ -216,6 +280,11 @@
 	avb_pins: avb {
 		groups = "avb_mdio", "avb_gmii";
 		function = "avb";
+	};
+
+	backlight_pins: backlight {
+		groups = "tpu0_to2";
+		function = "tpu0";
 	};
 
 	can1_pins: can1 {
@@ -301,6 +370,10 @@
 
 &ssi4 {
 	shared-pin;
+};
+
+&tpu {
+	status = "okay";
 };
 
 &usbphy {
