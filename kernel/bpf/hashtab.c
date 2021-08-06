@@ -14,6 +14,7 @@
 #include <linux/btf.h>
 #include <linux/jhash.h>
 #include <linux/filter.h>
+#include <linux/overflow.h>
 #include <linux/rculist_nulls.h>
 #include <linux/random.h>
 #include <uapi/linux/btf.h>
@@ -1253,6 +1254,7 @@ __htab_map_lookup_and_delete_batch(struct bpf_map *map,
 {
 	struct bpf_htab *htab = container_of(map, struct bpf_htab, map);
 	u32 bucket_cnt, total, key_size, value_size, roundup_key_size;
+	size_t keys_size, values_size;
 	void *keys = NULL, *values = NULL, *value, *dst_key, *dst_val;
 	void __user *uvalues = u64_to_user_ptr(attr->batch.values);
 	void __user *ukeys = u64_to_user_ptr(attr->batch.keys);
@@ -1307,8 +1309,15 @@ alloc:
 	/* We cannot do copy_from_user or copy_to_user inside
 	 * the rcu_read_lock. Allocate enough space here.
 	 */
-	keys = kvmalloc(key_size * bucket_size, GFP_USER | __GFP_NOWARN);
-	values = kvmalloc(value_size * bucket_size, GFP_USER | __GFP_NOWARN);
+	if (check_mul_overflow((size_t)key_size, (size_t)bucket_size,
+			       &keys_size) ||
+	    check_mul_overflow((size_t)value_size, (size_t)bucket_size,
+			       &values_size)) {
+		ret = -ENOMEM;
+		goto after_loop;
+	}
+	keys = kvmalloc(keys_size, GFP_USER | __GFP_NOWARN);
+	values = kvmalloc(values_size, GFP_USER | __GFP_NOWARN);
 	if (!keys || !values) {
 		ret = -ENOMEM;
 		goto after_loop;
