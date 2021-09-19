@@ -321,11 +321,14 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 		long cache_size = other_file * (long)(PAGE_SIZE / 1024);
 		long cache_limit = minfree * (long)(PAGE_SIZE / 1024);
 		long free = other_free * (long)(PAGE_SIZE / 1024);
+		static const struct sched_param sched_zero_prio;
 
 		task_lock(selected);
 		send_sig(SIGKILL, selected, 0);
 		if (selected->mm)
 			task_set_lmk_waiting(selected);
+		sched_setscheduler_nocheck(selected, SCHED_RR, &sched_zero_prio);
+		set_cpus_allowed_ptr(selected, cpu_all_mask);
 		task_unlock(selected);
 		trace_lowmemory_kill(selected, cache_size, cache_limit, free);
 		lowmem_print(1, "Killing '%s' (%d) (tgid %d), adj %hd,\n"
