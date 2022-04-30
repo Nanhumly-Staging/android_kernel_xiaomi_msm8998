@@ -252,7 +252,7 @@ int bpf_trampoline_link_prog(struct bpf_prog *prog)
 	enum bpf_tramp_prog_type kind;
 	struct bpf_trampoline *tr;
 	int err = 0;
-	int cnt;
+	int cnt = 0, i;
 
 	tr = prog->aux->trampoline;
 	kind = bpf_attach_type_to_tramp(prog->expected_attach_type);
@@ -264,7 +264,10 @@ int bpf_trampoline_link_prog(struct bpf_prog *prog)
 		err = -EBUSY;
 		goto out;
 	}
-	cnt = tr->progs_cnt[BPF_TRAMP_FENTRY] + tr->progs_cnt[BPF_TRAMP_FEXIT];
+
+	for (i = 0; i < BPF_TRAMP_MAX; i++)
+		cnt += tr->progs_cnt[i];
+
 	if (kind == BPF_TRAMP_REPLACE) {
 		/* Cannot attach extension if fentry/fexit are in use. */
 		if (cnt) {
@@ -324,16 +327,17 @@ out:
 
 void bpf_trampoline_put(struct bpf_trampoline *tr)
 {
+	int i;
+
 	if (!tr)
 		return;
 	mutex_lock(&trampoline_mutex);
 	if (!refcount_dec_and_test(&tr->refcnt))
 		goto out;
 	WARN_ON_ONCE(mutex_is_locked(&tr->mutex));
-	if (WARN_ON_ONCE(!hlist_empty(&tr->progs_hlist[BPF_TRAMP_FENTRY])))
-		goto out;
-	if (WARN_ON_ONCE(!hlist_empty(&tr->progs_hlist[BPF_TRAMP_FEXIT])))
-		goto out;
+	for (i = 0; i < BPF_TRAMP_MAX; i++)
+		if (WARN_ON_ONCE(!hlist_empty(&tr->progs_hlist[i])))
+			goto out;
 	bpf_image_ksym_del(&tr->ksym);
 	/* wait for tasks to get out of trampoline before freeing it */
 	synchronize_rcu_tasks();
