@@ -63,34 +63,9 @@
 	};
 };
 
-/delete-node/ &firmware;
-
-/ {
-	firmware: firmware {
-		android {
-			compatible = "android,firmware";
-			fstab {
-				compatible = "android,fstab";
-				system {
-					compatible = "android,system";
-					dev = "/dev/block/platform/soc/1da4000.ufshc/by-name/system";
-					type = "erofs";
-					mnt_flags = "ro";
-					fsmgr_flags = "wait";
-					status = "ok";
-				};
-
-				vendor {
-					compatible = "android,vendor";
-					dev = "/dev/block/platform/soc/1da4000.ufshc/by-name/cust";
-					type = "erofs";
-					mnt_flags = "ro";
-					fsmgr_flags = "wait";
-					status = "ok";
-				};
-
-			};
-		};
+&firmware {
+	android {
+		/delete-node/ fstab;
 	};
 };
 
