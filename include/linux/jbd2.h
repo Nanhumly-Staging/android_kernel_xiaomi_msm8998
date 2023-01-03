@@ -436,6 +436,34 @@ struct jbd2_inode {
 
 	/* Flags of inode [j_list_lock] */
 	unsigned long i_flags;
+
+	/**
+	 * @i_dirty_start:
+	 * Offset in bytes where the dirty range for this inode starts in current transaction.
+	 * [j_list_lock]
+	 */
+	loff_t i_dirty_start;
+
+	/**
+	 * @i_dirty_end:
+	 * Inclusive offset in bytes where the dirty range for this inode in current transaction
+	 * ends. [j_list_lock]
+	 */
+	loff_t i_dirty_end;
+
+	/**
+	 * @i_next_dirty_start:
+	 * Offset in bytes where the dirty range for this inode starts in next transaction.
+	 * [j_list_lock]
+	 */
+	loff_t i_next_dirty_start;
+
+	/**
+	 * @i_next_dirty_end:
+	 * Inclusive offset in bytes where the dirty range for this inode in next transaction
+	 * ends. [j_list_lock]
+	 */
+	loff_t i_next_dirty_end;
 };
 
 struct jbd2_revoke_table_s;
@@ -1274,7 +1302,8 @@ extern int	   jbd2_journal_clear_err  (journal_t *);
 extern int	   jbd2_journal_bmap(journal_t *, unsigned long, unsigned long long *);
 extern int	   jbd2_journal_force_commit(journal_t *);
 extern int	   jbd2_journal_force_commit_nested(journal_t *);
-extern int	   jbd2_journal_file_inode(handle_t *handle, struct jbd2_inode *inode);
+extern int	   jbd2_journal_file_inode(handle_t *handle, struct jbd2_inode *inode,
+				loff_t start_byte, loff_t end_byte);
 extern int	   jbd2_journal_begin_ordered_truncate(journal_t *journal,
 				struct jbd2_inode *inode, loff_t new_size);
 extern void	   jbd2_journal_init_jbd_inode(struct jbd2_inode *jinode, struct inode *inode);
