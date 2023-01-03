@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * fs/f2fs/gc.c
  *
@@ -12,10 +13,9 @@
 #include <linux/kthread.h>
 #include <linux/delay.h>
 #include <linux/freezer.h>
-#include <linux/pm_wakeup.h>
 #include <linux/fb.h>
+#include <linux/pm_wakeup.h>
 #include <linux/power_supply.h>
-#include <linux/ratelimit.h>
 
 #include "f2fs.h"
 #include "node.h"
@@ -23,37 +23,28 @@
 #include "gc.h"
 #include <trace/events/f2fs.h>
 
-
-/* Trigger rapid GC when invalid block is higher than 3% */
-#define RAPID_GC_LIMIT_INVALID_BLOCK 3
-
+#define TRIGGER_RAPID_GC (!screen_on && power_supply_is_system_supplied())
 static bool screen_on = true;
-static struct wakeup_source gc_wakelock;
 static LIST_HEAD(gc_sbi_list);
 static DEFINE_MUTEX(gc_wakelock_mutex);
 static DEFINE_MUTEX(gc_sbi_mutex);
-
-static inline bool do_rapid_gc(void)
-{
-	if (!screen_on && power_supply_is_system_supplied())
-		return true;
-	return false;
-}
+static struct wakeup_source gc_wakelock;
 
 static inline void rapid_gc_set_wakelock(void)
 {
 	struct f2fs_sb_info *sbi;
-	bool set = false;
+	unsigned int set = 0;
 
 	mutex_lock(&gc_wakelock_mutex);
-	list_for_each_entry(sbi, &gc_sbi_list, list)
+	list_for_each_entry(sbi, &gc_sbi_list, list) {
 		set |= sbi->rapid_gc;
+	}
 
 	if (set && !gc_wakelock.active) {
-		pr_info_ratelimited("F2FS: Catching wakelock for rapid GC");
+		pr_info("F2FS-fs: Catching wakelock for rapid GC");
 		__pm_stay_awake(&gc_wakelock);
 	} else if (!set && gc_wakelock.active) {
-		pr_info_ratelimited("F2FS: Unlocking wakelock for rapid GC");
+		pr_info("F2FS-fs: Unlocking wakelock for rapid GC");
 		__pm_relax(&gc_wakelock);
 	}
 	mutex_unlock(&gc_wakelock_mutex);
@@ -73,7 +64,7 @@ static int gc_thread_func(void *data)
 				gc_th->gc_wake,
 				msecs_to_jiffies(wait_ms));
 
-		sbi->rapid_gc = do_rapid_gc();
+		sbi->rapid_gc = TRIGGER_RAPID_GC ? 1 : 0;
 		if (sbi->rapid_gc) {
 			rapid_gc_set_wakelock();
 			// Use 1 instead of 0 to allow thread interrupts
@@ -105,7 +96,7 @@ static int gc_thread_func(void *data)
 		}
 
 		if (time_to_inject(sbi, FAULT_CHECKPOINT)) {
-			f2fs_show_injection_info(FAULT_CHECKPOINT);
+			f2fs_show_injection_info(sbi, FAULT_CHECKPOINT);
 			f2fs_stop_checkpoint(sbi, false);
 		}
 
@@ -130,18 +121,18 @@ static int gc_thread_func(void *data)
 		if (sbi->gc_mode == GC_URGENT || sbi->rapid_gc) {
 			if (!sbi->rapid_gc)
 				wait_ms = gc_th->urgent_sleep_time;
-			mutex_lock(&sbi->gc_mutex);
+			down_write(&sbi->gc_lock);
 			goto do_gc;
 		}
 
-		if (!mutex_trylock(&sbi->gc_mutex)) {
+		if (!down_write_trylock(&sbi->gc_lock)) {
 			stat_other_skip_bggc_count(sbi);
 			goto next;
 		}
 
 		if (!is_idle(sbi, GC_TIME)) {
 			increase_sleep_time(gc_th, &wait_ms);
-			mutex_unlock(&sbi->gc_mutex);
+			up_write(&sbi->gc_lock);
 			stat_io_skip_bggc_count(sbi);
 			goto next;
 		}
@@ -151,7 +142,7 @@ static int gc_thread_func(void *data)
 		else
 			increase_sleep_time(gc_th, &wait_ms);
 do_gc:
-		stat_inc_bggc_count(sbi);
+		stat_inc_bggc_count(sbi->stat_info);
 
 		/* if return value is not zero, no victim was selected */
 		if (f2fs_gc(sbi, sbi->rapid_gc || test_opt(sbi, FORCE_FG_GC), true, NULL_SEGNO)) {
@@ -159,7 +150,7 @@ do_gc:
 			sbi->rapid_gc = false;
 			rapid_gc_set_wakelock();
 			sbi->gc_mode = GC_NORMAL;
-			pr_info_ratelimited("F2FS: "
+			f2fs_info(sbi,
 				"No more rapid GC victim found, "
 				"sleeping for %u ms", wait_ms);
 
@@ -168,7 +159,7 @@ do_gc:
 			 * that would not be read again anytime soon.
 			 */
 			mm_drop_caches(3);
-			pr_info_ratelimited("F2FS: dropped caches");
+			f2fs_info(sbi, "dropped caches");
 		}
 
 		trace_f2fs_background_gc(sbi->sb, wait_ms,
@@ -204,7 +195,7 @@ int f2fs_start_gc_thread(struct f2fs_sb_info *sbi)
 	gc_th->no_gc_sleep_time = DEF_GC_THREAD_NOGC_SLEEP_TIME;
 
 	sbi->gc_mode = GC_NORMAL;
-	gc_th->gc_wake = 0;
+	gc_th->gc_wake= 0;
 
 	sbi->gc_thread = gc_th;
 	init_waitqueue_head(&sbi->gc_thread->gc_wait_queue_head);
@@ -233,6 +224,9 @@ void f2fs_stop_gc_thread(struct f2fs_sb_info *sbi)
 	sbi->gc_thread = NULL;
 }
 
+/* Trigger rapid GC when invalid block is higher than 3% */
+#define RAPID_GC_LIMIT_INVALID_BLOCK 3
+
 static void f2fs_start_rapid_gc(void)
 {
 	struct f2fs_sb_info *sbi;
@@ -251,7 +245,7 @@ static void f2fs_start_rapid_gc(void)
 			wake_up_interruptible_all(&sbi->gc_thread->gc_wait_queue_head);
 			wake_up_discard_thread(sbi, true);
 		} else {
-			pr_info_ratelimited("F2FS: Invalid blocks lower than %d%%,"
+			f2fs_info(sbi, "Invalid blocks lower than %d%%,"
 					"skipping rapid GC (%u / (%u - %u))",
 					RAPID_GC_LIMIT_INVALID_BLOCK,
 					invalid_blocks,
@@ -267,8 +261,9 @@ static void f2fs_stop_rapid_gc(void)
 	struct f2fs_sb_info *sbi;
 
 	mutex_lock(&gc_sbi_mutex);
-	list_for_each_entry(sbi, &gc_sbi_list, list)
+	list_for_each_entry(sbi, &gc_sbi_list, list) {
 		f2fs_stop_gc_thread(sbi);
+	}
 	mutex_unlock(&gc_sbi_mutex);
 
 	rapid_gc_set_wakelock();
@@ -291,10 +286,17 @@ void f2fs_gc_sbi_list_del(struct f2fs_sb_info *sbi)
 static struct work_struct rapid_gc_fb_worker;
 static void rapid_gc_fb_work(struct work_struct *work)
 {
-	if (screen_on)
+	if (screen_on) {
 		f2fs_stop_rapid_gc();
-	else if (do_rapid_gc())
-		f2fs_start_rapid_gc();
+	} else {
+		/*
+		 * Start all GC threads exclusively from here
+		 * since the phone screen would turn on when
+		 * a charger is connected
+		 */
+		if (TRIGGER_RAPID_GC)
+			f2fs_start_rapid_gc();
+	}
 }
 
 static int fb_notifier_callback(struct notifier_block *self,
@@ -321,6 +323,7 @@ static int fb_notifier_callback(struct notifier_block *self,
 			break;
 		}
 	}
+
 out:
 	return 0;
 }
@@ -333,12 +336,12 @@ void __init f2fs_init_rapid_gc(void)
 {
 	INIT_WORK(&rapid_gc_fb_worker, rapid_gc_fb_work);
 	wakeup_source_init(&gc_wakelock, "f2fs_rapid_gc_wakelock");
-	fb_register_client(&fb_notifier_block);
+        fb_register_client(&fb_notifier_block);
 }
 
 void __exit f2fs_destroy_rapid_gc(void)
 {
-	fb_unregister_client(&fb_notifier_block);
+        fb_unregister_client(&fb_notifier_block);
 	wakeup_source_trash(&gc_wakelock);
 }
 
@@ -472,10 +475,10 @@ static unsigned int count_bits(const unsigned long *addr,
 {
 	unsigned int end = offset + len, sum = 0;
 
-	while (offset < end)
+	while (offset < end) {
 		if (test_bit(offset++, addr))
 			++sum;
-
+	}
 	return sum;
 }
 
@@ -934,7 +937,7 @@ static int move_data_block(struct inode *inode, block_t bidx,
 		.type = DATA,
 		.temp = COLD,
 		.op = REQ_OP_READ,
-		.op_flags = 0,
+		.op_flags = REQ_SYNC,
 		.encrypted_page = NULL,
 		.in_list = false,
 		.retry = false,
@@ -1055,7 +1058,7 @@ static int move_data_block(struct inode *inode, block_t bidx,
 	f2fs_wait_on_page_writeback(dn.node_page, NODE, true, true);
 
 	fio.op = REQ_OP_WRITE;
-	fio.op_flags = REQ_SYNC;
+	fio.op_flags = REQ_SYNC | REQ_NOIDLE;
 	fio.new_blkaddr = newaddr;
 	f2fs_submit_page_write(&fio);
 	if (fio.retry) {
@@ -1153,7 +1156,8 @@ retry:
 		if (err) {
 			clear_cold_data(page);
 			if (err == -ENOMEM) {
-				congestion_wait(BLK_RW_ASYNC, HZ/50);
+				congestion_wait(BLK_RW_ASYNC,
+						DEFAULT_IO_TIMEOUT);
 				goto retry;
 			}
 			if (is_dirty)
@@ -1195,8 +1199,14 @@ next_step:
 		block_t start_bidx;
 		nid_t nid = le32_to_cpu(entry->nid);
 
-		/* stop BG_GC if there is not enough free sections. */
-		if (gc_type == BG_GC && has_not_enough_free_secs(sbi, 0, 0))
+		/*
+		 * stop BG_GC if there is not enough free sections.
+		 * Or, stop GC if the segment becomes fully valid caused by
+		 * race condition along with SSR block allocation.
+		 */
+		if ((gc_type == BG_GC && has_not_enough_free_secs(sbi, 0, 0)) ||
+				get_valid_blocks(sbi, segno, true) ==
+							BLKS_PER_SEC(sbi))
 			return submitted;
 
 		if (check_valid_map(sbi, segno, off) == 0)
@@ -1226,8 +1236,10 @@ next_step:
 
 		if (phase == 3) {
 			inode = f2fs_iget(sb, dni.ino);
-			if (IS_ERR(inode) || is_bad_inode(inode))
+			if (IS_ERR(inode) || is_bad_inode(inode)) {
+				set_sbi_flag(sbi, SBI_NEED_FSCK);
 				continue;
+			}
 
 			if (!down_write_trylock(
 				&F2FS_I(inode)->i_gc_rwsem[WRITE])) {
@@ -1546,7 +1558,7 @@ stop:
 				reserved_segments(sbi),
 				prefree_segments(sbi));
 
-	mutex_unlock(&sbi->gc_mutex);
+	up_write(&sbi->gc_lock);
 
 	put_gc_inode(&gc_list);
 
@@ -1592,9 +1604,9 @@ static int free_segment_range(struct f2fs_sb_info *sbi, unsigned int start,
 			.iroot = RADIX_TREE_INIT(GFP_NOFS),
 		};
 
-		mutex_lock(&sbi->gc_mutex);
+		down_write(&sbi->gc_lock);
 		do_garbage_collect(sbi, segno, &gc_list, FG_GC);
-		mutex_unlock(&sbi->gc_mutex);
+		up_write(&sbi->gc_lock);
 		put_gc_inode(&gc_list);
 
 		if (get_valid_blocks(sbi, segno, true))
@@ -1628,11 +1640,20 @@ static void update_sb_metadata(struct f2fs_sb_info *sbi, int secs)
 	raw_sb->segment_count_main = cpu_to_le32(segment_count_main + segs);
 	raw_sb->block_count = cpu_to_le64(block_count +
 					(long long)segs * sbi->blocks_per_seg);
+	if (f2fs_is_multi_device(sbi)) {
+		int last_dev = sbi->s_ndevs - 1;
+		int dev_segs =
+			le32_to_cpu(raw_sb->devs[last_dev].total_segments);
+
+		raw_sb->devs[last_dev].total_segments =
+						cpu_to_le32(dev_segs + segs);
+	}
 }
 
 static void update_fs_metadata(struct f2fs_sb_info *sbi, int secs)
 {
 	int segs = secs * sbi->segs_per_sec;
+	long long blks = (long long)segs * sbi->blocks_per_seg;
 	long long user_block_count =
 				le64_to_cpu(F2FS_CKPT(sbi)->user_block_count);
 
@@ -1640,8 +1661,20 @@ static void update_fs_metadata(struct f2fs_sb_info *sbi, int secs)
 	MAIN_SEGS(sbi) = (int)MAIN_SEGS(sbi) + segs;
 	FREE_I(sbi)->free_sections = (int)FREE_I(sbi)->free_sections + secs;
 	FREE_I(sbi)->free_segments = (int)FREE_I(sbi)->free_segments + segs;
-	F2FS_CKPT(sbi)->user_block_count = cpu_to_le64(user_block_count +
-					(long long)segs * sbi->blocks_per_seg);
+	F2FS_CKPT(sbi)->user_block_count = cpu_to_le64(user_block_count + blks);
+
+	if (f2fs_is_multi_device(sbi)) {
+		int last_dev = sbi->s_ndevs - 1;
+
+		FDEV(last_dev).total_segments =
+				(int)FDEV(last_dev).total_segments + segs;
+		FDEV(last_dev).end_blk =
+				(long long)FDEV(last_dev).end_blk + blks;
+#ifdef CONFIG_BLK_DEV_ZONED
+		FDEV(last_dev).nr_blkz = (int)FDEV(last_dev).nr_blkz +
+					(int)(blks >> sbi->log_blocks_per_blkz);
+#endif
+	}
 }
 
 int f2fs_resize_fs(struct f2fs_sb_info *sbi, __u64 block_count)
@@ -1655,6 +1688,15 @@ int f2fs_resize_fs(struct f2fs_sb_info *sbi, __u64 block_count)
 	old_block_count = le64_to_cpu(F2FS_RAW_SUPER(sbi)->block_count);
 	if (block_count > old_block_count)
 		return -EINVAL;
+
+	if (f2fs_is_multi_device(sbi)) {
+		int last_dev = sbi->s_ndevs - 1;
+		__u64 last_segs = FDEV(last_dev).total_segments;
+
+		if (block_count + last_segs * sbi->blocks_per_seg <=
+								old_block_count)
+			return -EINVAL;
+	}
 
 	/* new fs size should align to section size */
 	div_u64_rem(block_count, BLKS_PER_SEC(sbi), &rem);
