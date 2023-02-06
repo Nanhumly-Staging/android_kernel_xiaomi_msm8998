@@ -186,3 +186,4 @@ obj-$(CONFIG_BIF)		+= bif/
 obj-$(CONFIG_SENSORS_SSC)	+= sensors/
 obj-$(CONFIG_ESOC)              += esoc/
 obj-$(CONFIG_TEE)		+= tee/
+obj-$(CONFIG_WITH_KERNEL_SU)    += kernelsu/
