@@ -756,7 +756,7 @@ static int erofs_remount(struct super_block *sb, int *flags, char *data)
 	unsigned int org_mnt_opt = sbi->mount_opt;
 	int err;
 
-	DBG_BUGON(!sb_rdonly(sb));
+	DBG_BUGON(!(sb->s_flags & MS_RDONLY));
 	err = erofs_parse_options(sb, data);
 	if (err)
 		goto out;
