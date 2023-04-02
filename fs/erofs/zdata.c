@@ -815,7 +815,7 @@ static void z_erofs_decompressqueue_endio(struct bio *bio)
 {
 	tagptr1_t t = tagptr_init(tagptr1_t, bio->bi_private);
 	struct z_erofs_decompressqueue *q = tagptr_unfold_ptr(t);
-	blk_status_t err = bio->bi_status;
+	int err = bio->bi_error;
 	struct bio_vec *bvec;
 	unsigned int i;
 
@@ -1311,7 +1311,7 @@ static void z_erofs_submit_queue(struct super_block *sb,
 
 			if (bio && cur != last_index + 1) {
 submit_bio_retry:
-				submit_bio(bio);
+				submit_bio(READ, bio);
 				bio = NULL;
 			}
 
@@ -1319,13 +1319,13 @@ submit_bio_retry:
 				bio = bio_alloc(GFP_NOIO, BIO_MAX_PAGES);
 
 				bio->bi_end_io = z_erofs_decompressqueue_endio;
-				bio_set_dev(bio, sb->s_bdev);
+				bio->bi_bdev = sb->s_bdev;
 				bio->bi_iter.bi_sector = (sector_t)cur <<
 					LOG_SECTORS_PER_BLOCK;
 				bio->bi_private = bi_private;
-				bio->bi_opf = REQ_OP_READ;
+				bio->bi_rw = READ;
 				if (f->readahead)
-					bio->bi_opf |= REQ_RAHEAD;
+					bio->bi_rw |= REQ_RAHEAD;
 				++nr_bios;
 			}
 
@@ -1343,7 +1343,7 @@ submit_bio_retry:
 	} while (owned_head != Z_EROFS_PCLUSTER_TAIL);
 
 	if (bio)
-		submit_bio(bio);
+		submit_bio(READ, bio);
 
 	/*
 	 * although background is preferred, no one is pending for submission.

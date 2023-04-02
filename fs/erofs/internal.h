@@ -17,6 +17,17 @@
 #include <linux/vmalloc.h>
 #include "erofs_fs.h"
 
+/*
+ * sb->s_flags.  Note that these mirror the equivalent MS_* flags where
+ * represented in both.
+ */
+#define SB_RDONLY	1	/* Mount read-only */
+#define SB_NOATIME	1024	/* Do not update access times. */
+static inline bool sb_rdonly(const struct super_block *sb)
+{
+	return sb->s_flags & MS_RDONLY;
+}
+
 /* redefine pr_fmt "erofs: " */
 #undef pr_fmt
 #define pr_fmt(fmt) "erofs: " fmt
@@ -381,8 +392,8 @@ extern const struct inode_operations erofs_symlink_iops;
 extern const struct inode_operations erofs_fast_symlink_iops;
 
 struct inode *erofs_iget(struct super_block *sb, erofs_nid_t nid, bool dir);
-int erofs_getattr(const struct path *path, struct kstat *stat,
-		  u32 request_mask, unsigned int query_flags);
+int erofs_getattr(struct vfsmount *mnt,
+			 struct dentry *dentry, struct kstat *stat);
 
 /* namei.c */
 extern const struct inode_operations erofs_dir_iops;
