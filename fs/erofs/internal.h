@@ -17,6 +17,17 @@
 #include <linux/vmalloc.h>
 #include "erofs_fs.h"
 
+/*
+ * sb->s_flags.  Note that these mirror the equivalent MS_* flags where
+ * represented in both.
+ */
+#define SB_RDONLY	1	/* Mount read-only */
+#define SB_NOATIME	1024	/* Do not update access times. */
+static inline bool sb_rdonly(const struct super_block *sb)
+{
+	return sb->s_flags & MS_RDONLY;
+}
+
 /* redefine pr_fmt "erofs: " */
 #undef pr_fmt
 #define pr_fmt(fmt) "erofs: " fmt

@@ -12,7 +12,7 @@ static void erofs_readendio(struct bio *bio)
 {
 	int i;
 	struct bio_vec *bvec;
-	const blk_status_t err = bio->bi_status;
+	const int err = bio->bi_error;
 
 	bio_for_each_segment_all(bvec, bio, i) {
 		struct page *page = bvec->bv_page;
@@ -132,7 +132,7 @@ static inline struct bio *erofs_read_raw_page(struct bio *bio,
 	    /* not continuous */
 	    *last_block + 1 != current_block) {
 submit_bio_retry:
-		submit_bio(bio);
+		submit_bio(READ, bio);
 		bio = NULL;
 	}
 
@@ -205,10 +205,10 @@ submit_bio_retry:
 		bio = bio_alloc(GFP_NOIO, nblocks);
 
 		bio->bi_end_io = erofs_readendio;
-		bio_set_dev(bio, sb->s_bdev);
+		bio->bi_bdev = sb->s_bdev;
 		bio->bi_iter.bi_sector = (sector_t)blknr <<
 			LOG_SECTORS_PER_BLOCK;
-		bio->bi_opf = REQ_OP_READ | (ra ? REQ_RAHEAD : 0);
+		bio->bi_rw = READ | (ra ? REQ_RAHEAD : 0);
 	}
 
 	err = bio_add_page(bio, page, PAGE_SIZE, 0);
@@ -239,7 +239,7 @@ has_updated:
 	/* if updated manually, continuous pages has a gap */
 	if (bio)
 submit_bio_out:
-		submit_bio(bio);
+		submit_bio(READ, bio);
 	return err ? ERR_PTR(err) : NULL;
 }
 
@@ -303,7 +303,7 @@ static int erofs_raw_access_readpages(struct file *filp,
 
 	/* the rare case (end in gaps) */
 	if (bio)
-		submit_bio(bio);
+		submit_bio(READ, bio);
 	return 0;
 }
 
