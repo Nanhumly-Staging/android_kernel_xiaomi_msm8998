@@ -195,9 +195,13 @@ static void init_once(void *foo)
 	init_rwsem(&ei->xattr_sem);
 #endif
 	mutex_init(&ei->truncate_mutex);
+
+#if 0
 #ifdef CONFIG_FS_DAX
 	init_rwsem(&ei->dax_sem);
 #endif
+#endif
+
 	inode_init_once(&ei->vfs_inode);
 }
 
@@ -297,11 +301,13 @@ static int ext2_show_options(struct seq_file *seq, struct dentry *root)
 		seq_puts(seq, ",grpquota");
 #endif
 
+#if 0
 #ifdef CONFIG_FS_DAX
 	if (sbi->s_mount_opt & EXT2_MOUNT_XIP)
 		seq_puts(seq, ",xip");
 	if (sbi->s_mount_opt & EXT2_MOUNT_DAX)
 		seq_puts(seq, ",dax");
+#endif
 #endif
 
 	if (!test_opt(sb, RESERVATION))
@@ -571,6 +577,8 @@ static int parse_options(char *options, struct super_block *sb)
 			set_opt(sbi->s_mount_opt, XIP);
 			/* Fall through */
 		case Opt_dax:
+
+#if 0
 #ifdef CONFIG_FS_DAX
 			ext2_msg(sb, KERN_WARNING,
 		"DAX enabled. Warning: EXPERIMENTAL, use at your own risk");
@@ -578,6 +586,9 @@ static int parse_options(char *options, struct super_block *sb)
 #else
 			ext2_msg(sb, KERN_INFO, "dax option not supported");
 #endif
+#endif
+
+			ext2_msg(sb, KERN_INFO, "dax option not supported");
 			break;
 
 #if defined(CONFIG_QUOTA)

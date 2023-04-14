@@ -357,10 +357,14 @@ xfs_parseargs(
 			mp->m_flags |= XFS_MOUNT_DISCARD;
 		} else if (!strcmp(this_char, MNTOPT_NODISCARD)) {
 			mp->m_flags &= ~XFS_MOUNT_DISCARD;
+
+#if 0
 #ifdef CONFIG_FS_DAX
 		} else if (!strcmp(this_char, MNTOPT_DAX)) {
 			mp->m_flags |= XFS_MOUNT_DAX;
 #endif
+#endif
+
 		} else {
 			xfs_warn(mp, "unknown mount option [%s].", this_char);
 			return -EINVAL;

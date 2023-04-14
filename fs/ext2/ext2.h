@@ -387,12 +387,16 @@ struct ext2_inode {
 #define EXT2_MOUNT_USRQUOTA		0x020000  /* user quota */
 #define EXT2_MOUNT_GRPQUOTA		0x040000  /* group quota */
 #define EXT2_MOUNT_RESERVATION		0x080000  /* Preallocation */
+
+#if 0
 #ifdef CONFIG_FS_DAX
 #define EXT2_MOUNT_DAX			0x100000  /* Direct Access */
 #else
 #define EXT2_MOUNT_DAX			0
 #endif
+#endif
 
+#define EXT2_MOUNT_DAX			0
 
 #define clear_opt(o, opt)		o &= ~EXT2_MOUNT_##opt
 #define set_opt(o, opt)			o |= EXT2_MOUNT_##opt

@@ -192,6 +192,7 @@ out:
 	return ret;
 }
 
+#if 0
 #ifdef CONFIG_FS_DAX
 static void ext4_end_io_unwritten(struct buffer_head *bh, int uptodate)
 {
@@ -329,6 +330,9 @@ static const struct vm_operations_struct ext4_dax_vm_ops = {
 #else
 #define ext4_dax_vm_ops	ext4_file_vm_ops
 #endif
+#endif
+
+#define ext4_dax_vm_ops	ext4_file_vm_ops
 
 static const struct vm_operations_struct ext4_file_vm_ops = {
 	.fault		= ext4_filemap_fault,

@@ -1101,8 +1101,10 @@ static void __ext2_truncate_blocks(struct inode *inode, loff_t offset)
 	blocksize = inode->i_sb->s_blocksize;
 	iblock = (offset + blocksize-1) >> EXT2_BLOCK_SIZE_BITS(inode->i_sb);
 
+#if 0
 #ifdef CONFIG_FS_DAX
 	WARN_ON(!rwsem_is_locked(&ei->dax_sem));
+#endif
 #endif
 
 	n = ext2_block_to_path(inode, iblock, offsets, NULL);
