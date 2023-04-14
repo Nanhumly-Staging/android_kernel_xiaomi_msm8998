@@ -203,6 +203,8 @@ extern struct tsb_phys_patch_entry __tsb_phys_patch, __tsb_phys_patch_end;
 	 * We have to propagate the 4MB bit of the virtual address
 	 * because we are fabricating 8MB pages using 4MB hw pages.
 	 */
+
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 #define USER_PGTABLE_CHECK_PMD_HUGE(VADDR, REG1, REG2, FAIL_LABEL, PTE_LABEL) \
 	brz,pn		REG1, FAIL_LABEL;		\
@@ -222,6 +224,11 @@ extern struct tsb_phys_patch_entry __tsb_phys_patch, __tsb_phys_patch_end;
 	brz,pn		REG1, FAIL_LABEL; \
 	 nop;
 #endif
+#endif
+
+#define USER_PGTABLE_CHECK_PMD_HUGE(VADDR, REG1, REG2, FAIL_LABEL, PTE_LABEL) \
+	brz,pn		REG1, FAIL_LABEL; \
+	 nop;
 
 	/* Do a user page table walk in MMU globals.  Leaves final,
 	 * valid, PTE value in REG1.  Jumps to FAIL_LABEL on early

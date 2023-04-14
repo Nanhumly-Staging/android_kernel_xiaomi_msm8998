@@ -397,6 +397,7 @@ void add_wired_entry(unsigned long entrylo0, unsigned long entrylo1,
 #endif
 }
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 
 int __init has_transparent_hugepage(void)
@@ -416,6 +417,7 @@ int __init has_transparent_hugepage(void)
 }
 
 #endif /* CONFIG_TRANSPARENT_HUGEPAGE  */
+#endif
 
 /*
  * Used for loading TLB entries before trap_init() has started, when we

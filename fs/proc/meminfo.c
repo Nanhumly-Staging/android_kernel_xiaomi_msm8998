@@ -103,9 +103,13 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
 #ifdef CONFIG_MEMORY_FAILURE
 		"HardwareCorrupted: %5lu kB\n"
 #endif
+
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 		"AnonHugePages:  %8lu kB\n"
 #endif
+#endif
+
 #ifdef CONFIG_CMA
 		"CmaTotal:       %8lu kB\n"
 		"CmaFree:        %8lu kB\n"
@@ -161,10 +165,14 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
 #ifdef CONFIG_MEMORY_FAILURE
 		, atomic_long_read(&num_poisoned_pages) << (PAGE_SHIFT - 10)
 #endif
+
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 		, K(global_page_state(NR_ANON_TRANSPARENT_HUGEPAGES) *
 		   HPAGE_PMD_NR)
 #endif
+#endif
+
 #ifdef CONFIG_CMA
 		, K(totalcma_pages)
 		, K(global_page_state(NR_FREE_CMA_PAGES))

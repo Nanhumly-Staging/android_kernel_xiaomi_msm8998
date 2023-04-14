@@ -482,6 +482,7 @@ void pgtable_free_tlb(struct mmu_gather *tlb, void *table, int shift)
 #endif
 #endif /* CONFIG_PPC_64K_PAGES */
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 
 /*
@@ -867,3 +868,4 @@ int has_transparent_hugepage(void)
 	return 1;
 }
 #endif /* CONFIG_TRANSPARENT_HUGEPAGE */
+#endif

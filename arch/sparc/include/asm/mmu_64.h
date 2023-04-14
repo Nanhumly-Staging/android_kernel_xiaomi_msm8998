@@ -82,12 +82,16 @@ struct tsb_config {
 
 #define MM_TSB_BASE	0
 
+#if 0
 #if defined(CONFIG_HUGETLB_PAGE) || defined(CONFIG_TRANSPARENT_HUGEPAGE)
 #define MM_TSB_HUGE	1
 #define MM_NUM_TSBS	2
 #else
 #define MM_NUM_TSBS	1
 #endif
+#endif
+
+#define MM_NUM_TSBS	1
 
 typedef struct {
 	spinlock_t		lock;

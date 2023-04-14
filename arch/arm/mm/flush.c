@@ -416,6 +416,7 @@ void __flush_anon_page(struct vm_area_struct *vma, struct page *page, unsigned l
 	__cpuc_flush_dcache_area(page_address(page), PAGE_SIZE);
 }
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 #ifdef CONFIG_HAVE_RCU_TABLE_FREE
 void pmdp_splitting_flush(struct vm_area_struct *vma, unsigned long address,
@@ -430,3 +431,4 @@ void pmdp_splitting_flush(struct vm_area_struct *vma, unsigned long address,
 }
 #endif /* CONFIG_HAVE_RCU_TABLE_FREE */
 #endif /* CONFIG_TRANSPARENT_HUGEPAGE */
+#endif

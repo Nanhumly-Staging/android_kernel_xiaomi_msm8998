@@ -1,6 +1,7 @@
 #ifndef _ASM_POWERPC_HUGETLB_H
 #define _ASM_POWERPC_HUGETLB_H
 
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 #include <asm/page.h>
 #include <asm-generic/hugetlb.h>
@@ -185,12 +186,27 @@ static inline pte_t *hugepte_offset(hugepd_t hpd, unsigned long addr,
 	return 0;
 }
 #endif /* CONFIG_HUGETLB_PAGE */
+#endif
+
+static inline void flush_hugetlb_page(struct vm_area_struct *vma,
+				      unsigned long vmaddr)
+{
+}
+
+#define hugepd_shift(x) 0
+static inline pte_t *hugepte_offset(hugepd_t hpd, unsigned long addr,
+				    unsigned pdshift)
+{
+	return 0;
+}
 
 /*
  * FSL Book3E platforms require special gpage handling - the gpages
  * are reserved early in the boot process by memblock instead of via
  * the .dts as on IBM platforms.
  */
+
+#if 0
 #if defined(CONFIG_HUGETLB_PAGE) && defined(CONFIG_PPC_FSL_BOOK3E)
 extern void __init reserve_hugetlb_gpages(void);
 #else
@@ -198,5 +214,10 @@ static inline void reserve_hugetlb_gpages(void)
 {
 }
 #endif
+#endif
+
+static inline void reserve_hugetlb_gpages(void)
+{
+}
 
 #endif /* _ASM_POWERPC_HUGETLB_H */

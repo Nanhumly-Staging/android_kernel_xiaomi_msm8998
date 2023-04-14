@@ -39,10 +39,13 @@ arch_get_unmapped_area (struct file *filp, unsigned long addr, unsigned long len
 		return addr;
 	}
 
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 	if (REGION_NUMBER(addr) == RGN_HPAGE)
 		addr = 0;
 #endif
+#endif
+
 	if (!addr)
 		addr = TASK_UNMAPPED_BASE;
 

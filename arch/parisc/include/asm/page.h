@@ -144,6 +144,7 @@ extern int npmem_ranges;
 #define pfn_valid(pfn)		((pfn) < max_mapnr)
 #endif /* CONFIG_DISCONTIGMEM */
 
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 #define HPAGE_SHIFT		PMD_SHIFT /* fixed for transparent huge pages */
 #define HPAGE_SIZE      	((1UL) << HPAGE_SHIFT)
@@ -161,6 +162,7 @@ extern int npmem_ranges;
 # define _HUGE_PAGE_SIZE_ENCODING_DEFAULT _PAGE_SIZE_ENCODING_16M
 #endif
 #endif /* CONFIG_HUGETLB_PAGE */
+#endif
 
 #define virt_addr_valid(kaddr)	pfn_valid(__pa(kaddr) >> PAGE_SHIFT)
 

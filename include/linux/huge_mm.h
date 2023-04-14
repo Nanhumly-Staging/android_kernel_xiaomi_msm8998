@@ -62,6 +62,7 @@ extern pmd_t *page_check_address_pmd(struct page *page,
 #define HPAGE_PMD_ORDER (HPAGE_PMD_SHIFT-PAGE_SHIFT)
 #define HPAGE_PMD_NR (1<<HPAGE_PMD_ORDER)
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 #define HPAGE_PMD_SHIFT PMD_SHIFT
 #define HPAGE_PMD_SIZE	((1UL) << HPAGE_PMD_SHIFT)
@@ -219,5 +220,59 @@ static inline bool is_huge_zero_page(struct page *page)
 }
 
 #endif /* CONFIG_TRANSPARENT_HUGEPAGE */
+#endif
+
+#define HPAGE_PMD_SHIFT ({ BUILD_BUG(); 0; })
+#define HPAGE_PMD_MASK ({ BUILD_BUG(); 0; })
+#define HPAGE_PMD_SIZE ({ BUILD_BUG(); 0; })
+
+#define hpage_nr_pages(x) 1
+
+#define transparent_hugepage_enabled(__vma) 0
+
+#define transparent_hugepage_flags 0UL
+static inline int
+split_huge_page_to_list(struct page *page, struct list_head *list)
+{
+	return 0;
+}
+static inline int split_huge_page(struct page *page)
+{
+	return 0;
+}
+#define split_huge_page_pmd(__vma, __address, __pmd)	\
+	do { } while (0)
+#define wait_split_huge_page(__anon_vma, __pmd)	\
+	do { } while (0)
+#define split_huge_page_pmd_mm(__mm, __address, __pmd)	\
+	do { } while (0)
+static inline int hugepage_madvise(struct vm_area_struct *vma,
+				   unsigned long *vm_flags, int advice)
+{
+	BUG();
+	return 0;
+}
+static inline void vma_adjust_trans_huge(struct vm_area_struct *vma,
+					 unsigned long start,
+					 unsigned long end,
+					 long adjust_next)
+{
+}
+static inline int pmd_trans_huge_lock(pmd_t *pmd, struct vm_area_struct *vma,
+		spinlock_t **ptl)
+{
+	return 0;
+}
+
+static inline int do_huge_pmd_numa_page(struct mm_struct *mm, struct vm_area_struct *vma,
+					unsigned long addr, pmd_t pmd, pmd_t *pmdp)
+{
+	return 0;
+}
+
+static inline bool is_huge_zero_page(struct page *page)
+{
+	return false;
+}
 
 #endif /* _LINUX_HUGE_MM_H */

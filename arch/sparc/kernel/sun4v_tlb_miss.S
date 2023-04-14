@@ -176,6 +176,7 @@ sun4v_tsb_miss_common:
 
 	sub	%g2, TRAP_PER_CPU_FAULT_INFO, %g2
 
+#if 0
 #if defined(CONFIG_HUGETLB_PAGE) || defined(CONFIG_TRANSPARENT_HUGEPAGE)
 	mov	SCRATCHPAD_UTSBREG2, %g5
 	ldxa	[%g5] ASI_SCRATCHPAD, %g5
@@ -189,6 +190,7 @@ sun4v_tsb_miss_common:
 	sub	%g2, TRAP_PER_CPU_FAULT_INFO, %g2
 
 80:	stx	%g5, [%g2 + TRAP_PER_CPU_TSB_HUGE_TEMP]
+#endif
 #endif
 
 	ba,pt	%xcc, tsb_miss_page_table_walk_sun4v_fastpath

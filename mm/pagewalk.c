@@ -121,6 +121,7 @@ static int walk_pgd_range(unsigned long addr, unsigned long end,
 	return err;
 }
 
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 static unsigned long hugetlb_entry_end(struct hstate *h, unsigned long addr,
 				       unsigned long end)
@@ -163,6 +164,13 @@ static int walk_hugetlb_range(unsigned long addr, unsigned long end,
 }
 
 #endif /* CONFIG_HUGETLB_PAGE */
+#endif
+
+static int walk_hugetlb_range(unsigned long addr, unsigned long end,
+			      struct mm_walk *walk)
+{
+	return 0;
+}
 
 /*
  * Decide whether we really walk over the current vma on [@start, @end)

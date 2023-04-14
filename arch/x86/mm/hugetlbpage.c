@@ -71,6 +71,7 @@ int pud_huge(pud_t pud)
 }
 #endif
 
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 static unsigned long hugetlb_get_unmapped_area_bottomup(struct file *file,
 		unsigned long addr, unsigned long len,
@@ -155,6 +156,7 @@ hugetlb_get_unmapped_area(struct file *file, unsigned long addr,
 				pgoff, flags);
 }
 #endif /* CONFIG_HUGETLB_PAGE */
+#endif
 
 #ifdef CONFIG_X86_64
 static __init int setup_hugepagesz(char *opt)

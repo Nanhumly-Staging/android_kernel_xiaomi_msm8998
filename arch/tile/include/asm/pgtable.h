@@ -486,6 +486,7 @@ static inline pmd_t pmd_modify(pmd_t pmd, pgprot_t newprot)
 	return pfn_pmd(pmd_pfn(pmd), newprot);
 }
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 #define has_transparent_hugepage() 1
 #define pmd_trans_huge pmd_huge_page
@@ -500,6 +501,7 @@ static inline int pmd_trans_splitting(pmd_t pmd)
 	return hv_pte_get_client2(pmd_pte(pmd));
 }
 #endif /* CONFIG_TRANSPARENT_HUGEPAGE */
+#endif
 
 /*
  * The pte page can be thought of an array like this: pte_t[PTRS_PER_PTE]

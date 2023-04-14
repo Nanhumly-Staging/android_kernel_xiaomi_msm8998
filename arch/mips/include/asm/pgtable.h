@@ -91,9 +91,14 @@ extern void paging_init(void);
 #define pmd_phys(pmd)		virt_to_phys((void *)pmd_val(pmd))
 
 #define __pmd_page(pmd)		(pfn_to_page(pmd_phys(pmd) >> PAGE_SHIFT))
+
+#if 0
 #ifndef CONFIG_TRANSPARENT_HUGEPAGE
 #define pmd_page(pmd)		__pmd_page(pmd)
 #endif /* CONFIG_TRANSPARENT_HUGEPAGE  */
+#endif
+
+#define pmd_page(pmd)		__pmd_page(pmd)
 
 #define pmd_page_vaddr(pmd)	pmd_val(pmd)
 
@@ -482,6 +487,7 @@ static inline int io_remap_pfn_range(struct vm_area_struct *vma,
 #define io_remap_pfn_range io_remap_pfn_range
 #endif
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 
 extern int has_transparent_hugepage(void);
@@ -632,6 +638,7 @@ static inline pmd_t pmdp_huge_get_and_clear(struct mm_struct *mm,
 }
 
 #endif /* CONFIG_TRANSPARENT_HUGEPAGE */
+#endif
 
 #include <asm-generic/pgtable.h>
 

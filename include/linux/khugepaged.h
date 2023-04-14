@@ -3,6 +3,7 @@
 
 #include <linux/sched.h> /* MMF_VM_HUGEPAGE */
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 extern int __khugepaged_enter(struct mm_struct *mm);
 extern void __khugepaged_exit(struct mm_struct *mm);
@@ -66,5 +67,24 @@ static inline int khugepaged_enter_vma_merge(struct vm_area_struct *vma,
 	return 0;
 }
 #endif /* CONFIG_TRANSPARENT_HUGEPAGE */
+#endif
+
+static inline int khugepaged_fork(struct mm_struct *mm, struct mm_struct *oldmm)
+{
+	return 0;
+}
+static inline void khugepaged_exit(struct mm_struct *mm)
+{
+}
+static inline int khugepaged_enter(struct vm_area_struct *vma,
+				   unsigned long vm_flags)
+{
+	return 0;
+}
+static inline int khugepaged_enter_vma_merge(struct vm_area_struct *vma,
+					     unsigned long vm_flags)
+{
+	return 0;
+}
 
 #endif /* _LINUX_KHUGEPAGED_H */

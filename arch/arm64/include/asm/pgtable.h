@@ -385,6 +385,7 @@ static inline pgprot_t mk_sect_prot(pgprot_t prot)
  * THP definitions.
  */
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 #define pmd_trans_huge(pmd)	(pmd_val(pmd) && !(pmd_val(pmd) & PMD_TABLE_BIT))
 #define pmd_trans_splitting(pmd)	pte_special(pmd_pte(pmd))
@@ -395,6 +396,7 @@ void pmdp_splitting_flush(struct vm_area_struct *vma, unsigned long address,
 			  pmd_t *pmdp);
 #endif /* CONFIG_HAVE_RCU_TABLE_FREE */
 #endif /* CONFIG_TRANSPARENT_HUGEPAGE */
+#endif
 
 #define pmd_present(pmd)	pte_present(pmd_pte(pmd))
 #define pmd_dirty(pmd)		pte_dirty(pmd_pte(pmd))
@@ -663,6 +665,7 @@ extern int ptep_set_access_flags(struct vm_area_struct *vma,
 				 unsigned long address, pte_t *ptep,
 				 pte_t entry, int dirty);
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 #define __HAVE_ARCH_PMDP_SET_ACCESS_FLAGS
 static inline int pmdp_set_access_flags(struct vm_area_struct *vma,
@@ -671,6 +674,7 @@ static inline int pmdp_set_access_flags(struct vm_area_struct *vma,
 {
 	return ptep_set_access_flags(vma, address, (pte_t *)pmdp, pmd_pte(entry), dirty);
 }
+#endif
 #endif
 
 /*
@@ -697,6 +701,7 @@ static inline int ptep_test_and_clear_young(struct vm_area_struct *vma,
 	return res;
 }
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 #define __HAVE_ARCH_PMDP_TEST_AND_CLEAR_YOUNG
 static inline int pmdp_test_and_clear_young(struct vm_area_struct *vma,
@@ -706,6 +711,7 @@ static inline int pmdp_test_and_clear_young(struct vm_area_struct *vma,
 	return ptep_test_and_clear_young(vma, address, (pte_t *)pmdp);
 }
 #endif /* CONFIG_TRANSPARENT_HUGEPAGE */
+#endif
 
 #define __HAVE_ARCH_PTEP_GET_AND_CLEAR
 static inline pte_t ptep_get_and_clear(struct mm_struct *mm,
@@ -724,6 +730,7 @@ static inline pte_t ptep_get_and_clear(struct mm_struct *mm,
 	return __pte(old_pteval);
 }
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 #define __HAVE_ARCH_PMDP_HUGE_GET_AND_CLEAR
 static inline pmd_t pmdp_huge_get_and_clear(struct mm_struct *mm,
@@ -732,6 +739,7 @@ static inline pmd_t pmdp_huge_get_and_clear(struct mm_struct *mm,
 	return pte_pmd(ptep_get_and_clear(mm, address, (pte_t *)pmdp));
 }
 #endif /* CONFIG_TRANSPARENT_HUGEPAGE */
+#endif
 
 /*
  * ptep_set_wrprotect - mark read-only while trasferring potential hardware
@@ -757,6 +765,7 @@ static inline void ptep_set_wrprotect(struct mm_struct *mm, unsigned long addres
 	: "cc");
 }
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 #define __HAVE_ARCH_PMDP_SET_WRPROTECT
 static inline void pmdp_set_wrprotect(struct mm_struct *mm,
@@ -765,6 +774,8 @@ static inline void pmdp_set_wrprotect(struct mm_struct *mm,
 	ptep_set_wrprotect(mm, address, (pte_t *)pmdp);
 }
 #endif
+#endif
+
 #endif	/* CONFIG_ARM64_HW_AFDBM */
 
 extern pgd_t swapper_pg_dir[PTRS_PER_PGD];

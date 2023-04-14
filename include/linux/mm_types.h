@@ -159,6 +159,7 @@ struct page {
 #endif
 		};
 
+#if 0
 #if defined(CONFIG_TRANSPARENT_HUGEPAGE) && USE_SPLIT_PMD_PTLOCKS
 		struct {
 			unsigned long __pad;	/* do not overlay pmd_huge_pte
@@ -168,6 +169,8 @@ struct page {
 			pgtable_t pmd_huge_pte; /* protected by page->ptl */
 		};
 #endif
+#endif
+
 	};
 
 	/* Remainder is not double word aligned */
@@ -488,9 +491,13 @@ struct mm_struct {
 #ifdef CONFIG_MMU_NOTIFIER
 	struct mmu_notifier_mm *mmu_notifier_mm;
 #endif
+
+#if 0
 #if defined(CONFIG_TRANSPARENT_HUGEPAGE) && !USE_SPLIT_PMD_PTLOCKS
 	pgtable_t pmd_huge_pte; /* protected by page_table_lock */
 #endif
+#endif
+
 #ifdef CONFIG_CPUMASK_OFFSTACK
 	struct cpumask cpumask_allocation;
 #endif
@@ -525,9 +532,13 @@ struct mm_struct {
 	/* address of the bounds directory */
 	void __user *bd_addr;
 #endif
+
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 	atomic_long_t hugetlb_usage;
 #endif
+#endif
+
 #ifdef CONFIG_MSM_APP_SETTINGS
 	int app_setting;
 #endif

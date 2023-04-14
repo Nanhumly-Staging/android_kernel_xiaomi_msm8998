@@ -5,8 +5,10 @@
 #include <linux/list.h>
 #endif
 
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 #include <asm/page.h>
+#endif
 #endif
 
 typedef struct {
@@ -15,10 +17,13 @@ typedef struct {
 #ifdef CONFIG_METAG_USER_TCM
 	struct list_head tcm;
 #endif
+
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 #if HPAGE_SHIFT < HUGEPT_SHIFT
 	/* last partially filled huge page table address */
 	unsigned long part_huge;
+#endif
 #endif
 #endif
 } mm_context_t;

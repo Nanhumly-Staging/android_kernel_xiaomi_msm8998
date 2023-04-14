@@ -133,12 +133,18 @@ void __init setup_arch(char **cmdline_p)
 
 	printk(KERN_INFO "Kernel default page size is %d KB. Huge pages ",
 		(int)(PAGE_SIZE / 1024));
+
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 	printk(KERN_CONT "enabled with %d MB physical and %d MB virtual size",
 		 1 << (REAL_HPAGE_SHIFT - 20), 1 << (HPAGE_SHIFT - 20));
 #else
 	printk(KERN_CONT "disabled");
 #endif
+#endif
+
+	printk(KERN_CONT "disabled");
+
 	printk(KERN_CONT ".\n");
 
 	/*

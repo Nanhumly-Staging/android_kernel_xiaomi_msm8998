@@ -130,6 +130,7 @@ static void subpage_prot_clear(unsigned long addr, unsigned long len)
 	up_write(&mm->mmap_sem);
 }
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 static int subpage_walk_pmd_entry(pmd_t *pmd, unsigned long addr,
 				  unsigned long end, struct mm_walk *walk)
@@ -174,6 +175,13 @@ static void subpage_mark_vma_nohuge(struct mm_struct *mm, unsigned long addr,
 	return;
 }
 #endif
+#endif
+
+static void subpage_mark_vma_nohuge(struct mm_struct *mm, unsigned long addr,
+				    unsigned long len)
+{
+	return;
+}
 
 /*
  * Copy in a subpage protection map for an address range.

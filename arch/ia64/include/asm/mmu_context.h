@@ -144,12 +144,15 @@ reload_context (nv_mm_context_t context)
 	rr2 = rr0 + 2*rid_incr;
 	rr3 = rr0 + 3*rid_incr;
 	rr4 = rr0 + 4*rid_incr;
+
+#if 0
 #ifdef  CONFIG_HUGETLB_PAGE
 	rr4 = (rr4 & (~(0xfcUL))) | (old_rr4 & 0xfc);
 
 #  if RGN_HPAGE != 4
 #    error "reload_context assumes RGN_HPAGE is 4"
 #  endif
+#endif
 #endif
 
 	ia64_set_rr0_to_rr4(rr0, rr1, rr2, rr3, rr4);

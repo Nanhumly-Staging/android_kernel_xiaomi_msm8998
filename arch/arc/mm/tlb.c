@@ -269,6 +269,7 @@ noinline void local_flush_tlb_all(void)
 		write_aux_reg(ARC_REG_TLBCOMMAND, TLBWrite);
 	}
 
+#if 0
 	if (IS_ENABLED(CONFIG_TRANSPARENT_HUGEPAGE)) {
 		const int stlb_idx = 0x800;
 
@@ -280,6 +281,7 @@ noinline void local_flush_tlb_all(void)
 			write_aux_reg(ARC_REG_TLBCOMMAND, TLBWrite);
 		}
 	}
+#endif
 
 	utlb_invalidate();
 
@@ -434,6 +436,7 @@ static inline void ipi_flush_tlb_range(void *arg)
 	local_flush_tlb_range(ta->ta_vma, ta->ta_start, ta->ta_end);
 }
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 static inline void ipi_flush_pmd_tlb_range(void *arg)
 {
@@ -441,6 +444,7 @@ static inline void ipi_flush_pmd_tlb_range(void *arg)
 
 	local_flush_pmd_tlb_range(ta->ta_vma, ta->ta_start, ta->ta_end);
 }
+#endif
 #endif
 
 static inline void ipi_flush_tlb_kernel_range(void *arg)
@@ -483,6 +487,7 @@ void flush_tlb_range(struct vm_area_struct *vma, unsigned long start,
 	on_each_cpu_mask(mm_cpumask(vma->vm_mm), ipi_flush_tlb_range, &ta, 1);
 }
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 void flush_pmd_tlb_range(struct vm_area_struct *vma, unsigned long start,
 			 unsigned long end)
@@ -495,6 +500,7 @@ void flush_pmd_tlb_range(struct vm_area_struct *vma, unsigned long start,
 
 	on_each_cpu_mask(mm_cpumask(vma->vm_mm), ipi_flush_pmd_tlb_range, &ta, 1);
 }
+#endif
 #endif
 
 void flush_tlb_kernel_range(unsigned long start, unsigned long end)
@@ -629,6 +635,7 @@ void update_mmu_cache(struct vm_area_struct *vma, unsigned long vaddr_unaligned,
 	}
 }
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 
 /*
@@ -716,6 +723,7 @@ void local_flush_pmd_tlb_range(struct vm_area_struct *vma, unsigned long start,
 	local_irq_restore(flags);
 }
 
+#endif
 #endif
 
 /* Read the Cache Build Confuration Registers, Decode them and save into
@@ -830,10 +838,12 @@ void arc_mmu_init(void)
 	if (mmu->pg_sz_k != TO_KB(PAGE_SIZE))
 		panic("MMU pg size != PAGE_SIZE (%luk)\n", TO_KB(PAGE_SIZE));
 
+#if 0
 	if (IS_ENABLED(CONFIG_TRANSPARENT_HUGEPAGE) &&
 	    mmu->s_pg_sz_m != TO_MB(HPAGE_PMD_SIZE))
 		panic("MMU Super pg size != Linux HPAGE_PMD_SIZE (%luM)\n",
 		      (unsigned long)TO_MB(HPAGE_PMD_SIZE));
+#endif
 
 	if (IS_ENABLED(CONFIG_ARC_HAS_PAE40) && !mmu->pae)
 		panic("Hardware doesn't support PAE40\n");

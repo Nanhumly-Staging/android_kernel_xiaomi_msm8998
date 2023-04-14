@@ -574,6 +574,7 @@ again:
 	else
 		err = 0;
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 	page_head = page;
 	if (unlikely(PageTail(page))) {
@@ -609,6 +610,13 @@ again:
 		put_page(page);
 	}
 #endif
+#endif
+
+	page_head = compound_head(page);
+	if (page != page_head) {
+		get_page(page_head);
+		put_page(page);
+	}
 
 	/*
 	 * The treatment of mapping from this point on is critical. The page

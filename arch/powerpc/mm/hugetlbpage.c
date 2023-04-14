@@ -23,6 +23,7 @@
 #include <asm/setup.h>
 #include <asm/hugetlb.h>
 
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 
 #define PAGE_SHIFT_64K	16
@@ -961,6 +962,7 @@ void flush_dcache_icache_hugepage(struct page *page)
 }
 
 #endif /* CONFIG_HUGETLB_PAGE */
+#endif
 
 /*
  * We have 4 cases for pgds and pmds:

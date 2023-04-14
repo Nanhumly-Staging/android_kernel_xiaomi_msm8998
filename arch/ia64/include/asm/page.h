@@ -44,7 +44,7 @@
 #define PERCPU_PAGE_SHIFT	18	/* log2() of max. size of per-CPU area */
 #define PERCPU_PAGE_SIZE	(__IA64_UL_CONST(1) << PERCPU_PAGE_SHIFT)
 
-
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 # define HPAGE_REGION_BASE	RGN_BASE(RGN_HPAGE)
 # define HPAGE_SHIFT		hpage_shift
@@ -54,6 +54,7 @@
 
 # define HAVE_ARCH_HUGETLB_UNMAPPED_AREA
 #endif /* CONFIG_HUGETLB_PAGE */
+#endif
 
 #ifdef __ASSEMBLY__
 # define __pa(x)		((x) - PAGE_OFFSET)
@@ -145,11 +146,13 @@ typedef union ia64_va {
 #define REGION_NUMBER(x)	({ia64_va _v; _v.l = (long) (x); _v.f.reg;})
 #define REGION_OFFSET(x)	({ia64_va _v; _v.l = (long) (x); _v.f.off;})
 
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 # define htlbpage_to_page(x)	(((unsigned long) REGION_NUMBER(x) << 61)			\
 				 | (REGION_OFFSET(x) >> (HPAGE_SHIFT-PAGE_SHIFT)))
 # define HUGETLB_PAGE_ORDER	(HPAGE_SHIFT - PAGE_SHIFT)
 extern unsigned int hpage_shift;
+#endif
 #endif
 
 static __inline__ int

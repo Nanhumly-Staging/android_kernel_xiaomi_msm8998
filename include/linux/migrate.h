@@ -102,6 +102,7 @@ static inline int migrate_misplaced_page(struct page *page,
 }
 #endif /* CONFIG_NUMA_BALANCING */
 
+#if 0
 #if defined(CONFIG_NUMA_BALANCING) && defined(CONFIG_TRANSPARENT_HUGEPAGE)
 extern int migrate_misplaced_transhuge_page(struct mm_struct *mm,
 			struct vm_area_struct *vma,
@@ -118,5 +119,6 @@ static inline int migrate_misplaced_transhuge_page(struct mm_struct *mm,
 	return -EAGAIN;
 }
 #endif /* CONFIG_NUMA_BALANCING && CONFIG_TRANSPARENT_HUGEPAGE*/
+#endif
 
 #endif /* _LINUX_MIGRATE_H */

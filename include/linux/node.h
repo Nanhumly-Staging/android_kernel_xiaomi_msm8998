@@ -21,9 +21,12 @@
 struct node {
 	struct device	dev;
 
+#if 0
 #if defined(CONFIG_MEMORY_HOTPLUG_SPARSE) && defined(CONFIG_HUGETLBFS)
 	struct work_struct	node_work;
 #endif
+#endif
+
 };
 
 struct memory_block;
@@ -41,10 +44,13 @@ extern int register_mem_sect_under_node(struct memory_block *mem_blk,
 extern int unregister_mem_sect_under_nodes(struct memory_block *mem_blk,
 					   unsigned long phys_index);
 
+#if 0
 #ifdef CONFIG_HUGETLBFS
 extern void register_hugetlbfs_with_node(node_registration_func_t doregister,
 					 node_registration_func_t unregister);
 #endif
+#endif
+
 #else
 static inline int register_one_node(int nid)
 {

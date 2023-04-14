@@ -43,10 +43,12 @@ typedef struct page *pgtable_t;
 #define PTE_MASK	PAGE_MASK
 #define HPAGE_SHIFT	22
 
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 #define HPAGE_SIZE		((1UL) << HPAGE_SHIFT)
 #define HPAGE_MASK		(~(HPAGE_SIZE - 1))
 #define HUGETLB_PAGE_ORDER	(HPAGE_SHIFT - PAGE_SHIFT)
+#endif
 #endif
 
 #define pte_val(x)	((x).pte)

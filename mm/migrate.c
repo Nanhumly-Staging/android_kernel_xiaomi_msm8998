@@ -243,12 +243,15 @@ static int remove_migration_pte(struct page *new, struct vm_area_struct *vma,
 	if (is_write_migration_entry(entry))
 		pte = maybe_mkwrite(pte, vma);
 
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 	if (PageHuge(new)) {
 		pte = pte_mkhuge(pte);
 		pte = arch_make_huge_pte(pte, vma, new, 0);
 	}
 #endif
+#endif
+
 	flush_dcache_page(new);
 	set_pte_at(mm, addr, ptep, pte);
 
@@ -1903,6 +1906,7 @@ out:
 }
 #endif /* CONFIG_NUMA_BALANCING */
 
+#if 0
 #if defined(CONFIG_NUMA_BALANCING) && defined(CONFIG_TRANSPARENT_HUGEPAGE)
 /*
  * Migrates a THP to a given target node. page must be locked and is unlocked
@@ -2053,5 +2057,6 @@ out_unlock:
 	return 0;
 }
 #endif /* CONFIG_NUMA_BALANCING */
+#endif
 
 #endif /* CONFIG_NUMA */

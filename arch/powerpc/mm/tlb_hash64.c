@@ -61,6 +61,8 @@ void hpte_need_flush(struct mm_struct *mm, unsigned long addr,
 	 * of this call
 	 */
 	if (huge) {
+
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 		psize = get_slice_psize(mm, addr);
 		/* Mask the address for the correct page size */
@@ -69,6 +71,11 @@ void hpte_need_flush(struct mm_struct *mm, unsigned long addr,
 		BUG();
 		psize = pte_pagesize_index(mm, addr, pte); /* shutup gcc */
 #endif
+#endif
+
+		BUG();
+		psize = pte_pagesize_index(mm, addr, pte); /* shutup gcc */
+
 	} else {
 		psize = pte_pagesize_index(mm, addr, pte);
 		/* Mask the address for the standard page size.  If we

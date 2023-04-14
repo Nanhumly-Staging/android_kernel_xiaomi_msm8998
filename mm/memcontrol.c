@@ -2471,6 +2471,7 @@ void __memcg_kmem_uncharge(struct page *page, int order)
 }
 #endif /* CONFIG_MEMCG_KMEM */
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 
 /*
@@ -2493,6 +2494,7 @@ void mem_cgroup_split_huge_fixup(struct page *head)
 		       HPAGE_PMD_NR);
 }
 #endif /* CONFIG_TRANSPARENT_HUGEPAGE */
+#endif
 
 #ifdef CONFIG_MEMCG_SWAP
 static void mem_cgroup_swap_statistics(struct mem_cgroup *memcg,
@@ -4768,6 +4770,7 @@ static enum mc_target_type get_mctgt_type(struct vm_area_struct *vma,
 	return ret;
 }
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 /*
  * We don't consider swapping or file mapped pages because THP does not
@@ -4800,6 +4803,13 @@ static inline enum mc_target_type get_mctgt_type_thp(struct vm_area_struct *vma,
 	return MC_TARGET_NONE;
 }
 #endif
+#endif
+
+static inline enum mc_target_type get_mctgt_type_thp(struct vm_area_struct *vma,
+		unsigned long addr, pmd_t pmd, union mc_target *target)
+{
+	return MC_TARGET_NONE;
+}
 
 static int mem_cgroup_count_precharge_pte_range(pmd_t *pmd,
 					unsigned long addr, unsigned long end,

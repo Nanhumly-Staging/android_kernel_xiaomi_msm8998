@@ -967,12 +967,14 @@ static inline pte_t pte_mkspecial(pte_t pte)
 	return pte;
 }
 
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 static inline pte_t pte_mkhuge(pte_t pte)
 {
 	pte_val(pte) |= _PAGE_LARGE;
 	return pte;
 }
+#endif
 #endif
 
 static inline void __ptep_ipte(unsigned long address, pte_t *ptep)
@@ -1352,6 +1354,7 @@ static inline pmd_t *pmd_offset(pud_t *pud, unsigned long address)
 #define pte_offset_map(pmd, address) pte_offset_kernel(pmd, address)
 #define pte_unmap(pte) do { } while (0)
 
+#if 0
 #if defined(CONFIG_TRANSPARENT_HUGEPAGE) || defined(CONFIG_HUGETLB_PAGE)
 static inline unsigned long massage_pgprot_pmd(pgprot_t pgprot)
 {
@@ -1448,6 +1451,7 @@ static inline pmd_t mk_pmd_phys(unsigned long physpage, pgprot_t pgprot)
 }
 
 #endif /* CONFIG_TRANSPARENT_HUGEPAGE || CONFIG_HUGETLB_PAGE */
+#endif
 
 static inline void __pmdp_csp(pmd_t *pmdp)
 {
@@ -1526,6 +1530,7 @@ static inline void pmdp_flush_lazy(struct mm_struct *mm,
 	atomic_sub(0x10000, &mm->context.attach_count);
 }
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 
 #define __HAVE_ARCH_PGTABLE_DEPOSIT
@@ -1638,6 +1643,7 @@ static inline int has_transparent_hugepage(void)
 	return MACHINE_HAS_HPAGE ? 1 : 0;
 }
 #endif /* CONFIG_TRANSPARENT_HUGEPAGE */
+#endif
 
 /*
  * 64 bit swap entry format:

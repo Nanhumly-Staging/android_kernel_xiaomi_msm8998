@@ -100,6 +100,7 @@ EXPORT_SYMBOL(flush_dcache_page);
 EXPORT_SYMBOL(flush_cache_all);
 EXPORT_SYMBOL(flush_icache_range);
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 #ifdef CONFIG_HAVE_RCU_TABLE_FREE
 void pmdp_splitting_flush(struct vm_area_struct *vma, unsigned long address,
@@ -115,3 +116,4 @@ void pmdp_splitting_flush(struct vm_area_struct *vma, unsigned long address,
 }
 #endif /* CONFIG_HAVE_RCU_TABLE_FREE */
 #endif /* CONFIG_TRANSPARENT_HUGEPAGE */
+#endif

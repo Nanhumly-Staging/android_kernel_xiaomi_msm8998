@@ -366,10 +366,13 @@ void ia64_mmu_init(void *my_cpu_data)
 
 	ia64_tlb_init();
 
+#if 0
 #ifdef	CONFIG_HUGETLB_PAGE
 	ia64_set_rr(HPAGE_REGION_BASE, HPAGE_SHIFT << 2);
 	ia64_srlz_d();
 #endif
+#endif
+
 }
 
 #ifdef CONFIG_VIRTUAL_MEM_MAP

@@ -500,8 +500,11 @@ static inline void mem_cgroup_count_vm_event(struct mm_struct *mm,
 out:
 	rcu_read_unlock();
 }
+
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 void mem_cgroup_split_huge_fixup(struct page *head);
+#endif
 #endif
 
 #else /* CONFIG_MEMCG */

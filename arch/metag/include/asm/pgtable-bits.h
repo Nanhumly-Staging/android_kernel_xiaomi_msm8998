@@ -79,6 +79,7 @@
 #endif
 #define _PAGE_TABLE		(_PAGE_SZ | _PAGE_PRESENT)
 
+#if 0
 #if defined(CONFIG_HUGETLB_PAGE_SIZE_8K)
 # define _PAGE_SZHUGE		(_PAGE_SZ_8K)
 #elif defined(CONFIG_HUGETLB_PAGE_SIZE_16K)
@@ -99,6 +100,7 @@
 # define _PAGE_SZHUGE		(_PAGE_SZ_2M)
 #elif defined(CONFIG_HUGETLB_PAGE_SIZE_4M)
 # define _PAGE_SZHUGE		(_PAGE_SZ_4M)
+#endif
 #endif
 
 #endif /* _METAG_PGTABLE_BITS_H */

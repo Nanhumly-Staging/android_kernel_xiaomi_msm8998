@@ -209,6 +209,7 @@ ex_saved_reg1:
 	tst	r3, r3
 	bz	do_slow_path_pf         ; if no Page Table, do page fault
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 	and.f	0, r3, _PAGE_HW_SZ	; Is this Huge PMD (thp)
 	add2.nz	r1, r1, r0
@@ -216,6 +217,8 @@ ex_saved_reg1:
 	mov.nz	r0, r3
 
 #endif
+#endif
+
 	and	r1, r3, PAGE_MASK
 
 	; Get the PTE entry: The idea is

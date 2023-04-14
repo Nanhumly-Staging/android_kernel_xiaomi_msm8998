@@ -17,6 +17,7 @@
 #define PAGE_SIZE	(_AC(1, UL) << PAGE_SHIFT)
 #define PAGE_MASK	(~(PAGE_SIZE-1))
 
+#if 0
 #if defined(CONFIG_HUGETLB_PAGE_SIZE_8K)
 # define HPAGE_SHIFT	13
 #elif defined(CONFIG_HUGETLB_PAGE_SIZE_16K)
@@ -52,6 +53,7 @@
 # define HUGEPT_MASK		(HUGEPT_ALIGN - 1)
 # define ALIGN_HUGEPT(x)	ALIGN(x, HUGEPT_ALIGN)
 # define HAVE_ARCH_HUGETLB_UNMAPPED_AREA
+#endif
 #endif
 
 #ifndef __ASSEMBLY__

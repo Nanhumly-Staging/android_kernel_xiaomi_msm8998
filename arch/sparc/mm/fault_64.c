@@ -111,6 +111,7 @@ static unsigned int get_user_insn(unsigned long tpc)
 	if (pmd_none(*pmdp) || unlikely(pmd_bad(*pmdp)))
 		goto out_irq_enable;
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 	if (pmd_trans_huge(*pmdp)) {
 		if (pmd_trans_splitting(*pmdp))
@@ -125,6 +126,8 @@ static unsigned int get_user_insn(unsigned long tpc)
 				     : "r" (pa), "i" (ASI_PHYS_USE_EC));
 	} else
 #endif
+#endif
+
 	{
 		ptep = pte_offset_map(pmdp, tpc);
 		pte = *ptep;
@@ -479,12 +482,18 @@ good_area:
 	up_read(&mm->mmap_sem);
 
 	mm_rss = get_mm_rss(mm);
+
+#if 0
 #if defined(CONFIG_TRANSPARENT_HUGEPAGE)
 	mm_rss -= (mm->context.thp_pte_count * (HPAGE_SIZE / PAGE_SIZE));
 #endif
+#endif
+
 	if (unlikely(mm_rss >
 		     mm->context.tsb_block[MM_TSB_BASE].tsb_rss_limit))
 		tsb_grow(mm, MM_TSB_BASE, mm_rss);
+
+#if 0
 #if defined(CONFIG_HUGETLB_PAGE) || defined(CONFIG_TRANSPARENT_HUGEPAGE)
 	mm_rss = mm->context.hugetlb_pte_count + mm->context.thp_pte_count;
 	mm_rss *= REAL_HPAGE_PER_HPAGE;
@@ -497,6 +506,8 @@ good_area:
 
 	}
 #endif
+#endif
+
 exit_exception:
 	exception_exit(prev_state);
 	return;

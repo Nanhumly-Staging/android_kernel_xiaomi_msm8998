@@ -55,12 +55,14 @@
  *  "Huge" for us should be 4MB or 16MB, which are both represented
  *  in L1 PTE's.  Right now, it's set up for 4MB.
  */
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 #define HPAGE_SHIFT 22
 #define HPAGE_SIZE (1UL << HPAGE_SHIFT)
 #define HPAGE_MASK (~(HPAGE_SIZE-1))
 #define HUGETLB_PAGE_ORDER (HPAGE_SHIFT-PAGE_SHIFT)
 #define HVM_HUGEPAGE_SIZE 0x5
+#endif
 #endif
 
 #define PAGE_SIZE  (1UL << PAGE_SHIFT)

@@ -530,6 +530,8 @@ static int queue_pages_hugetlb(pte_t *pte, unsigned long hmask,
 			       unsigned long addr, unsigned long end,
 			       struct mm_walk *walk)
 {
+
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 	struct queue_pages *qp = walk->private;
 	unsigned long flags = qp->flags;
@@ -555,6 +557,9 @@ unlock:
 #else
 	BUG();
 #endif
+#endif
+
+	BUG();
 	return 0;
 }
 
@@ -1804,6 +1809,7 @@ int node_random(const nodemask_t *maskp)
 	return bit;
 }
 
+#if 0
 #ifdef CONFIG_HUGETLBFS
 /*
  * huge_zonelist(@vma, @addr, @gfp_flags, @mpol)
@@ -1888,6 +1894,7 @@ bool init_nodemask_of_mempolicy(nodemask_t *mask)
 
 	return true;
 }
+#endif
 #endif
 
 /*
@@ -1995,6 +2002,7 @@ retry_cpuset:
 		goto out;
 	}
 
+#if 0
 	if (unlikely(IS_ENABLED(CONFIG_TRANSPARENT_HUGEPAGE) && hugepage)) {
 		int hpage_node = node;
 
@@ -2048,6 +2056,7 @@ retry_cpuset:
 			goto out;
 		}
 	}
+#endif
 
 	nmask = policy_nodemask(gfp, pol);
 	zl = policy_zonelist(gfp, pol, node);

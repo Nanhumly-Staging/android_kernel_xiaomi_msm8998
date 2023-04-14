@@ -137,12 +137,15 @@ static __inline__ void set_pte(pte_t *pteptr, pte_t pteval)
 /*
  * HugeTLB support
  */
+
+#if 0
 #if defined(CONFIG_HUGETLB_PAGE_SIZE_64K)
 #define _PAGE_SZHUGE	(_PAGE_SIZE0)
 #elif defined(CONFIG_HUGETLB_PAGE_SIZE_1MB)
 #define _PAGE_SZHUGE	(_PAGE_SIZE1)
 #elif defined(CONFIG_HUGETLB_PAGE_SIZE_512MB)
 #define _PAGE_SZHUGE	(_PAGE_SIZE0 | _PAGE_SIZE1)
+#endif
 #endif
 
 /*

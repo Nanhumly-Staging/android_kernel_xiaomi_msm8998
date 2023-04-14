@@ -231,6 +231,7 @@ static inline pte_t pte_mkspecial(pte_t pte)
 #define pmd_hugewillfault(pmd)	(!pmd_young(pmd) || !pmd_write(pmd))
 #define pmd_thp_or_huge(pmd)	(pmd_huge(pmd) || pmd_trans_huge(pmd))
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 #define pmd_trans_huge(pmd)	(pmd_val(pmd) && !pmd_table(pmd))
 #define pmd_trans_splitting(pmd) (pmd_isset((pmd), L_PMD_SECT_SPLITTING))
@@ -239,6 +240,7 @@ static inline pte_t pte_mkspecial(pte_t pte)
 #define __HAVE_ARCH_PMDP_SPLITTING_FLUSH
 void pmdp_splitting_flush(struct vm_area_struct *vma, unsigned long address,
 			  pmd_t *pmdp);
+#endif
 #endif
 #endif
 

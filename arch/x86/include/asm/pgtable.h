@@ -185,6 +185,7 @@ static inline int pmd_large(pmd_t pte)
 	return pmd_flags(pte) & _PAGE_PSE;
 }
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 static inline int pmd_trans_splitting(pmd_t pmd)
 {
@@ -201,6 +202,7 @@ static inline int has_transparent_hugepage(void)
 	return cpu_has_pse;
 }
 #endif /* CONFIG_TRANSPARENT_HUGEPAGE */
+#endif
 
 static inline pte_t pte_set_flags(pte_t pte, pteval_t set)
 {

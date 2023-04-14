@@ -431,6 +431,7 @@ int ptep_set_access_flags(struct vm_area_struct *vma,
 	return changed;
 }
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 int pmdp_set_access_flags(struct vm_area_struct *vma,
 			  unsigned long address, pmd_t *pmdp,
@@ -454,6 +455,7 @@ int pmdp_set_access_flags(struct vm_area_struct *vma,
 	return changed;
 }
 #endif
+#endif
 
 int ptep_test_and_clear_young(struct vm_area_struct *vma,
 			      unsigned long addr, pte_t *ptep)
@@ -470,6 +472,7 @@ int ptep_test_and_clear_young(struct vm_area_struct *vma,
 	return ret;
 }
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 int pmdp_test_and_clear_young(struct vm_area_struct *vma,
 			      unsigned long addr, pmd_t *pmdp)
@@ -485,6 +488,7 @@ int pmdp_test_and_clear_young(struct vm_area_struct *vma,
 
 	return ret;
 }
+#endif
 #endif
 
 int ptep_clear_flush_young(struct vm_area_struct *vma,
@@ -506,6 +510,7 @@ int ptep_clear_flush_young(struct vm_area_struct *vma,
 	return ptep_test_and_clear_young(vma, address, ptep);
 }
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 int pmdp_clear_flush_young(struct vm_area_struct *vma,
 			   unsigned long address, pmd_t *pmdp)
@@ -534,6 +539,7 @@ void pmdp_splitting_flush(struct vm_area_struct *vma,
 		flush_tlb_range(vma, address, address + HPAGE_PMD_SIZE);
 	}
 }
+#endif
 #endif
 
 /**

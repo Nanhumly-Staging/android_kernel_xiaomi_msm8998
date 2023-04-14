@@ -243,6 +243,7 @@ static inline pte_t pfn_pte(unsigned long pfn, pgprot_t prot)
 }
 #define mk_pte(page, pgprot)	pfn_pte(page_to_pfn(page), (pgprot))
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 static inline pmd_t pfn_pmd(unsigned long page_nr, pgprot_t pgprot)
 {
@@ -251,6 +252,7 @@ static inline pmd_t pfn_pmd(unsigned long page_nr, pgprot_t pgprot)
 	return __pmd(pte_val(pte));
 }
 #define mk_pmd(page, pgprot)	pfn_pmd(page_to_pfn(page), (pgprot))
+#endif
 #endif
 
 /* This one can be done with two shifts.  */
@@ -333,6 +335,7 @@ static inline pte_t pte_modify(pte_t pte, pgprot_t prot)
 	return __pte((pte_val(pte) & mask) | (pgprot_val(prot) & ~mask));
 }
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 static inline pmd_t pmd_modify(pmd_t pmd, pgprot_t newprot)
 {
@@ -342,6 +345,7 @@ static inline pmd_t pmd_modify(pmd_t pmd, pgprot_t newprot)
 
 	return __pmd(pte_val(pte));
 }
+#endif
 #endif
 
 static inline pgprot_t pgprot_noncached(pgprot_t prot)
@@ -374,6 +378,7 @@ static inline pgprot_t pgprot_noncached(pgprot_t prot)
  */
 #define pgprot_noncached pgprot_noncached
 
+#if 0
 #if defined(CONFIG_HUGETLB_PAGE) || defined(CONFIG_TRANSPARENT_HUGEPAGE)
 static inline unsigned long __pte_huge_mask(void)
 {
@@ -420,6 +425,12 @@ static inline bool is_hugetlb_pte(pte_t pte)
 	return false;
 }
 #endif
+#endif
+
+static inline bool is_hugetlb_pte(pte_t pte)
+{
+	return false;
+}
 
 static inline pte_t pte_mkdirty(pte_t pte)
 {
@@ -676,6 +687,7 @@ static inline unsigned long pmd_write(pmd_t pmd)
 	return pte_write(pte);
 }
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 static inline unsigned long pmd_dirty(pmd_t pmd)
 {
@@ -768,6 +780,7 @@ static inline pgprot_t pmd_pgprot(pmd_t entry)
 	return __pgprot(val);
 }
 #endif
+#endif
 
 static inline int pmd_present(pmd_t pmd)
 {
@@ -792,6 +805,7 @@ static inline int pmd_present(pmd_t pmd)
 
 #define pgd_bad(pgd)			(pgd_val(pgd) & ~PAGE_MASK)
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 void set_pmd_at(struct mm_struct *mm, unsigned long addr,
 		pmd_t *pmdp, pmd_t pmd);
@@ -802,6 +816,13 @@ static inline void set_pmd_at(struct mm_struct *mm, unsigned long addr,
 	*pmdp = pmd;
 }
 #endif
+#endif
+
+static inline void set_pmd_at(struct mm_struct *mm, unsigned long addr,
+			      pmd_t *pmdp, pmd_t pmd)
+{
+	*pmdp = pmd;
+}
 
 static inline void pmd_set(struct mm_struct *mm, pmd_t *pmdp, pte_t *ptep)
 {
@@ -951,6 +972,8 @@ void mmu_info(struct seq_file *);
 
 struct vm_area_struct;
 void update_mmu_cache(struct vm_area_struct *, unsigned long, pte_t *);
+
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 void update_mmu_cache_pmd(struct vm_area_struct *vma, unsigned long addr,
 			  pmd_t *pmd);
@@ -965,6 +988,7 @@ void pgtable_trans_huge_deposit(struct mm_struct *mm, pmd_t *pmdp,
 
 #define __HAVE_ARCH_PGTABLE_WITHDRAW
 pgtable_t pgtable_trans_huge_withdraw(struct mm_struct *mm, pmd_t *pmdp);
+#endif
 #endif
 
 /* Encode and de-code a swap entry */

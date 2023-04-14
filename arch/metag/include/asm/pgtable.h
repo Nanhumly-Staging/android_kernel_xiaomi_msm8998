@@ -190,6 +190,7 @@ static inline unsigned long pmd_page_vaddr(pmd_t pmd)
 #define pmd_index(address)	(((address) >> PMD_SHIFT) & (PTRS_PER_PMD-1))
 
 /* Find an entry in the second-level page table.. */
+#if 0
 #if !defined(CONFIG_HUGETLB_PAGE)
   /* all pages are of size (1 << PAGE_SHIFT), so no need to read 1st level pt */
 # define pte_index(pmd, address) \
@@ -199,6 +200,12 @@ static inline unsigned long pmd_page_vaddr(pmd_t pmd)
 # define pte_index(pmd, address) \
 	(((address) >> pmd_page_shift(pmd)) & (pmd_num_ptrs(pmd) - 1))
 #endif
+#endif
+
+  /* some pages are huge, so read 1st level pt to find out */
+# define pte_index(pmd, address) \
+	(((address) >> pmd_page_shift(pmd)) & (pmd_num_ptrs(pmd) - 1))
+
 #define pte_offset_kernel(dir, address) \
 	((pte_t *) pmd_page_vaddr(*(dir)) + pte_index(*(dir), address))
 #define pte_offset_map(dir, address)		pte_offset_kernel(dir, address)

@@ -52,8 +52,10 @@ SUBSYS(perf_event)
 SUBSYS(net_prio)
 #endif
 
+#if 0
 #if IS_ENABLED(CONFIG_CGROUP_HUGETLB)
 SUBSYS(hugetlb)
+#endif
 #endif
 
 #if IS_ENABLED(CONFIG_CGROUP_PIDS)

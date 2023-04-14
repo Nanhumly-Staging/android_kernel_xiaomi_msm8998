@@ -1100,6 +1100,7 @@ void tlb_remove_table(struct mmu_gather *tlb, void *table)
 		tlb_flush_mmu(tlb);
 }
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 static inline void thp_split_vma(struct vm_area_struct *vma)
 {
@@ -1125,6 +1126,11 @@ static inline void thp_split_mm(struct mm_struct *mm)
 {
 }
 #endif /* CONFIG_TRANSPARENT_HUGEPAGE */
+#endif
+
+static inline void thp_split_mm(struct mm_struct *mm)
+{
+}
 
 /*
  * switch on pgstes for its userspace process (for kvm)
@@ -1272,6 +1278,7 @@ bool gmap_test_and_clear_dirty(unsigned long address, struct gmap *gmap)
 }
 EXPORT_SYMBOL_GPL(gmap_test_and_clear_dirty);
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 int pmdp_clear_flush_young(struct vm_area_struct *vma, unsigned long address,
 			   pmd_t *pmdp)
@@ -1353,3 +1360,4 @@ pgtable_t pgtable_trans_huge_withdraw(struct mm_struct *mm, pmd_t *pmdp)
 	return pgtable;
 }
 #endif /* CONFIG_TRANSPARENT_HUGEPAGE */
+#endif

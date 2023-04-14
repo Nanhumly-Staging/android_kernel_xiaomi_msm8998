@@ -310,6 +310,8 @@ set_ivor:
  *   r10 is the pshift from the PGD, if we're a hugepage
  */
 #ifdef CONFIG_PTE_64BIT
+
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 #define FIND_PTE	\
 	rlwinm	r12, r10, 13, 19, 29;	/* Compute pgdir/pmd offset */	\
@@ -333,6 +335,16 @@ set_ivor:
 	rlwimi	r12, r10, 23, 20, 28;	/* Compute pte address */	\
 	lwz	r11, 4(r12);		/* Get pte entry */
 #endif /* HUGEPAGE */
+#endif
+
+#define FIND_PTE	\
+	rlwinm	r12, r10, 13, 19, 29;	/* Compute pgdir/pmd offset */	\
+	lwzx	r11, r12, r11;		/* Get pgd/pmd entry */		\
+	rlwinm.	r12, r11, 0, 0, 20;	/* Extract pt base address */	\
+	beq	2f;			/* Bail if no table */		\
+	rlwimi	r12, r10, 23, 20, 28;	/* Compute pte address */	\
+	lwz	r11, 4(r12);		/* Get pte entry */
+
 #else /* !PTE_64BIT */
 #define FIND_PTE	\
 	rlwimi	r11, r10, 12, 20, 29;	/* Create L1 (pgdir/pmd) address */	\
@@ -702,6 +714,8 @@ interrupt_end:
  *	Upon exit, we reload everything and RFI.
  */
 finish_tlb_load:
+
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 	cmpwi	6, r10, 0			/* check for huge page */
 	beq	6, finish_tlb_load_cont    	/* !huge */
@@ -761,6 +775,7 @@ finish_tlb_load:
 	/* fall through */
 
 #endif /* CONFIG_HUGETLB_PAGE */
+#endif
 
 	/*
 	 * We set execute, because we don't have the granularity to
@@ -801,6 +816,8 @@ END_MMU_FTR_SECTION_IFSET(MMU_FTR_BIG_PHYS)
 #else
 	rlwimi	r12, r11, 26, 27, 31	/* extract WIMGE from pte */
 #endif
+
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 	beq	6, 3f			/* don't mask if page isn't huge */
 	li	r13, 1
@@ -809,6 +826,8 @@ END_MMU_FTR_SECTION_IFSET(MMU_FTR_BIG_PHYS)
 	rlwinm	r13, r13, 0, 0, 19	/* bottom bits used for WIMGE/etc */
 	andc	r12, r12, r13		/* mask off ea bits within the page */
 #endif
+#endif
+
 3:	mtspr	SPRN_MAS2, r12
 
 #ifdef CONFIG_E200
@@ -841,6 +860,8 @@ tlb_write_entry:
 
 	/* Done...restore registers and get out of here.  */
 	mfspr	r10, SPRN_SPRG_THREAD
+
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 	beq	6, 8f /* skip restore for 4k page faults */
 	lwz	r14, THREAD_NORMSAVE(4)(r10)
@@ -848,6 +869,8 @@ tlb_write_entry:
 	lwz	r16, THREAD_NORMSAVE(6)(r10)
 	lwz	r17, THREAD_NORMSAVE(7)(r10)
 #endif
+#endif
+
 8:	lwz	r11, THREAD_NORMSAVE(3)(r10)
 	mtcr	r11
 	lwz	r13, THREAD_NORMSAVE(2)(r10)

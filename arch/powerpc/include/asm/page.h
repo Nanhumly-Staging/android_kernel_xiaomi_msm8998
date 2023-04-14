@@ -38,11 +38,17 @@
 #define PAGE_SIZE		(ASM_CONST(1) << PAGE_SHIFT)
 
 #ifndef __ASSEMBLY__
+
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 extern unsigned int HPAGE_SHIFT;
 #else
 #define HPAGE_SHIFT PAGE_SHIFT
 #endif
+#endif
+
+#define HPAGE_SHIFT PAGE_SHIFT
+
 #define HPAGE_SIZE		((1UL) << HPAGE_SHIFT)
 #define HPAGE_MASK		(~(HPAGE_SIZE - 1))
 #define HUGETLB_PAGE_ORDER	(HPAGE_SHIFT - PAGE_SHIFT)
@@ -375,6 +381,7 @@ typedef unsigned long pgprot_t;
 
 typedef struct { signed long pd; } hugepd_t;
 
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 #ifdef CONFIG_PPC_BOOK3S_64
 #ifdef CONFIG_PPC_64K_PAGES
@@ -414,6 +421,11 @@ int pgd_huge(pgd_t pgd);
 #define is_hugepd(pdep)			0
 #define pgd_huge(pgd)			0
 #endif /* CONFIG_HUGETLB_PAGE */
+#endif
+
+#define is_hugepd(pdep)			0
+#define pgd_huge(pgd)			0
+
 #define __hugepd(x) ((hugepd_t) { (x) })
 
 struct page;

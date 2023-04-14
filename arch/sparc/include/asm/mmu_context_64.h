@@ -33,6 +33,8 @@ static inline void tsb_context_switch_ctx(struct mm_struct *mm,
 {
 	__tsb_context_switch(__pa(mm->pgd),
 			     &mm->context.tsb_block[0],
+
+#if 0
 #if defined(CONFIG_HUGETLB_PAGE) || defined(CONFIG_TRANSPARENT_HUGEPAGE)
 			     (mm->context.tsb_block[1].tsb ?
 			      &mm->context.tsb_block[1] :
@@ -40,6 +42,9 @@ static inline void tsb_context_switch_ctx(struct mm_struct *mm,
 #else
 			     NULL
 #endif
+#endif
+
+			     NULL
 			     , __pa(&mm->context.tsb_descr[0]),
 			     ctx);
 }

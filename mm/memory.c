@@ -788,6 +788,7 @@ out:
 	return pfn_to_page(pfn);
 }
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 struct page *vm_normal_page_pmd(struct vm_area_struct *vma, unsigned long addr,
 				pmd_t pmd)
@@ -826,6 +827,7 @@ struct page *vm_normal_page_pmd(struct vm_area_struct *vma, unsigned long addr,
 out:
 	return pfn_to_page(pfn);
 }
+#endif
 #endif
 
 /*
@@ -3873,6 +3875,7 @@ void __might_fault(const char *file, int line)
 EXPORT_SYMBOL(__might_fault);
 #endif
 
+#if 0
 #if defined(CONFIG_TRANSPARENT_HUGEPAGE) || defined(CONFIG_HUGETLBFS)
 static void clear_gigantic_page(struct page *page,
 				unsigned long addr,
@@ -3943,6 +3946,7 @@ void copy_user_huge_page(struct page *dst, struct page *src,
 	}
 }
 #endif /* CONFIG_TRANSPARENT_HUGEPAGE || CONFIG_HUGETLBFS */
+#endif
 
 #if USE_SPLIT_PTE_PTLOCKS && ALLOC_SPLIT_PTLOCKS
 

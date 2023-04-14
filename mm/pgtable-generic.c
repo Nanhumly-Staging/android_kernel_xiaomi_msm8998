@@ -82,6 +82,7 @@ pte_t ptep_clear_flush(struct vm_area_struct *vma, unsigned long address,
 }
 #endif
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 
 #ifndef __HAVE_ARCH_FLUSH_PMD_TLB_RANGE
@@ -217,3 +218,4 @@ pmd_t pmdp_collapse_flush(struct vm_area_struct *vma, unsigned long address,
 }
 #endif
 #endif /* CONFIG_TRANSPARENT_HUGEPAGE */
+#endif

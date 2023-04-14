@@ -142,6 +142,7 @@ no_cache_flush:
 		tlb_batch_add_one(mm, vaddr, pte_exec(orig), huge);
 }
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 static void tlb_batch_pmd_scan(struct mm_struct *mm, unsigned long vaddr,
 			       pmd_t pmd)
@@ -279,3 +280,4 @@ pgtable_t pgtable_trans_huge_withdraw(struct mm_struct *mm, pmd_t *pmdp)
 	return pgtable;
 }
 #endif /* CONFIG_TRANSPARENT_HUGEPAGE */
+#endif

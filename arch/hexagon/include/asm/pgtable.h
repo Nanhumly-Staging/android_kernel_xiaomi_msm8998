@@ -176,8 +176,10 @@ extern pgd_t swapper_pg_dir[PTRS_PER_PGD];  /* located in head.S */
 #define pte_mkspecial(pte)	(pte)
 
 /*  HUGETLB not working currently  */
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 #define pte_mkhuge(pte) __pte((pte_val(pte) & ~0x3) | HVM_HUGEPAGE_SIZE)
+#endif
 #endif
 
 /*

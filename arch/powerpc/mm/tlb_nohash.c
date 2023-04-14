@@ -326,9 +326,12 @@ void __flush_tlb_page(struct mm_struct *mm, unsigned long vmaddr,
 
 void flush_tlb_page(struct vm_area_struct *vma, unsigned long vmaddr)
 {
+
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 	if (vma && is_vm_hugetlb_page(vma))
 		flush_hugetlb_page(vma, vmaddr);
+#endif
 #endif
 
 	__flush_tlb_page(vma ? vma->vm_mm : NULL, vmaddr,

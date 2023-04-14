@@ -345,6 +345,7 @@ void update_mmu_cache(struct vm_area_struct *vma, unsigned long address, pte_t *
 
 	spin_lock_irqsave(&mm->context.lock, flags);
 
+#if 0
 #if defined(CONFIG_HUGETLB_PAGE) || defined(CONFIG_TRANSPARENT_HUGEPAGE)
 	if ((mm->context.hugetlb_pte_count || mm->context.thp_pte_count) &&
 	    is_hugetlb_pte(pte))
@@ -352,6 +353,8 @@ void update_mmu_cache(struct vm_area_struct *vma, unsigned long address, pte_t *
 					address, pte_val(pte));
 	else
 #endif
+#endif
+
 		__update_mmu_tsb_insert(mm, MM_TSB_BASE, PAGE_SHIFT,
 					address, pte_val(pte));
 
@@ -2846,6 +2849,7 @@ void pgtable_free(void *table, bool is_page)
 		kmem_cache_free(pgtable_cache, table);
 }
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 void update_mmu_cache_pmd(struct vm_area_struct *vma, unsigned long addr,
 			  pmd_t *pmd)
@@ -2946,6 +2950,7 @@ void hugetlb_setup(struct pt_regs *regs)
 			on_each_cpu(context_reload, mm, 0);
 	}
 }
+#endif
 #endif
 
 static struct resource code_resource = {

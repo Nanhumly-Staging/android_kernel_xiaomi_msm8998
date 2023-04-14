@@ -832,10 +832,13 @@ const char * const vmstat_text[] = {
 	"compact_daemon_wake",
 #endif
 
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 	"htlb_buddy_alloc_success",
 	"htlb_buddy_alloc_fail",
 #endif
+#endif
+
 	"unevictable_pgs_culled",
 	"unevictable_pgs_scanned",
 	"unevictable_pgs_rescued",
@@ -844,6 +847,7 @@ const char * const vmstat_text[] = {
 	"unevictable_pgs_cleared",
 	"unevictable_pgs_stranded",
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 	"thp_fault_alloc",
 	"thp_fault_fallback",
@@ -853,6 +857,8 @@ const char * const vmstat_text[] = {
 	"thp_zero_page_alloc",
 	"thp_zero_page_alloc_failed",
 #endif
+#endif
+
 #ifdef CONFIG_MEMORY_BALLOON
 	"balloon_inflate",
 	"balloon_deflate",

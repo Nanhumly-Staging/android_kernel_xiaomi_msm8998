@@ -400,10 +400,14 @@ madvise_behavior_valid(int behavior)
 	case MADV_MERGEABLE:
 	case MADV_UNMERGEABLE:
 #endif
+
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 	case MADV_HUGEPAGE:
 	case MADV_NOHUGEPAGE:
 #endif
+#endif
+
 	case MADV_DONTDUMP:
 	case MADV_DODUMP:
 		return true;

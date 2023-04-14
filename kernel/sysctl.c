@@ -1638,6 +1638,8 @@ static struct ctl_table vm_table[] = {
 		.extra1		= &zero,
 		.extra2		= &one_hundred,
 	},
+
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 	{
 		.procname	= "nr_hugepages",
@@ -1677,6 +1679,8 @@ static struct ctl_table vm_table[] = {
 		.proc_handler	= hugetlb_overcommit_handler,
 	},
 #endif
+#endif
+
 	{
 		.procname	= "lowmem_reserve_ratio",
 		.data		= &sysctl_lowmem_reserve_ratio,

@@ -111,9 +111,13 @@ static ssize_t node_read_meminfo(struct device *dev,
 		       "Node %d Slab:           %8lu kB\n"
 		       "Node %d SReclaimable:   %8lu kB\n"
 		       "Node %d SUnreclaim:     %8lu kB\n"
+
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 		       "Node %d AnonHugePages:  %8lu kB\n"
 #endif
+#endif
+
 			,
 		       nid, K(node_page_state(nid, NR_FILE_DIRTY)),
 		       nid, K(node_page_state(nid, NR_WRITEBACK)),
@@ -130,6 +134,8 @@ static ssize_t node_read_meminfo(struct device *dev,
 		       nid, K(node_page_state(nid, NR_SLAB_RECLAIMABLE) +
 				node_page_state(nid, NR_SLAB_UNRECLAIMABLE)),
 		       nid, K(node_page_state(nid, NR_SLAB_RECLAIMABLE)),
+
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 		       nid, K(node_page_state(nid, NR_SLAB_UNRECLAIMABLE))
 			, nid,
@@ -138,6 +144,10 @@ static ssize_t node_read_meminfo(struct device *dev,
 #else
 		       nid, K(node_page_state(nid, NR_SLAB_UNRECLAIMABLE)));
 #endif
+#endif
+
+		       nid, K(node_page_state(nid, NR_SLAB_UNRECLAIMABLE)));
+
 	n += hugetlb_report_node_meminfo(nid, buf + n);
 	return n;
 }
@@ -211,6 +221,7 @@ static struct attribute *node_dev_attrs[] = {
 };
 ATTRIBUTE_GROUPS(node_dev);
 
+#if 0
 #ifdef CONFIG_HUGETLBFS
 /*
  * hugetlbfs per node attributes registration interface:
@@ -251,11 +262,17 @@ static inline void hugetlb_register_node(struct node *node) {}
 
 static inline void hugetlb_unregister_node(struct node *node) {}
 #endif
+#endif
+
+static inline void hugetlb_register_node(struct node *node) {}
+
+static inline void hugetlb_unregister_node(struct node *node) {}
 
 static void node_device_release(struct device *dev)
 {
 	struct node *node = to_node(dev);
 
+#if 0
 #if defined(CONFIG_MEMORY_HOTPLUG_SPARSE) && defined(CONFIG_HUGETLBFS)
 	/*
 	 * We schedule the work only when a memory section is
@@ -268,6 +285,8 @@ static void node_device_release(struct device *dev)
 	 */
 	flush_work(&node->node_work);
 #endif
+#endif
+
 	kfree(node);
 }
 
@@ -494,6 +513,7 @@ static int link_mem_sections(int nid)
 	return err;
 }
 
+#if 0
 #ifdef CONFIG_HUGETLBFS
 /*
  * Handle per node hstate attribute [un]registration on transistions
@@ -548,11 +568,14 @@ static int node_memory_callback(struct notifier_block *self,
 	return NOTIFY_OK;
 }
 #endif	/* CONFIG_HUGETLBFS */
+#endif
+
 #else	/* !CONFIG_MEMORY_HOTPLUG_SPARSE */
 
 static int link_mem_sections(int nid) { return 0; }
 #endif	/* CONFIG_MEMORY_HOTPLUG_SPARSE */
 
+#if 0
 #if !defined(CONFIG_MEMORY_HOTPLUG_SPARSE) || \
     !defined(CONFIG_HUGETLBFS)
 static inline int node_memory_callback(struct notifier_block *self,
@@ -564,6 +587,15 @@ static inline int node_memory_callback(struct notifier_block *self,
 static void init_node_hugetlb_work(int nid) { }
 
 #endif
+#endif
+
+static inline int node_memory_callback(struct notifier_block *self,
+				unsigned long action, void *arg)
+{
+	return NOTIFY_OK;
+}
+
+static void init_node_hugetlb_work(int nid) { }
 
 int register_one_node(int nid)
 {

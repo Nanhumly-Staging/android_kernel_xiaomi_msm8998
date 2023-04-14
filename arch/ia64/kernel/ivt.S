@@ -109,10 +109,14 @@ ENTRY(vhpt_miss)
 	 *	- the faulting virtual address has no valid page table mapping
 	 */
 	MOV_FROM_IFA(r16)			// get address that caused the TLB miss
+
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 	movl r18=PAGE_SHIFT
 	MOV_FROM_ITIR(r25)
 #endif
+#endif
+
 	;;
 	RSM_PSR_DT				// use physical addressing for data
 	mov r31=pr				// save the predicate registers
@@ -121,6 +125,8 @@ ENTRY(vhpt_miss)
 	shr.u r17=r16,61			// get the region number into r17
 	;;
 	shr.u r22=r21,3
+
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 	extr.u r26=r25,2,6
 	;;
@@ -130,6 +136,8 @@ ENTRY(vhpt_miss)
 (p8)	dep r25=r18,r25,2,6
 (p8)	shr r22=r22,r27
 #endif
+#endif
+
 	;;
 	cmp.eq p6,p7=5,r17			// is IFA pointing into to region 5?
 	shr.u r18=r22,PGDIR_SHIFT		// get bottom portion of pgd index bit
@@ -187,8 +195,10 @@ ENTRY(vhpt_miss)
 (p6)	br.cond.spnt.many page_fault		// handle bad address/page not present (page fault)
 	MOV_TO_IFA(r22, r24)
 
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 	MOV_TO_ITIR(p8, r25, r24)		// change to default page-size for VHPT
+#endif
 #endif
 
 	/*

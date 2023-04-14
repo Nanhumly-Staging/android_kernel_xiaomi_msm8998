@@ -193,11 +193,16 @@ static int non_atomic_pte_lookup(struct vm_area_struct *vma,
 {
 	struct page *page;
 
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 	*pageshift = is_vm_hugetlb_page(vma) ? HPAGE_SHIFT : PAGE_SHIFT;
 #else
 	*pageshift = PAGE_SHIFT;
 #endif
+#endif
+
+	*pageshift = PAGE_SHIFT;
+
 	if (get_user_pages
 	    (current, current->mm, vaddr, 1, write ? FOLL_WRITE : 0, &page, NULL) <= 0)
 		return -EFAULT;
@@ -247,11 +252,17 @@ static int atomic_pte_lookup(struct vm_area_struct *vma, unsigned long vaddr,
 		return 1;
 
 	*paddr = pte_pfn(pte) << PAGE_SHIFT;
+
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 	*pageshift = is_vm_hugetlb_page(vma) ? HPAGE_SHIFT : PAGE_SHIFT;
 #else
 	*pageshift = PAGE_SHIFT;
 #endif
+#endif
+
+	*pageshift = PAGE_SHIFT;
+
 	return 0;
 
 err:

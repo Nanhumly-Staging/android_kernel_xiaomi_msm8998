@@ -13,6 +13,7 @@ struct ctl_table;
 struct user_struct;
 struct mmu_gather;
 
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 
 #include <linux/mempolicy.h>
@@ -193,6 +194,79 @@ static inline void __unmap_hugepage_range(struct mmu_gather *tlb,
 }
 
 #endif /* !CONFIG_HUGETLB_PAGE */
+#endif
+
+static inline void reset_vma_resv_huge_pages(struct vm_area_struct *vma)
+{
+}
+
+static inline unsigned long hugetlb_total_pages(void)
+{
+	return 0;
+}
+
+static inline int huge_pmd_unshare(struct mm_struct *mm, unsigned long *addr,
+						pte_t *ptep)
+{
+	return 0;
+}
+
+static inline void adjust_range_if_pmd_sharing_possible(
+				struct vm_area_struct *vma,
+				unsigned long *start, unsigned long *end)
+{
+}
+
+#define follow_hugetlb_page(m,v,p,vs,a,b,i,w)	({ BUG(); 0; })
+#define follow_huge_addr(mm, addr, write)	ERR_PTR(-EINVAL)
+#define copy_hugetlb_page_range(src, dst, vma)	({ BUG(); 0; })
+static inline void hugetlb_report_meminfo(struct seq_file *m)
+{
+}
+#define hugetlb_report_node_meminfo(n, buf)	0
+static inline void hugetlb_show_meminfo(void)
+{
+}
+#define follow_huge_pmd(mm, addr, pmd, flags)	NULL
+#define follow_huge_pud(mm, addr, pud, flags)	NULL
+#define prepare_hugepage_range(file, addr, len)	(-EINVAL)
+#define pmd_huge(x)	0
+#define pud_huge(x)	0
+#define is_hugepage_only_range(mm, addr, len)	0
+#define hugetlb_free_pgd_range(tlb, addr, end, floor, ceiling) ({BUG(); 0; })
+#define hugetlb_fault(mm, vma, addr, flags)	({ BUG(); 0; })
+#define huge_pte_offset(mm, address)	0
+static inline int dequeue_hwpoisoned_huge_page(struct page *page)
+{
+	return 0;
+}
+
+static inline bool isolate_huge_page(struct page *page, struct list_head *list)
+{
+	return false;
+}
+#define putback_active_hugepage(p)	do {} while (0)
+
+static inline unsigned long hugetlb_change_protection(struct vm_area_struct *vma,
+		unsigned long address, unsigned long end, pgprot_t newprot)
+{
+	return 0;
+}
+
+static inline void __unmap_hugepage_range_final(struct mmu_gather *tlb,
+			struct vm_area_struct *vma, unsigned long start,
+			unsigned long end, struct page *ref_page)
+{
+	BUG();
+}
+
+static inline void __unmap_hugepage_range(struct mmu_gather *tlb,
+			struct vm_area_struct *vma, unsigned long start,
+			unsigned long end, struct page *ref_page)
+{
+	BUG();
+}
+
 /*
  * hugepages at page global directory. If arch support
  * hugepages at pgd level, they need to define this.
@@ -255,6 +329,7 @@ enum {
 	HUGETLB_ANONHUGE_INODE  = 2,
 };
 
+#if 0
 #ifdef CONFIG_HUGETLBFS
 struct hugetlbfs_sb_info {
 	long	max_inodes;   /* inodes allowed */
@@ -298,6 +373,16 @@ hugetlb_file_setup(const char *name, size_t size, vm_flags_t acctflag,
 }
 
 #endif /* !CONFIG_HUGETLBFS */
+#endif
+
+#define is_file_hugepages(file)			0
+static inline struct file *
+hugetlb_file_setup(const char *name, size_t size, vm_flags_t acctflag,
+		struct user_struct **user, int creat_flags,
+		int page_size_log)
+{
+	return ERR_PTR(-ENOSYS);
+}
 
 #ifdef HAVE_ARCH_HUGETLB_UNMAPPED_AREA
 unsigned long hugetlb_get_unmapped_area(struct file *file, unsigned long addr,
@@ -305,6 +390,7 @@ unsigned long hugetlb_get_unmapped_area(struct file *file, unsigned long addr,
 					unsigned long flags);
 #endif /* HAVE_ARCH_HUGETLB_UNMAPPED_AREA */
 
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 
 #define HSTATE_NAME_LEN 32
@@ -552,6 +638,51 @@ static inline void hugetlb_count_sub(long l, struct mm_struct *mm)
 {
 }
 #endif	/* CONFIG_HUGETLB_PAGE */
+#endif
+
+struct hstate {};
+#define alloc_huge_page(v, a, r) NULL
+#define alloc_huge_page_node(h, nid) NULL
+#define alloc_huge_page_noerr(v, a, r) NULL
+#define alloc_bootmem_huge_page(h) NULL
+#define hstate_file(f) NULL
+#define hstate_sizelog(s) NULL
+#define hstate_vma(v) NULL
+#define hstate_inode(i) NULL
+#define page_hstate(page) NULL
+#define huge_page_size(h) PAGE_SIZE
+#define huge_page_mask(h) PAGE_MASK
+#define vma_kernel_pagesize(v) PAGE_SIZE
+#define vma_mmu_pagesize(v) PAGE_SIZE
+#define huge_page_order(h) 0
+#define huge_page_shift(h) PAGE_SHIFT
+static inline unsigned int pages_per_huge_page(struct hstate *h)
+{
+	return 1;
+}
+#define hstate_index_to_shift(index) 0
+#define hstate_index(h) 0
+
+static inline pgoff_t basepage_index(struct page *page)
+{
+	return page->index;
+}
+#define dissolve_free_huge_pages(s, e)	do {} while (0)
+#define hugepage_migration_supported(h)	0
+
+static inline spinlock_t *huge_pte_lockptr(struct hstate *h,
+					   struct mm_struct *mm, pte_t *pte)
+{
+	return &mm->page_table_lock;
+}
+
+static inline void hugetlb_report_usage(struct seq_file *f, struct mm_struct *m)
+{
+}
+
+static inline void hugetlb_count_sub(long l, struct mm_struct *mm)
+{
+}
 
 static inline spinlock_t *huge_pte_lock(struct hstate *h,
 					struct mm_struct *mm, pte_t *pte)

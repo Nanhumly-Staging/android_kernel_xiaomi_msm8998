@@ -14,6 +14,8 @@ int dax_fault(struct vm_area_struct *, struct vm_fault *, get_block_t,
 		dax_iodone_t);
 int __dax_fault(struct vm_area_struct *, struct vm_fault *, get_block_t,
 		dax_iodone_t);
+
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 int dax_pmd_fault(struct vm_area_struct *, unsigned long addr, pmd_t *,
 				unsigned int flags, get_block_t, dax_iodone_t);
@@ -28,6 +30,16 @@ static inline int dax_pmd_fault(struct vm_area_struct *vma, unsigned long addr,
 }
 #define __dax_pmd_fault dax_pmd_fault
 #endif
+#endif
+
+static inline int dax_pmd_fault(struct vm_area_struct *vma, unsigned long addr,
+				pmd_t *pmd, unsigned int flags, get_block_t gb,
+				dax_iodone_t di)
+{
+	return VM_FAULT_FALLBACK;
+}
+#define __dax_pmd_fault dax_pmd_fault
+
 int dax_pfn_mkwrite(struct vm_area_struct *, struct vm_fault *);
 #define dax_mkwrite(vma, vmf, gb, iod)		dax_fault(vma, vmf, gb, iod)
 #define __dax_mkwrite(vma, vmf, gb, iod)	__dax_fault(vma, vmf, gb, iod)

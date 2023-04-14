@@ -489,12 +489,13 @@ extern struct page *zero_page_memmap_ptr;
 /* We provide our own get_unmapped_area to cope with VA holes for userland */
 #define HAVE_ARCH_UNMAPPED_AREA
 
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 #define HUGETLB_PGDIR_SHIFT	(HPAGE_SHIFT + 2*(PAGE_SHIFT-3))
 #define HUGETLB_PGDIR_SIZE	(__IA64_UL(1) << HUGETLB_PGDIR_SHIFT)
 #define HUGETLB_PGDIR_MASK	(~(HUGETLB_PGDIR_SIZE-1))
 #endif
-
+#endif
 
 #define __HAVE_ARCH_PTEP_SET_ACCESS_FLAGS
 /*

@@ -101,9 +101,13 @@ enum pageflags {
 #ifdef CONFIG_MEMORY_FAILURE
 	PG_hwpoison,		/* hardware poisoned page. Don't touch */
 #endif
+
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 	PG_compound_lock,
 #endif
+#endif
+
 #if defined(CONFIG_IDLE_PAGE_TRACKING) && defined(CONFIG_64BIT)
 	PG_young,
 	PG_idle,
@@ -483,6 +487,7 @@ static inline void clear_compound_head(struct page *page)
 	WRITE_ONCE(page->compound_head, 0);
 }
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 static inline void ClearPageCompound(struct page *page)
 {
@@ -490,9 +495,11 @@ static inline void ClearPageCompound(struct page *page)
 	ClearPageHead(page);
 }
 #endif
+#endif
 
 #define PG_head_mask ((1L << PG_head))
 
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 int PageHuge(struct page *page);
 int PageHeadHuge(struct page *page);
@@ -506,8 +513,17 @@ static inline bool page_huge_active(struct page *page)
 	return 0;
 }
 #endif
+#endif
 
+TESTPAGEFLAG_FALSE(Huge)
+TESTPAGEFLAG_FALSE(HeadHuge)
 
+static inline bool page_huge_active(struct page *page)
+{
+	return 0;
+}
+
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 /*
  * PageHuge() only returns true for hugetlbfs pages, but not for
@@ -560,6 +576,22 @@ static inline int PageTransTail(struct page *page)
 	return 0;
 }
 #endif
+#endif
+
+static inline int PageTransHuge(struct page *page)
+{
+	return 0;
+}
+
+static inline int PageTransCompound(struct page *page)
+{
+	return 0;
+}
+
+static inline int PageTransTail(struct page *page)
+{
+	return 0;
+}
 
 /*
  * PageBuddy() indicate that the page is free and in the buddy system
@@ -644,11 +676,15 @@ static inline void ClearPageSlabPfmemalloc(struct page *page)
 #define __PG_MLOCKED		0
 #endif
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 #define __PG_COMPOUND_LOCK		(1 << PG_compound_lock)
 #else
 #define __PG_COMPOUND_LOCK		0
 #endif
+#endif
+
+#define __PG_COMPOUND_LOCK		0
 
 /*
  * Flags checked when a page is freed.  Pages being freed should not have

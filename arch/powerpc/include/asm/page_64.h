@@ -154,6 +154,7 @@ do {						\
 #define slice_mm_new_context(mm)	1
 #endif /* CONFIG_PPC_MM_SLICES */
 
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 
 #ifdef CONFIG_PPC_MM_SLICES
@@ -161,6 +162,7 @@ do {						\
 #endif
 
 #endif /* !CONFIG_HUGETLB_PAGE */
+#endif
 
 #define VM_DATA_DEFAULT_FLAGS \
 	(is_32bit_task() ? \

@@ -292,11 +292,16 @@ int main(void)
 	BLANK();
 	/* HUGEPAGE_SIZE is only used in vmlinux.lds.S to align kernel text
 	 * and kernel data on physical huge pages */
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 	DEFINE(HUGEPAGE_SIZE, 1UL << REAL_HPAGE_SHIFT);
 #else
 	DEFINE(HUGEPAGE_SIZE, PAGE_SIZE);
 #endif
+#endif
+
+	DEFINE(HUGEPAGE_SIZE, PAGE_SIZE);
+
 	BLANK();
 	DEFINE(EXCDATA_IP, offsetof(struct exception_data, fault_ip));
 	DEFINE(EXCDATA_GP, offsetof(struct exception_data, fault_gp));

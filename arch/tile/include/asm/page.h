@@ -140,8 +140,10 @@ static inline __attribute_const__ int get_order(unsigned long size)
 
 #define HUGE_MAX_HSTATE		6
 
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 #define HAVE_ARCH_HUGETLB_UNMAPPED_AREA
+#endif
 #endif
 
 /* Allow overriding how much VA or PA the kernel will use. */

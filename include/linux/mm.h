@@ -417,37 +417,53 @@ extern void kvfree(const void *addr);
 
 static inline void compound_lock(struct page *page)
 {
+
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 	VM_BUG_ON_PAGE(PageSlab(page), page);
 	bit_spin_lock(PG_compound_lock, &page->flags);
 #endif
+#endif
+
 }
 
 static inline void compound_unlock(struct page *page)
 {
+
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 	VM_BUG_ON_PAGE(PageSlab(page), page);
 	bit_spin_unlock(PG_compound_lock, &page->flags);
 #endif
+#endif
+
 }
 
 static inline unsigned long compound_lock_irqsave(struct page *page)
 {
 	unsigned long uninitialized_var(flags);
+
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 	local_irq_save(flags);
 	compound_lock(page);
 #endif
+#endif
+
 	return flags;
 }
 
 static inline void compound_unlock_irqrestore(struct page *page,
 					      unsigned long flags)
 {
+
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 	compound_unlock(page);
 	local_irq_restore(flags);
 #endif
+#endif
+
 }
 
 /*
@@ -569,9 +585,13 @@ typedef void compound_page_dtor(struct page *);
 enum compound_dtor_id {
 	NULL_COMPOUND_DTOR,
 	COMPOUND_PAGE_DTOR,
+
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 	HUGETLB_PAGE_DTOR,
 #endif
+#endif
+
 	NR_COMPOUND_DTORS,
 };
 extern compound_page_dtor * const compound_page_dtors[];
@@ -1669,17 +1689,25 @@ static inline spinlock_t *pmd_lockptr(struct mm_struct *mm, pmd_t *pmd)
 
 static inline bool pgtable_pmd_page_ctor(struct page *page)
 {
+
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 	page->pmd_huge_pte = NULL;
 #endif
+#endif
+
 	return ptlock_init(page);
 }
 
 static inline void pgtable_pmd_page_dtor(struct page *page)
 {
+
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 	VM_BUG_ON_PAGE(page->pmd_huge_pte, page);
 #endif
+#endif
+
 	ptlock_free(page);
 }
 
@@ -2358,6 +2386,7 @@ enum mf_action_page_type {
 	MF_MSG_UNKNOWN,
 };
 
+#if 0
 #if defined(CONFIG_TRANSPARENT_HUGEPAGE) || defined(CONFIG_HUGETLBFS)
 extern void clear_huge_page(struct page *page,
 			    unsigned long addr,
@@ -2366,6 +2395,7 @@ extern void copy_user_huge_page(struct page *dst, struct page *src,
 				unsigned long addr, struct vm_area_struct *vma,
 				unsigned int pages_per_huge_page);
 #endif /* CONFIG_TRANSPARENT_HUGEPAGE || CONFIG_HUGETLBFS */
+#endif
 
 extern struct page_ext_operations debug_guardpage_ops;
 

@@ -370,6 +370,7 @@ static inline pte_t pte_mkspecial(pte_t pte)	{ return pte; }
 /*
  * Huge pte definitions.
  */
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 #define pte_huge(pte)           (pte_val(pte) & _PAGE_HUGE)
 #define pte_mkhuge(pte)         (__pte(pte_val(pte) | \
@@ -378,7 +379,10 @@ static inline pte_t pte_mkspecial(pte_t pte)	{ return pte; }
 #define pte_huge(pte)           (0)
 #define pte_mkhuge(pte)         (pte)
 #endif
+#endif
 
+#define pte_huge(pte)           (0)
+#define pte_mkhuge(pte)         (pte)
 
 /*
  * Conversion functions: convert a page and protection to a page entry,

@@ -21,15 +21,19 @@
                 	    PUD_INDEX_SIZE + PGD_INDEX_SIZE + PAGE_SHIFT)
 #define PGTABLE_RANGE (ASM_CONST(1) << PGTABLE_EADDR_SIZE)
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 #define PMD_CACHE_INDEX	(PMD_INDEX_SIZE + 1)
 #else
 #define PMD_CACHE_INDEX	PMD_INDEX_SIZE
 #endif
+#endif
+
+#define PMD_CACHE_INDEX	PMD_INDEX_SIZE
+
 /*
  * Define the address range of the kernel non-linear virtual area
  */
-
 #ifdef CONFIG_PPC_BOOK3E
 #define KERN_VIRT_START ASM_CONST(0x8000000000000000)
 #else
@@ -437,6 +441,7 @@ static inline char *get_hpte_slot_array(pmd_t *pmdp)
 
 }
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 extern void hpte_do_hugepage_flush(struct mm_struct *mm, unsigned long addr,
 				   pmd_t *pmdp, unsigned long old_pmd);
@@ -488,6 +493,15 @@ static inline void hpte_do_hugepage_flush(struct mm_struct *mm,
 	WARN(1, "%s called with THP disabled\n", __func__);
 }
 #endif /* CONFIG_TRANSPARENT_HUGEPAGE */
+#endif
+
+static inline void hpte_do_hugepage_flush(struct mm_struct *mm,
+					  unsigned long addr, pmd_t *pmdp,
+					  unsigned long old_pmd)
+{
+
+	WARN(1, "%s called with THP disabled\n", __func__);
+}
 
 static inline int pmd_large(pmd_t pmd)
 {

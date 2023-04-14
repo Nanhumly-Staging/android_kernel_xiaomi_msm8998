@@ -402,6 +402,7 @@ static int __init htab_dt_scan_page_sizes(unsigned long node,
 	return 1;
 }
 
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 /* Scan for 16G memory blocks that have been set aside for huge pages
  * and reserve those blocks for 16G huge pages.
@@ -443,6 +444,7 @@ static int __init htab_dt_scan_hugepage_blocks(unsigned long node,
 	return 0;
 }
 #endif /* CONFIG_HUGETLB_PAGE */
+#endif
 
 static void mmu_psize_set_default_penc(void)
 {
@@ -562,10 +564,13 @@ static void __init htab_init_page_sizes(void)
 #endif
 	       );
 
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 	/* Reserve 16G huge page memory sections for huge pages */
 	of_scan_flat_dt(htab_dt_scan_hugepage_blocks, NULL);
 #endif /* CONFIG_HUGETLB_PAGE */
+#endif
+
 }
 
 static int __init htab_dt_scan_pftsize(unsigned long node,
@@ -1092,6 +1097,8 @@ int hash_page_mm(struct mm_struct *mm, unsigned long ea,
 		if (is_thp)
 			rc = __hash_page_thp(ea, access, vsid, (pmd_t *)ptep,
 					     trap, flags, ssize, psize);
+
+#if 0
 #ifdef CONFIG_HUGETLB_PAGE
 		else
 			rc = __hash_page_huge(ea, access, vsid, ptep, trap,
@@ -1106,6 +1113,17 @@ int hash_page_mm(struct mm_struct *mm, unsigned long ea,
 			WARN_ON(1);
 		}
 #endif
+#endif
+
+		else {
+			/*
+			 * if we have hugeshift, and is not transhuge with
+			 * hugetlb disabled, something is really wrong.
+			 */
+			rc = 1;
+			WARN_ON(1);
+		}
+
 		if (current->mm == mm)
 			check_paca_psize(ea, mm, psize, user_region);
 
@@ -1328,6 +1346,7 @@ void flush_hash_page(unsigned long vpn, real_pte_t pte, int psize, int ssize,
 #endif
 }
 
+#if 0
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 void flush_hash_hugepage(unsigned long vsid, unsigned long addr,
 			 pmd_t *pmdp, unsigned int psize, int ssize,
@@ -1400,6 +1419,7 @@ tm_abort:
 	return;
 }
 #endif /* CONFIG_TRANSPARENT_HUGEPAGE */
+#endif
 
 void flush_hash_range(unsigned long number, int local)
 {

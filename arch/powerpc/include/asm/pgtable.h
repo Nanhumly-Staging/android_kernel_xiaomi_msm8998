@@ -254,10 +254,14 @@ extern void update_mmu_cache(struct vm_area_struct *, unsigned long, pte_t *);
 extern int gup_hugepte(pte_t *ptep, unsigned long sz, unsigned long addr,
 		       unsigned long end, int write,
 		       struct page **pages, int *nr);
+
+#if 0
 #ifndef CONFIG_TRANSPARENT_HUGEPAGE
 #define pmd_large(pmd)		0
 #define has_transparent_hugepage() 0
 #endif
+#endif
+
 pte_t *__find_linux_pte_or_hugepte(pgd_t *pgdir, unsigned long ea,
 				   bool *is_thp, unsigned *shift);
 static inline pte_t *find_linux_pte_or_hugepte(pgd_t *pgdir, unsigned long ea,

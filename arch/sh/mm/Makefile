@@ -35,7 +35,7 @@ obj-y				+= $(tlb-y)
 endif
 
 obj-$(CONFIG_DEBUG_FS)		+= $(debugfs-y)
-obj-$(CONFIG_HUGETLB_PAGE)	+= hugetlbpage.o
+#obj-$(CONFIG_HUGETLB_PAGE)	+= hugetlbpage.o
 obj-$(CONFIG_PMB)		+= pmb.o
 obj-$(CONFIG_NUMA)		+= numa.o
 obj-$(CONFIG_IOREMAP_FIXED)	+= ioremap_fixed.o
