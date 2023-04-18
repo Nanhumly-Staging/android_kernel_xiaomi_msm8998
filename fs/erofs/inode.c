@@ -360,14 +360,14 @@ const struct inode_operations erofs_generic_iops = {
 };
 
 const struct inode_operations erofs_symlink_iops = {
-	.follow_link = page_follow_link_light,
+	.get_link = page_get_link,
 	.getattr = erofs_getattr,
 	.listxattr = erofs_listxattr,
 	.get_acl = erofs_get_acl,
 };
 
 const struct inode_operations erofs_fast_symlink_iops = {
-	.follow_link = simple_follow_link,
+	.get_link = simple_get_link,
 	.getattr = erofs_getattr,
 	.listxattr = erofs_listxattr,
 	.get_acl = erofs_get_acl,
