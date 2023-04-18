@@ -3003,10 +3003,12 @@ static const struct inode_operations sdfat_dir_inode_operations = {
 	.getattr       = sdfat_getattr,
 #ifdef CONFIG_SDFAT_VIRTUAL_XATTR
 	.listxattr      = sdfat_listxattr,
+#if 0
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	.setxattr       = sdfat_setxattr,
 	.getxattr       = sdfat_getxattr,
 	.removexattr    = sdfat_removexattr,
+#endif
 #endif
 #endif
 };
@@ -3025,10 +3027,12 @@ static const struct inode_operations sdfat_symlink_inode_operations = {
 #endif
 #ifdef CONFIG_SDFAT_VIRTUAL_XATTR
 	.listxattr      = sdfat_listxattr,
+#if 0
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	.setxattr       = sdfat_setxattr,
 	.getxattr       = sdfat_getxattr,
 	.removexattr    = sdfat_removexattr,
+#endif
 #endif
 #endif
 };
@@ -3157,10 +3161,12 @@ static const struct inode_operations sdfat_file_inode_operations = {
 	.getattr     = sdfat_getattr,
 #ifdef CONFIG_SDFAT_VIRTUAL_XATTR
 	.listxattr      = sdfat_listxattr,
+#if 0
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	.setxattr       = sdfat_setxattr,
 	.getxattr       = sdfat_getxattr,
 	.removexattr    = sdfat_removexattr,
+#endif
 #endif
 #endif
 };
