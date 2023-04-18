@@ -78,6 +78,7 @@ ssize_t __sdfat_getxattr(const char *name, void *value, size_t size)
 /*************************************************************************
  * FUNCTIONS WHICH HAS KERNEL VERSION DEPENDENCY
  *************************************************************************/
+#if 0
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
 #if defined(CONFIG_ANDROID) && (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
 static int sdfat_xattr_get(const struct xattr_handler *handler,
@@ -140,3 +141,35 @@ void setup_sdfat_xattr_handler(struct super_block *sb)
 	/* DO NOTHING */
 }
 #endif
+#endif
+
+static int sdfat_xattr_get(const struct xattr_handler *handler,
+		struct dentry *dentry, struct inode *inode,
+		const char *name, void *buffer, size_t size)
+{
+	return __sdfat_getxattr(name, buffer, size);
+}
+
+static int sdfat_xattr_set(const struct xattr_handler *handler,
+		struct dentry *dentry, struct inode *inode,
+		const char *name, const void *value, size_t size,
+		int flags)
+{
+	return __sdfat_xattr_check_support(name);
+}
+
+const struct xattr_handler sdfat_xattr_handler = {
+	.prefix = "",  /* match anything */
+	.get = sdfat_xattr_get,
+	.set = sdfat_xattr_set,
+};
+
+const struct xattr_handler *sdfat_xattr_handlers[] = {
+	&sdfat_xattr_handler,
+	NULL
+};
+
+void setup_sdfat_xattr_handler(struct super_block *sb)
+{
+	sb->s_xattr = sdfat_xattr_handlers;
+}
