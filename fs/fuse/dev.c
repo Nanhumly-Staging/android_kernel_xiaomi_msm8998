@@ -1325,9 +1325,6 @@ static ssize_t fuse_dev_do_read(struct fuse_dev *fud, struct file *file,
 	/* If request is too large, reply with an error and restart the read */
 	if (nbytes < reqsize) {
 		req->out.h.error = -EIO;
-		/* SETXATTR is special, since it may contain too large data */
-		if (in->h.opcode == FUSE_SETXATTR)
-			req->out.h.error = -E2BIG;
 		request_end(fc, req);
 		goto restart;
 	}

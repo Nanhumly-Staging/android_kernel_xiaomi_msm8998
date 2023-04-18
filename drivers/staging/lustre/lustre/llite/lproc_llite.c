@@ -912,11 +912,8 @@ static const struct llite_file_opcode {
 	/* special inode operation */
 	{ LPROC_LL_STAFS,	  LPROCFS_TYPE_REGS, "statfs" },
 	{ LPROC_LL_ALLOC_INODE,    LPROCFS_TYPE_REGS, "alloc_inode" },
-	{ LPROC_LL_SETXATTR,       LPROCFS_TYPE_REGS, "setxattr" },
-	{ LPROC_LL_GETXATTR,       LPROCFS_TYPE_REGS, "getxattr" },
 	{ LPROC_LL_GETXATTR_HITS,  LPROCFS_TYPE_REGS, "getxattr_hits" },
 	{ LPROC_LL_LISTXATTR,      LPROCFS_TYPE_REGS, "listxattr" },
-	{ LPROC_LL_REMOVEXATTR,    LPROCFS_TYPE_REGS, "removexattr" },
 	{ LPROC_LL_INODE_PERM,     LPROCFS_TYPE_REGS, "inode_permission" },
 };
 
