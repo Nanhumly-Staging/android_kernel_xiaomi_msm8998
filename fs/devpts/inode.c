@@ -95,8 +95,6 @@ static struct ctl_table pty_root_table[] = {
 
 static DEFINE_MUTEX(allocated_ptys_lock);
 
-static struct vfsmount *devpts_mnt;
-
 struct pts_mount_opts {
 	int setuid;
 	int setgid;
