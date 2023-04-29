@@ -16,7 +16,9 @@ CONTENTS
   1-2. What is cgroup?
 2. Basic Operations
   2-1. Mounting
-  2-2. Organizing Processes
+  2-2. Organizing Processes and Threads
+    2-2-1. Processes
+    2-2-2. Threads
   2-3. [Un]populated Notification
   2-4. Controlling Controllers
     2-4-1. Enabling and Disabling
@@ -47,6 +49,17 @@ CONTENTS
   5-3. IO
     5-3-1. IO Interface Files
     5-3-2. Writeback
+  5-4. PID
+    5-4-1. PID Interface Files
+  5-5. Misc
+    5-5-1. perf_event
+  5-6. RDMA
+    5-6-1. RDMA Interface Files
+6. Namespace
+  6-1. Basics
+  6-2. The Root and Views
+  6-3. Migration and setns(2)
+  6-4. Interaction with Other Namespaces
 P. Information on Kernel Programming
   P-1. Filesystem Support for Writeback
 D. Deprecated v1 Core Features
@@ -132,8 +145,26 @@ strongly discouraged for production use.  It is recommended to decide
 the hierarchies and controller associations before starting using the
 controllers after system boot.
 
+During transition to v2, system management software might still
+automount the v1 cgroup filesystem and so hijack all controllers
+during boot, before manual intervention is possible. To make testing
+and experimenting easier, the kernel parameter cgroup_no_v1= allows
+disabling controllers in v1 and make them always available in v2.
 
-2-2. Organizing Processes
+cgroup v2 currently supports the following mount options.
+
+  nsdelegate
+
+	Consider cgroup namespaces as delegation boundaries.  This
+	option is system wide and can only be set on mount or modified
+	through remount from the init namespace.  The mount option is
+	ignored on non-init namespace mounts.  Please refer to the
+	Delegation section for details.
+
+
+2-2. Organizing Processes and Threads
+
+2-2-1. Processes
 
 Initially, only the root cgroup exists to which all processes belong.
 A child cgroup can be created by creating a sub-directory.
@@ -182,6 +213,104 @@ is removed subsequently, " (deleted)" is appended to the path.
   # cat /proc/842/cgroup
   ...
   0::/test-cgroup/test-cgroup-nested (deleted)
+
+
+2-2-2. Threads
+
+cgroup v2 supports thread granularity for a subset of controllers to
+support use cases requiring hierarchical resource distribution across
+the threads of a group of processes.  By default, all threads of a
+process belong to the same cgroup, which also serves as the resource
+domain to host resource consumptions which are not specific to a
+process or thread.  The thread mode allows threads to be spread across
+a subtree while still maintaining the common resource domain for them.
+
+Controllers which support thread mode are called threaded controllers.
+The ones which don't are called domain controllers.
+
+Marking a cgroup threaded makes it join the resource domain of its
+parent as a threaded cgroup.  The parent may be another threaded
+cgroup whose resource domain is further up in the hierarchy.  The root
+of a threaded subtree, that is, the nearest ancestor which is not
+threaded, is called threaded domain or thread root interchangeably and
+serves as the resource domain for the entire subtree.
+
+Inside a threaded subtree, threads of a process can be put in
+different cgroups and are not subject to the no internal process
+constraint - threaded controllers can be enabled on non-leaf cgroups
+whether they have threads in them or not.
+
+As the threaded domain cgroup hosts all the domain resource
+consumptions of the subtree, it is considered to have internal
+resource consumptions whether there are processes in it or not and
+can't have populated child cgroups which aren't threaded.  Because the
+root cgroup is not subject to no internal process constraint, it can
+serve both as a threaded domain and a parent to domain cgroups.
+
+The current operation mode or type of the cgroup is shown in the
+"cgroup.type" file which indicates whether the cgroup is a normal
+domain, a domain which is serving as the domain of a threaded subtree,
+or a threaded cgroup.
+
+On creation, a cgroup is always a domain cgroup and can be made
+threaded by writing "threaded" to the "cgroup.type" file.  The
+operation is single direction::
+
+  # echo threaded > cgroup.type
+
+Once threaded, the cgroup can't be made a domain again.  To enable the
+thread mode, the following conditions must be met.
+
+- As the cgroup will join the parent's resource domain.  The parent
+  must either be a valid (threaded) domain or a threaded cgroup.
+
+- When the parent is an unthreaded domain, it must not have any domain
+  controllers enabled or populated domain children.  The root is
+  exempt from this requirement.
+
+Topology-wise, a cgroup can be in an invalid state.  Please consider
+the following toplogy::
+
+  A (threaded domain) - B (threaded) - C (domain, just created)
+
+C is created as a domain but isn't connected to a parent which can
+host child domains.  C can't be used until it is turned into a
+threaded cgroup.  "cgroup.type" file will report "domain (invalid)" in
+these cases.  Operations which fail due to invalid topology use
+EOPNOTSUPP as the errno.
+
+A domain cgroup is turned into a threaded domain when one of its child
+cgroup becomes threaded or threaded controllers are enabled in the
+"cgroup.subtree_control" file while there are processes in the cgroup.
+A threaded domain reverts to a normal domain when the conditions
+clear.
+
+When read, "cgroup.threads" contains the list of the thread IDs of all
+threads in the cgroup.  Except that the operations are per-thread
+instead of per-process, "cgroup.threads" has the same format and
+behaves the same way as "cgroup.procs".  While "cgroup.threads" can be
+written to in any cgroup, as it can only move threads inside the same
+threaded domain, its operations are confined inside each threaded
+subtree.
+
+The threaded domain cgroup serves as the resource domain for the whole
+subtree, and, while the threads can be scattered across the subtree,
+all the processes are considered to be in the threaded domain cgroup.
+"cgroup.procs" in a threaded domain cgroup contains the PIDs of all
+processes in the subtree and is not readable in the subtree proper.
+However, "cgroup.procs" can be written to from anywhere in the subtree
+to migrate all threads of the matching process to the cgroup.
+
+Only threaded controllers can be enabled in a threaded subtree.  When
+a threaded controller is enabled inside a threaded subtree, it only
+accounts for and controls resource consumptions associated with the
+threads in the cgroup and its descendants.  All consumptions which
+aren't tied to a specific thread belong to the threaded domain cgroup.
+
+Because a threaded subtree is exempt from no internal process
+constraint, a threaded controller must be able to handle competition
+between threads in a non-leaf cgroup and its child cgroups.  Each
+threaded controller defines how such competitions are handled.
 
 
 2-3. [Un]populated Notification
@@ -262,15 +391,15 @@ disabled if one or more children have it enabled.
 
 2-4-3. No Internal Process Constraint
 
-Non-root cgroups can only distribute resources to their children when
-they don't have any processes of their own.  In other words, only
-cgroups which don't contain any processes can have controllers enabled
-in their "cgroup.subtree_control" files.
+Non-root cgroups can distribute domain resources to their children
+only when they don't have any processes of their own.  In other words,
+only domain cgroups which don't contain any processes can have domain
+controllers enabled in their "cgroup.subtree_control" files.
 
-This guarantees that, when a controller is looking at the part of the
-hierarchy which has it enabled, processes are always only on the
-leaves.  This rules out situations where child cgroups compete against
-internal processes of the parent.
+This guarantees that, when a domain controller is looking at the part
+of the hierarchy which has it enabled, processes are always only on
+the leaves.  This rules out situations where child cgroups compete
+against internal processes of the parent.
 
 The root cgroup is exempt from this restriction.  Root contains
 processes and anonymous resource consumption which can't be associated
@@ -291,18 +420,27 @@ file.
 
 2-5-1. Model of Delegation
 
-A cgroup can be delegated to a less privileged user by granting write
-access of the directory and its "cgroup.procs" file to the user.  Note
-that resource control interface files in a given directory control the
-distribution of the parent's resources and thus must not be delegated
-along with the directory.
+A cgroup can be delegated in two ways.  First, to a less privileged
+user by granting write access of the directory and its "cgroup.procs",
+"cgroup.threads" and "cgroup.subtree_control" files to the user.
+Second, if the "nsdelegate" mount option is set, automatically to a
+cgroup namespace on namespace creation.
 
-Once delegated, the user can build sub-hierarchy under the directory,
-organize processes as it sees fit and further distribute the resources
-it received from the parent.  The limits and other settings of all
-resource controllers are hierarchical and regardless of what happens
-in the delegated sub-hierarchy, nothing can escape the resource
-restrictions imposed by the parent.
+Because the resource control interface files in a given directory
+control the distribution of the parent's resources, the delegatee
+shouldn't be allowed to write to them.  For the first method, this is
+achieved by not granting access to these files.  For the second, the
+kernel rejects writes to all files other than "cgroup.procs" and
+"cgroup.subtree_control" on a namespace root from inside the
+namespace.
+
+The end results are equivalent for both delegation types.  Once
+delegated, the user can build sub-hierarchy under the directory,
+organize processes inside it as it sees fit and further distribute the
+resources it received from the parent.  The limits and other settings
+of all resource controllers are hierarchical and regardless of what
+happens in the delegated sub-hierarchy, nothing can escape the
+resource restrictions imposed by the parent.
 
 Currently, cgroup doesn't impose any restrictions on the number of
 cgroups in or nesting depth of a delegated sub-hierarchy; however,
@@ -312,19 +450,19 @@ this may be limited explicitly in the future.
 2-5-2. Delegation Containment
 
 A delegated sub-hierarchy is contained in the sense that processes
-can't be moved into or out of the sub-hierarchy by the delegatee.  For
-a process with a non-root euid to migrate a target process into a
-cgroup by writing its PID to the "cgroup.procs" file, the following
-conditions must be met.
+can't be moved into or out of the sub-hierarchy by the delegatee.
 
-- The writer's euid must match either uid or suid of the target process.
+For delegations to a less privileged user, this is achieved by
+requiring the following conditions for a process with a non-root euid
+to migrate a target process into a cgroup by writing its PID to the
+"cgroup.procs" file.
 
 - The writer must have write access to the "cgroup.procs" file.
 
 - The writer must have write access to the "cgroup.procs" file of the
   common ancestor of the source and destination cgroups.
 
-The above three constraints ensure that while a delegatee may migrate
+The above two constraints ensure that while a delegatee may migrate
 processes around freely in the delegated sub-hierarchy it can't pull
 in from or push out to outside the sub-hierarchy.
 
@@ -339,10 +477,15 @@ all processes under C0 and C1 belong to U0.
 
 Let's also say U0 wants to write the PID of a process which is
 currently in C10 into "C00/cgroup.procs".  U0 has write access to the
-file and uid match on the process; however, the common ancestor of the
-source cgroup C10 and the destination cgroup C00 is above the points
-of delegation and U0 would not have write access to its "cgroup.procs"
-files and thus the write will be denied with -EACCES.
+file; however, the common ancestor of the source cgroup C10 and the
+destination cgroup C00 is above the points of delegation and U0 would
+not have write access to its "cgroup.procs" files and thus the write
+will be denied with -EACCES.
+
+For delegations to namespaces, containment is achieved by requiring
+that both the source and destination cgroups are reachable from the
+namespace of the process which is attempting the migration.  If either
+is not reachable, the migration is rejected with -ENOENT.
 
 
 2-6. Guidelines
@@ -575,6 +718,29 @@ may be specified in any order and not all pairs have to be specified.
 
 All cgroup core files are prefixed with "cgroup."
 
+  cgroup.type
+
+	A read-write single value file which exists on non-root
+	cgroups.
+
+	When read, it indicates the current type of the cgroup, which
+	can be one of the following values.
+
+	- "domain" : A normal valid domain cgroup.
+
+	- "domain threaded" : A threaded domain cgroup which is
+          serving as the root of a threaded subtree.
+
+	- "domain invalid" : A cgroup which is in an invalid state.
+	  It can't be populated or have controllers enabled.  It may
+	  be allowed to become a threaded cgroup.
+
+	- "threaded" : A threaded cgroup which is a member of a
+          threaded subtree.
+
+	A cgroup can be turned into a threaded cgroup by writing
+	"threaded" to this file.
+
   cgroup.procs
 
 	A read-write new-line separated values file which exists on
@@ -590,10 +756,36 @@ All cgroup core files are prefixed with "cgroup."
 	the PID to the cgroup.  The writer should match all of the
 	following conditions.
 
-	- Its euid is either root or must match either uid or suid of
-          the target process.
-
 	- It must have write access to the "cgroup.procs" file.
+
+	- It must have write access to the "cgroup.procs" file of the
+	  common ancestor of the source and destination cgroups.
+
+	When delegating a sub-hierarchy, write access to this file
+	should be granted along with the containing directory.
+
+	In a threaded cgroup, reading this file fails with EOPNOTSUPP
+	as all the processes belong to the thread root.  Writing is
+	supported and moves every thread of the process to the cgroup.
+
+  cgroup.threads
+	A read-write new-line separated values file which exists on
+	all cgroups.
+
+	When read, it lists the TIDs of all threads which belong to
+	the cgroup one-per-line.  The TIDs are not ordered and the
+	same TID may show up more than once if the thread got moved to
+	another cgroup and then back or the TID got recycled while
+	reading.
+
+	A TID can be written to migrate the thread associated with the
+	TID to the cgroup.  The writer should match all of the
+	following conditions.
+
+	- It must have write access to the "cgroup.threads" file.
+
+	- The cgroup that the thread is currently in must be in the
+          same resource domain as the destination cgroup.
 
 	- It must have write access to the "cgroup.procs" file of the
 	  common ancestor of the source and destination cgroups.
@@ -636,6 +828,38 @@ All cgroup core files are prefixed with "cgroup."
 
 		1 if the cgroup or its descendants contains any live
 		processes; otherwise, 0.
+
+  cgroup.max.descendants
+	A read-write single value files.  The default is "max".
+
+	Maximum allowed number of descent cgroups.
+	If the actual number of descendants is equal or larger,
+	an attempt to create a new cgroup in the hierarchy will fail.
+
+  cgroup.max.depth
+	A read-write single value files.  The default is "max".
+
+	Maximum allowed descent depth below the current cgroup.
+	If the actual descent depth is equal or larger,
+	an attempt to create a new child cgroup will fail.
+
+  cgroup.stat
+	A read-only flat-keyed file with the following entries:
+
+	  nr_descendants
+		Total number of visible descendant cgroups.
+
+	  nr_dying_descendants
+		Total number of dying descendant cgroups. A cgroup becomes
+		dying after being deleted by a user. The cgroup will remain
+		in dying state for some time undefined time (which can depend
+		on system load) before being completely destroyed.
+
+		A process can't enter a dying cgroup under any circumstances,
+		a dying cgroup can't revive.
+
+		A dying cgroup can consume system resources not exceeding
+		limits, which were active at the moment of cgroup deletion.
 
 
 5. Controllers
@@ -820,7 +1044,7 @@ PAGE_SIZE multiple when read back.
 		processes killed but should generally be close.
 
 
-5-2-2. General Usage
+5-2-2. Usage Guidelines
 
 "memory.high" is the main mechanism to control memory usage.
 Over-committing on high limit (sum of high limits > available memory)
@@ -1013,6 +1237,234 @@ writeback as follows.
 	vm.dirty[_background]_ratio.
 
 
+5-4. PID
+
+The process number controller is used to allow a cgroup to stop any
+new tasks from being fork()'d or clone()'d after a specified limit is
+reached.
+
+The number of tasks in a cgroup can be exhausted in ways which other
+controllers cannot prevent, thus warranting its own controller.  For
+example, a fork bomb is likely to exhaust the number of tasks before
+hitting memory restrictions.
+
+Note that PIDs used in this controller refer to TIDs, process IDs as
+used by the kernel.
+
+
+5-4-1. PID Interface Files
+
+  pids.max
+
+	A read-write single value file which exists on non-root
+	cgroups.  The default is "max".
+
+	Hard limit of number of processes.
+
+  pids.current
+
+	A read-only single value file which exists on all cgroups.
+
+	The number of processes currently in the cgroup and its
+	descendants.
+
+Organisational operations are not blocked by cgroup policies, so it is
+possible to have pids.current > pids.max.  This can be done by either
+setting the limit to be smaller than pids.current, or attaching enough
+processes to the cgroup such that pids.current is larger than
+pids.max.  However, it is not possible to violate a cgroup PID policy
+through fork() or clone(). These will return -EAGAIN if the creation
+of a new process would cause a cgroup policy to be violated.
+
+
+5-5. Misc
+
+5-5-1. perf_event
+
+perf_event controller, if not mounted on a legacy hierarchy, is
+automatically enabled on the v2 hierarchy so that perf events can
+always be filtered by cgroup v2 path.  The controller can still be
+moved to a legacy hierarchy after v2 hierarchy is populated.
+
+
+5-6. RDMA
+
+The "rdma" controller regulates the distribution and accounting of
+of RDMA resources.
+
+5-6-1. RDMA Interface Files
+
+  rdma.max
+	A readwrite nested-keyed file that exists for all the cgroups
+	except root that describes current configured resource limit
+	for a RDMA/IB device.
+
+	Lines are keyed by device name and are not ordered.
+	Each line contains space separated resource name and its configured
+	limit that can be distributed.
+
+	The following nested keys are defined.
+
+	  hca_handle	Maximum number of HCA Handles
+	  hca_object 	Maximum number of HCA Objects
+
+	An example for mlx4 and ocrdma device follows.
+
+	  mlx4_0 hca_handle=2 hca_object=2000
+	  ocrdma1 hca_handle=3 hca_object=max
+
+  rdma.current
+	A read-only file that describes current resource usage.
+	It exists for all the cgroup except root.
+
+	An example for mlx4 and ocrdma device follows.
+
+	  mlx4_0 hca_handle=1 hca_object=20
+	  ocrdma1 hca_handle=1 hca_object=23
+
+
+6. Namespace
+
+6-1. Basics
+
+cgroup namespace provides a mechanism to virtualize the view of the
+"/proc/$PID/cgroup" file and cgroup mounts.  The CLONE_NEWCGROUP clone
+flag can be used with clone(2) and unshare(2) to create a new cgroup
+namespace.  The process running inside the cgroup namespace will have
+its "/proc/$PID/cgroup" output restricted to cgroupns root.  The
+cgroupns root is the cgroup of the process at the time of creation of
+the cgroup namespace.
+
+Without cgroup namespace, the "/proc/$PID/cgroup" file shows the
+complete path of the cgroup of a process.  In a container setup where
+a set of cgroups and namespaces are intended to isolate processes the
+"/proc/$PID/cgroup" file may leak potential system level information
+to the isolated processes.  For Example:
+
+  # cat /proc/self/cgroup
+  0::/batchjobs/container_id1
+
+The path '/batchjobs/container_id1' can be considered as system-data
+and undesirable to expose to the isolated processes.  cgroup namespace
+can be used to restrict visibility of this path.  For example, before
+creating a cgroup namespace, one would see:
+
+  # ls -l /proc/self/ns/cgroup
+  lrwxrwxrwx 1 root root 0 2014-07-15 10:37 /proc/self/ns/cgroup -> cgroup:[4026531835]
+  # cat /proc/self/cgroup
+  0::/batchjobs/container_id1
+
+After unsharing a new namespace, the view changes.
+
+  # ls -l /proc/self/ns/cgroup
+  lrwxrwxrwx 1 root root 0 2014-07-15 10:35 /proc/self/ns/cgroup -> cgroup:[4026532183]
+  # cat /proc/self/cgroup
+  0::/
+
+When some thread from a multi-threaded process unshares its cgroup
+namespace, the new cgroupns gets applied to the entire process (all
+the threads).  This is natural for the v2 hierarchy; however, for the
+legacy hierarchies, this may be unexpected.
+
+A cgroup namespace is alive as long as there are processes inside or
+mounts pinning it.  When the last usage goes away, the cgroup
+namespace is destroyed.  The cgroupns root and the actual cgroups
+remain.
+
+
+6-2. The Root and Views
+
+The 'cgroupns root' for a cgroup namespace is the cgroup in which the
+process calling unshare(2) is running.  For example, if a process in
+/batchjobs/container_id1 cgroup calls unshare, cgroup
+/batchjobs/container_id1 becomes the cgroupns root.  For the
+init_cgroup_ns, this is the real root ('/') cgroup.
+
+The cgroupns root cgroup does not change even if the namespace creator
+process later moves to a different cgroup.
+
+  # ~/unshare -c # unshare cgroupns in some cgroup
+  # cat /proc/self/cgroup
+  0::/
+  # mkdir sub_cgrp_1
+  # echo 0 > sub_cgrp_1/cgroup.procs
+  # cat /proc/self/cgroup
+  0::/sub_cgrp_1
+
+Each process gets its namespace-specific view of "/proc/$PID/cgroup"
+
+Processes running inside the cgroup namespace will be able to see
+cgroup paths (in /proc/self/cgroup) only inside their root cgroup.
+From within an unshared cgroupns:
+
+  # sleep 100000 &
+  [1] 7353
+  # echo 7353 > sub_cgrp_1/cgroup.procs
+  # cat /proc/7353/cgroup
+  0::/sub_cgrp_1
+
+From the initial cgroup namespace, the real cgroup path will be
+visible:
+
+  $ cat /proc/7353/cgroup
+  0::/batchjobs/container_id1/sub_cgrp_1
+
+From a sibling cgroup namespace (that is, a namespace rooted at a
+different cgroup), the cgroup path relative to its own cgroup
+namespace root will be shown.  For instance, if PID 7353's cgroup
+namespace root is at '/batchjobs/container_id2', then it will see
+
+  # cat /proc/7353/cgroup
+  0::/../container_id2/sub_cgrp_1
+
+Note that the relative path always starts with '/' to indicate that
+its relative to the cgroup namespace root of the caller.
+
+
+6-3. Migration and setns(2)
+
+Processes inside a cgroup namespace can move into and out of the
+namespace root if they have proper access to external cgroups.  For
+example, from inside a namespace with cgroupns root at
+/batchjobs/container_id1, and assuming that the global hierarchy is
+still accessible inside cgroupns:
+
+  # cat /proc/7353/cgroup
+  0::/sub_cgrp_1
+  # echo 7353 > batchjobs/container_id2/cgroup.procs
+  # cat /proc/7353/cgroup
+  0::/../container_id2
+
+Note that this kind of setup is not encouraged.  A task inside cgroup
+namespace should only be exposed to its own cgroupns hierarchy.
+
+setns(2) to another cgroup namespace is allowed when:
+
+(a) the process has CAP_SYS_ADMIN against its current user namespace
+(b) the process has CAP_SYS_ADMIN against the target cgroup
+    namespace's userns
+
+No implicit cgroup changes happen with attaching to another cgroup
+namespace.  It is expected that the someone moves the attaching
+process under the target cgroup namespace root.
+
+
+6-4. Interaction with Other Namespaces
+
+Namespace specific cgroup hierarchy can be mounted by a process
+running inside a non-init cgroup namespace.
+
+  # mount -t cgroup2 none $MOUNT_POINT
+
+This will mount the unified cgroup hierarchy with cgroupns root as the
+filesystem root.  The process needs CAP_SYS_ADMIN against its user and
+mount namespaces.
+
+The virtualization of /proc/self/cgroup file combined with restricting
+the view of cgroup hierarchy by namespace-private cgroupfs mount
+provides a properly isolated cgroup view inside the container.
+
+
 P. Information on Kernel Programming
 
 This section contains kernel programming information in the areas
@@ -1058,7 +1510,7 @@ D. Deprecated v1 Core Features
 
 - Multiple hierarchies including named ones are not supported.
 
-- All mount options and remounting are not supported.
+- All v1 mount options are not supported.
 
 - The "tasks" file is removed and "cgroup.procs" is not sorted.
 

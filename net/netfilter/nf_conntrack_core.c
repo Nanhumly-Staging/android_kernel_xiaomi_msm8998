@@ -882,7 +882,7 @@ __nf_conntrack_alloc(struct net *net,
 
 	/*
 	 * Do not use kmem_cache_zalloc(), as this cache uses
-	 * SLAB_DESTROY_BY_RCU.
+	 * SLAB_TYPESAFE_BY_RCU.
 	 */
 	ct = kmem_cache_alloc(net->ct.nf_conntrack_cachep, gfp);
 	if (ct == NULL)
@@ -932,7 +932,7 @@ void nf_conntrack_free(struct nf_conn *ct)
 	struct net *net = nf_ct_net(ct);
 
 	/* A freed object has refcnt == 0, that's
-	 * the golden rule for SLAB_DESTROY_BY_RCU
+	 * the golden rule for SLAB_TYPESAFE_BY_RCU
 	 */
 	NF_CT_ASSERT(atomic_read(&ct->ct_general.use) == 0);
 
@@ -1829,7 +1829,7 @@ int nf_conntrack_init_net(struct net *net)
 
 	net->ct.nf_conntrack_cachep = kmem_cache_create(net->ct.slabname,
 							sizeof(struct nf_conn), 0,
-							SLAB_DESTROY_BY_RCU, NULL);
+							SLAB_TYPESAFE_BY_RCU, NULL);
 	if (!net->ct.nf_conntrack_cachep) {
 		printk(KERN_ERR "Unable to create nf_conn slab cache\n");
 		goto err_cache;

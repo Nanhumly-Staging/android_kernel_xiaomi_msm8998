@@ -1,5 +1,9 @@
-#ifndef _SCHED_SYSCTL_H
-#define _SCHED_SYSCTL_H
+#ifndef _LINUX_SCHED_SYSCTL_H
+#define _LINUX_SCHED_SYSCTL_H
+
+#include <linux/types.h>
+
+struct ctl_table;
 
 #ifdef CONFIG_DETECT_HUNG_TASK
 extern int	     sysctl_hung_task_check_count;
@@ -175,4 +179,4 @@ extern int sysctl_numa_balancing(struct ctl_table *table, int write,
 				 void __user *buffer, size_t *lenp,
 				 loff_t *ppos);
 
-#endif /* _SCHED_SYSCTL_H */
+#endif /* _LINUX_SCHED_SYSCTL_H */
