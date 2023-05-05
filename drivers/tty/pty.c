@@ -633,7 +633,7 @@ static int pty_unix98_ioctl(struct tty_struct *tty,
  */
 
 static struct tty_struct *ptm_unix98_lookup(struct tty_driver *driver,
-		struct inode *ptm_inode, int idx)
+		struct file *file, int idx)
 {
 	/* Master must be open via /dev/ptmx */
 	return ERR_PTR(-EIO);
@@ -649,12 +649,12 @@ static struct tty_struct *ptm_unix98_lookup(struct tty_driver *driver,
  */
 
 static struct tty_struct *pts_unix98_lookup(struct tty_driver *driver,
-		struct inode *pts_inode, int idx)
+		struct file *file, int idx)
 {
 	struct tty_struct *tty;
 
 	mutex_lock(&devpts_mutex);
-	tty = devpts_get_priv(pts_inode);
+	tty = devpts_get_priv(file->f_path.dentry);
 	mutex_unlock(&devpts_mutex);
 	/* Master must be open before slave */
 	if (!tty)
@@ -684,7 +684,7 @@ static void pty_unix98_shutdown(struct tty_struct *tty)
 	else
 		fsi = tty->link->driver_data;
 	devpts_kill_index(fsi, tty->index);
-	devpts_put_ref(fsi);
+	devpts_release(fsi);
 }
 
 static const struct tty_operations ptm_unix98_ops = {
@@ -738,7 +738,7 @@ static int ptmx_open(struct inode *inode, struct file *filp)
 {
 	struct pts_fs_info *fsi;
 	struct tty_struct *tty;
-	struct inode *slave_inode;
+	struct dentry *dentry;
 	int retval;
 	int index;
 
@@ -751,10 +751,11 @@ static int ptmx_open(struct inode *inode, struct file *filp)
 	if (retval)
 		return retval;
 
-	fsi = devpts_get_ref(inode, filp);
-	retval = -ENODEV;
-	if (!fsi)
+	fsi = devpts_acquire(filp);
+	if (IS_ERR(fsi)) {
+		retval = PTR_ERR(fsi);
 		goto out_free_file;
+	}
 
 	/* find a device that is not in use. */
 	mutex_lock(&devpts_mutex);
@@ -763,7 +764,7 @@ static int ptmx_open(struct inode *inode, struct file *filp)
 
 	retval = index;
 	if (index < 0)
-		goto out_put_ref;
+		goto out_put_fsi;
 
 
 	mutex_lock(&tty_mutex);
@@ -785,14 +786,12 @@ static int ptmx_open(struct inode *inode, struct file *filp)
 
 	tty_add_file(tty, filp);
 
-	slave_inode = devpts_pty_new(fsi,
-			MKDEV(UNIX98_PTY_SLAVE_MAJOR, index), index,
-			tty->link);
-	if (IS_ERR(slave_inode)) {
-		retval = PTR_ERR(slave_inode);
+	dentry = devpts_pty_new(fsi, index, tty->link);
+	if (IS_ERR(dentry)) {
+		retval = PTR_ERR(dentry);
 		goto err_release;
 	}
-	tty->link->driver_data = slave_inode;
+	tty->link->driver_data = dentry;
 
 	retval = ptm_driver->ops->open(tty, filp);
 	if (retval)
@@ -809,8 +808,8 @@ err_release:
 	return retval;
 out:
 	devpts_kill_index(fsi, index);
-out_put_ref:
-	devpts_put_ref(fsi);
+out_put_fsi:
+	devpts_release(fsi);
 out_free_file:
 	tty_free_file(filp);
 	return retval;

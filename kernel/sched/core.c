@@ -4902,6 +4902,9 @@ again:
 		retval = -EINVAL;
 	}
 
+	if (!retval && !(p->flags & PF_KTHREAD))
+		cpumask_and(&p->cpus_requested, in_mask, cpu_possible_mask);
+
 out_free_new_mask:
 	free_cpumask_var(new_mask);
 out_free_cpus_allowed:
@@ -8250,7 +8253,7 @@ static int cpuset_cpu_active(struct notifier_block *nfb, unsigned long action,
 		cpuset_force_rebuild();
 
 	case CPU_ONLINE:
-		cpuset_update_active_cpus(true);
+		cpuset_update_active_cpus();
 		break;
 	default:
 		return NOTIFY_DONE;
@@ -8281,7 +8284,7 @@ static int cpuset_cpu_inactive(struct notifier_block *nfb, unsigned long action,
 
 		if (overflow)
 			return notifier_from_errno(-EBUSY);
-		cpuset_update_active_cpus(false);
+		cpuset_update_active_cpus();
 		break;
 	case CPU_DOWN_PREPARE_FROZEN:
 		num_cpus_frozen++;
@@ -8325,6 +8328,7 @@ void __init sched_init_smp(void)
 	/* Move init over to a non-isolated CPU */
 	if (set_cpus_allowed_ptr(current, non_isolated_cpus) < 0)
 		BUG();
+	cpumask_copy(&current->cpus_requested, cpu_possible_mask);
 	sched_init_granularity();
 	free_cpumask_var(non_isolated_cpus);
 
@@ -9726,7 +9730,7 @@ struct cgroup_subsys cpu_cgrp_subsys = {
 	.can_attach	= cpu_cgroup_can_attach,
 	.attach		= cpu_cgroup_attach,
 	.legacy_cftypes	= cpu_files,
-	.early_init	= 1,
+	.early_init	= true,
 };
 
 #endif	/* CONFIG_CGROUP_SCHED */
