@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2019-2021 Sultan Alsawaf <sultan@kerneltoast.com>.
+ * Copyright (C) 2019-2023 Sultan Alsawaf <sultan@kerneltoast.com>.
  */
 
 #define pr_fmt(fmt) "simple_lmk: " fmt
@@ -10,6 +10,7 @@
 #include <linux/mm.h>
 #include <linux/moduleparam.h>
 #include <linux/oom.h>
+#include <linux/ratelimit.h>
 #include <linux/sort.h>
 #include <linux/vmpressure.h>
 
@@ -192,7 +193,7 @@ static void scan_and_kill(void)
 	/* Populate the victims array with tasks sorted by adj and then size */
 	pages_found = find_victims(&nr_found);
 	if (unlikely(!nr_found)) {
-		pr_err("No processes available to kill!\n");
+		pr_err_ratelimited("No processes available to kill!\n");
 		return;
 	}
 
@@ -224,7 +225,9 @@ static void scan_and_kill(void)
 
 	/* Kill the victims */
 	for (i = 0; i < nr_to_kill; i++) {
-		static const struct sched_param sched_zero_prio;
+		static const struct sched_param min_rt_prio = {
+			.sched_priority = 1
+		};
 		struct victim_info *victim = &victims[i];
 		struct task_struct *t, *vtsk = victim->tsk;
 
@@ -235,14 +238,22 @@ static void scan_and_kill(void)
 		/* Accelerate the victim's death by forcing the kill signal */
 		do_send_sig_info(SIGKILL, SEND_SIG_FORCED, vtsk, true);
 
-		/* Mark the thread group dead so that other kernel code knows */
+		/*
+		 * Mark the thread group dead so that other kernel code knows,
+		 * and then elevate the thread group to SCHED_RR with minimum RT
+		 * priority. The entire group needs to be elevated because
+		 * there's no telling which threads have references to the mm as
+		 * well as which thread will happen to put the final reference
+		 * and release the mm's memory. If the mm is released from a
+		 * thread with low scheduling priority then it may take a very
+		 * long time for exit_mmap() to complete.
+		 */
 		rcu_read_lock();
 		for_each_thread(vtsk, t)
 			set_tsk_thread_flag(t, TIF_MEMDIE);
+		for_each_thread(vtsk, t)
+			sched_setscheduler_nocheck(t, SCHED_RR, &min_rt_prio);
 		rcu_read_unlock();
-
-		/* Elevate the victim to SCHED_RR with zero RT priority */
-		sched_setscheduler_nocheck(vtsk, SCHED_RR, &sched_zero_prio);
 
 		/* Allow the victim to run on any CPU. This won't schedule. */
 		set_cpus_allowed_ptr(vtsk, cpu_all_mask);
@@ -278,7 +289,7 @@ static int simple_lmk_reclaim_thread(void *data)
 	while (1) {
 		wait_event_freezable(oom_waitq, atomic_read(&needs_reclaim));
 		scan_and_kill();
-		atomic_set_release(&needs_reclaim, 0);
+		atomic_set(&needs_reclaim, 0);
 	}
 
 	return 0;
@@ -306,8 +317,12 @@ void simple_lmk_mm_freed(struct mm_struct *mm)
 static int simple_lmk_vmpressure_cb(struct notifier_block *nb,
 				    unsigned long pressure, void *data)
 {
-	if (pressure == 100 && !atomic_cmpxchg_acquire(&needs_reclaim, 0, 1))
-		wake_up(&oom_waitq);
+	if (pressure == 100) {
+		atomic_set(&needs_reclaim, 1);
+		smp_mb__after_atomic();
+		if (waitqueue_active(&oom_waitq))
+			wake_up(&oom_waitq);
+	}
 
 	return NOTIFY_OK;
 }
