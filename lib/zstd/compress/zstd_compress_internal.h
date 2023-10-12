@@ -34,7 +34,7 @@
                                        It's not a big deal though : candidate will just be sorted again.
                                        Additionally, candidate position 1 will be lost.
                                        But candidate 1 cannot hide a large tree of candidates, so it's a minimal loss.
-                                       The benefit is that ZSTD_DUBT_UNSORTED_MARK cannot be mishandled after table re-use with a different strategy.
+                                       The benefit is that ZSTD_DUBT_UNSORTED_MARK cannot be mishandled after table reuse with a different strategy.
                                        This constant is required by ZSTD_compressBlock_btlazy2() and ZSTD_reduceTable_internal() */
 
 
@@ -223,7 +223,7 @@ struct ZSTD_matchState_t {
     U32 rowHashLog;                          /* For row-based matchfinder: Hashlog based on nb of rows in the hashTable.*/
     BYTE* tagTable;                          /* For row-based matchFinder: A row-based table containing the hashes and head index. */
     U32 hashCache[ZSTD_ROW_HASH_CACHE_SIZE]; /* For row-based matchFinder: a cache of hashes to improve speed */
-    U64 hashSalt;                            /* For row-based matchFinder: salts the hash for re-use of tag table */
+    U64 hashSalt;                            /* For row-based matchFinder: salts the hash for reuse of tag table */
     U32 hashSaltEntropy;                     /* For row-based matchFinder: collects entropy for salt generation */
 
     U32* hashTable;
@@ -1042,7 +1042,9 @@ MEM_STATIC U32 ZSTD_window_needOverflowCorrection(ZSTD_window_t const window,
  * The least significant cycleLog bits of the indices must remain the same,
  * which may be 0. Every index up to maxDist in the past must be valid.
  */
-MEM_STATIC U32 ZSTD_window_correctOverflow(ZSTD_window_t* window, U32 cycleLog,
+MEM_STATIC
+ZSTD_ALLOW_POINTER_OVERFLOW_ATTR
+U32 ZSTD_window_correctOverflow(ZSTD_window_t* window, U32 cycleLog,
                                            U32 maxDist, void const* src)
 {
     /* preemptive overflow correction:
@@ -1235,7 +1237,9 @@ MEM_STATIC void ZSTD_window_init(ZSTD_window_t* window) {
  * forget about the extDict. Handles overlap of the prefix and extDict.
  * Returns non-zero if the segment is contiguous.
  */
-MEM_STATIC U32 ZSTD_window_update(ZSTD_window_t* window,
+MEM_STATIC
+ZSTD_ALLOW_POINTER_OVERFLOW_ATTR
+U32 ZSTD_window_update(ZSTD_window_t* window,
                                   void const* src, size_t srcSize,
                                   int forceNonContiguous)
 {
@@ -1453,11 +1457,10 @@ size_t ZSTD_writeLastEmptyBlock(void* dst, size_t dstCapacity);
  * This cannot be used when long range matching is enabled.
  * Zstd will use these sequences, and pass the literals to a secondary block
  * compressor.
- * @return : An error code on failure.
  * NOTE: seqs are not verified! Invalid sequences can cause out-of-bounds memory
  * access and data corruption.
  */
-size_t ZSTD_referenceExternalSequences(ZSTD_CCtx* cctx, rawSeq* seq, size_t nbSeq);
+void ZSTD_referenceExternalSequences(ZSTD_CCtx* cctx, rawSeq* seq, size_t nbSeq);
 
 /* ZSTD_cycleLog() :
  *  condition for correct operation : hashLog > 1 */
