@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0+ OR BSD-3-Clause
 /*
- * Copyright (c) Przemyslaw Skibinski, Yann Collet, Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  * All rights reserved.
  *
  * This source code is licensed under both the BSD-style license (found in the
@@ -9,27 +9,18 @@
  * You may select, at your option, one of the above-listed licenses.
  */
 
-/*
- * Disable inlining for the optimal parser for the kernel build.
- * It is unlikely to be used in the kernel, and where it is used
- * latency shouldn't matter because it is very slow to begin with.
- * We prefer a ~180KB binary size win over faster optimal parsing.
- *
- * TODO(https://github.com/facebook/zstd/issues/2862):
- * Improve the code size of the optimal parser in general, so we
- * don't need this hack for the kernel build.
- */
-#define ZSTD_NO_INLINE 1
-
 #include "zstd_compress_internal.h"
 #include "hist.h"
 #include "zstd_opt.h"
 
+#if !defined(ZSTD_EXCLUDE_BTLAZY2_BLOCK_COMPRESSOR) \
+ || !defined(ZSTD_EXCLUDE_BTOPT_BLOCK_COMPRESSOR) \
+ || !defined(ZSTD_EXCLUDE_BTULTRA_BLOCK_COMPRESSOR)
 
 #define ZSTD_LITFREQ_ADD    2   /* scaling factor for litFreq, so that frequencies adapt faster to new stats */
 #define ZSTD_MAX_PRICE     (1<<30)
 
-#define ZSTD_PREDEF_THRESHOLD 1024   /* if srcSize < ZSTD_PREDEF_THRESHOLD, symbols' cost is assumed static, directly determined by pre-defined distributions */
+#define ZSTD_PREDEF_THRESHOLD 8   /* if srcSize < ZSTD_PREDEF_THRESHOLD, symbols' cost is assumed static, directly determined by pre-defined distributions */
 
 
 /*-*************************************
@@ -39,27 +30,35 @@
 #if 0    /* approximation at bit level (for tests) */
 #  define BITCOST_ACCURACY 0
 #  define BITCOST_MULTIPLIER (1 << BITCOST_ACCURACY)
-#  define WEIGHT(stat, opt) ((void)opt, ZSTD_bitWeight(stat))
+#  define WEIGHT(stat, opt) ((void)(opt), ZSTD_bitWeight(stat))
 #elif 0  /* fractional bit accuracy (for tests) */
 #  define BITCOST_ACCURACY 8
 #  define BITCOST_MULTIPLIER (1 << BITCOST_ACCURACY)
-#  define WEIGHT(stat,opt) ((void)opt, ZSTD_fracWeight(stat))
+#  define WEIGHT(stat,opt) ((void)(opt), ZSTD_fracWeight(stat))
 #else    /* opt==approx, ultra==accurate */
 #  define BITCOST_ACCURACY 8
 #  define BITCOST_MULTIPLIER (1 << BITCOST_ACCURACY)
-#  define WEIGHT(stat,opt) (opt ? ZSTD_fracWeight(stat) : ZSTD_bitWeight(stat))
+#  define WEIGHT(stat,opt) ((opt) ? ZSTD_fracWeight(stat) : ZSTD_bitWeight(stat))
 #endif
 
+/* ZSTD_bitWeight() :
+ * provide estimated "cost" of a stat in full bits only */
 MEM_STATIC U32 ZSTD_bitWeight(U32 stat)
 {
     return (ZSTD_highbit32(stat+1) * BITCOST_MULTIPLIER);
 }
 
+/* ZSTD_fracWeight() :
+ * provide fractional-bit "cost" of a stat,
+ * using linear interpolation approximation */
 MEM_STATIC U32 ZSTD_fracWeight(U32 rawStat)
 {
     U32 const stat = rawStat + 1;
     U32 const hb = ZSTD_highbit32(stat);
     U32 const BWeight = hb * BITCOST_MULTIPLIER;
+    /* Fweight was meant for "Fractional weight"
+     * but it's effectively a value between 1 and 2
+     * using fixed point arithmetic */
     U32 const FWeight = (stat << BITCOST_ACCURACY) >> hb;
     U32 const weight = BWeight + FWeight;
     assert(hb + BITCOST_ACCURACY < 31);
@@ -70,7 +69,7 @@ MEM_STATIC U32 ZSTD_fracWeight(U32 rawStat)
 /* debugging function,
  * @return price in bytes as fractional value
  * for debug messages only */
-MEM_STATIC double ZSTD_fCost(U32 price)
+MEM_STATIC double ZSTD_fCost(int price)
 {
     return (double)price / (BITCOST_MULTIPLIER*8);
 }
@@ -101,20 +100,26 @@ static U32 sum_u32(const unsigned table[], size_t nbElts)
     return total;
 }
 
-static U32 ZSTD_downscaleStats(unsigned* table, U32 lastEltIndex, U32 shift)
+typedef enum { base_0possible=0, base_1guaranteed=1 } base_directive_e;
+
+static U32
+ZSTD_downscaleStats(unsigned* table, U32 lastEltIndex, U32 shift, base_directive_e base1)
 {
     U32 s, sum=0;
-    DEBUGLOG(5, "ZSTD_downscaleStats (nbElts=%u, shift=%u)", (unsigned)lastEltIndex+1, (unsigned)shift);
+    DEBUGLOG(5, "ZSTD_downscaleStats (nbElts=%u, shift=%u)",
+            (unsigned)lastEltIndex+1, (unsigned)shift );
     assert(shift < 30);
     for (s=0; s<lastEltIndex+1; s++) {
-        table[s] = 1 + (table[s] >> shift);
-        sum += table[s];
+        unsigned const base = base1 ? 1 : (table[s]>0);
+        unsigned const newStat = base + (table[s] >> shift);
+        sum += newStat;
+        table[s] = newStat;
     }
     return sum;
 }
 
 /* ZSTD_scaleStats() :
- * reduce all elements in table is sum too large
+ * reduce all elt frequencies in table if sum too large
  * return the resulting sum of elements */
 static U32 ZSTD_scaleStats(unsigned* table, U32 lastEltIndex, U32 logTarget)
 {
@@ -123,7 +128,7 @@ static U32 ZSTD_scaleStats(unsigned* table, U32 lastEltIndex, U32 logTarget)
     DEBUGLOG(5, "ZSTD_scaleStats (nbElts=%u, target=%u)", (unsigned)lastEltIndex+1, (unsigned)logTarget);
     assert(logTarget < 30);
     if (factor <= 1) return prevsum;
-    return ZSTD_downscaleStats(table, lastEltIndex, ZSTD_highbit32(factor));
+    return ZSTD_downscaleStats(table, lastEltIndex, ZSTD_highbit32(factor), base_1guaranteed);
 }
 
 /* ZSTD_rescaleFreqs() :
@@ -142,18 +147,22 @@ ZSTD_rescaleFreqs(optState_t* const optPtr,
     DEBUGLOG(5, "ZSTD_rescaleFreqs (srcSize=%u)", (unsigned)srcSize);
     optPtr->priceType = zop_dynamic;
 
-    if (optPtr->litLengthSum == 0) {  /* first block : init */
-        if (srcSize <= ZSTD_PREDEF_THRESHOLD) {  /* heuristic */
-            DEBUGLOG(5, "(srcSize <= ZSTD_PREDEF_THRESHOLD) => zop_predef");
+    if (optPtr->litLengthSum == 0) {  /* no literals stats collected -> first block assumed -> init */
+
+        /* heuristic: use pre-defined stats for too small inputs */
+        if (srcSize <= ZSTD_PREDEF_THRESHOLD) {
+            DEBUGLOG(5, "srcSize <= %i : use predefined stats", ZSTD_PREDEF_THRESHOLD);
             optPtr->priceType = zop_predef;
         }
 
         assert(optPtr->symbolCosts != NULL);
         if (optPtr->symbolCosts->huf.repeatMode == HUF_repeat_valid) {
-            /* huffman table presumed generated by dictionary */
+
+            /* huffman stats covering the full value set : table presumed generated by dictionary */
             optPtr->priceType = zop_dynamic;
 
             if (compressedLiterals) {
+                /* generate literals statistics from huffman table */
                 unsigned lit;
                 assert(optPtr->litFreq != NULL);
                 optPtr->litSum = 0;
@@ -201,13 +210,14 @@ ZSTD_rescaleFreqs(optState_t* const optPtr,
                     optPtr->offCodeSum += optPtr->offCodeFreq[of];
             }   }
 
-        } else {  /* not a dictionary */
+        } else {  /* first block, no dictionary */
 
             assert(optPtr->litFreq != NULL);
             if (compressedLiterals) {
+                /* base initial cost of literals on direct frequency within src */
                 unsigned lit = MaxLit;
                 HIST_count_simple(optPtr->litFreq, &lit, src, srcSize);   /* use raw first block to init statistics */
-                optPtr->litSum = ZSTD_downscaleStats(optPtr->litFreq, MaxLit, 8);
+                optPtr->litSum = ZSTD_downscaleStats(optPtr->litFreq, MaxLit, 8, base_0possible);
             }
 
             {   unsigned const baseLLfreqs[MaxLL+1] = {
@@ -237,10 +247,9 @@ ZSTD_rescaleFreqs(optState_t* const optPtr,
                 optPtr->offCodeSum = sum_u32(baseOFCfreqs, MaxOff+1);
             }
 
-
         }
 
-    } else {   /* new block : re-use previous statistics, scaled down */
+    } else {   /* new block : scale down accumulated statistics */
 
         if (compressedLiterals)
             optPtr->litSum = ZSTD_scaleStats(optPtr->litFreq, MaxLit, 12);
@@ -288,10 +297,11 @@ static U32 ZSTD_litLengthPrice(U32 const litLength, const optState_t* const optP
     assert(litLength <= ZSTD_BLOCKSIZE_MAX);
     if (optPtr->priceType == zop_predef)
         return WEIGHT(litLength, optLevel);
-    /* We can't compute the litLength price for sizes >= ZSTD_BLOCKSIZE_MAX
-     * because it isn't representable in the zstd format. So instead just
-     * call it 1 bit more than ZSTD_BLOCKSIZE_MAX - 1. In this case the block
-     * would be all literals.
+
+    /* ZSTD_LLcode() can't compute litLength price for sizes >= ZSTD_BLOCKSIZE_MAX
+     * because it isn't representable in the zstd format.
+     * So instead just pretend it would cost 1 bit more than ZSTD_BLOCKSIZE_MAX - 1.
+     * In such a case, the block would be all literals.
      */
     if (litLength == ZSTD_BLOCKSIZE_MAX)
         return BITCOST_MULTIPLIER + ZSTD_litLengthPrice(ZSTD_BLOCKSIZE_MAX - 1, optPtr, optLevel);
@@ -305,7 +315,7 @@ static U32 ZSTD_litLengthPrice(U32 const litLength, const optState_t* const optP
 }
 
 /* ZSTD_getMatchPrice() :
- * Provides the cost of the match part (offset + matchLength) of a sequence
+ * Provides the cost of the match part (offset + matchLength) of a sequence.
  * Must be combined with ZSTD_fullLiteralsCost() to get the full cost of a sequence.
  * @offBase : sumtype, representing an offset or a repcode, and using numeric representation of ZSTD_storeSeq()
  * @optLevel: when <2, favors small offset for decompression speed (improved cache efficiency)
@@ -321,8 +331,9 @@ ZSTD_getMatchPrice(U32 const offBase,
     U32 const mlBase = matchLength - MINMATCH;
     assert(matchLength >= MINMATCH);
 
-    if (optPtr->priceType == zop_predef)  /* fixed scheme, do not use statistics */
-        return WEIGHT(mlBase, optLevel) + ((16 + offCode) * BITCOST_MULTIPLIER);
+    if (optPtr->priceType == zop_predef)  /* fixed scheme, does not use statistics */
+        return WEIGHT(mlBase, optLevel)
+             + ((16 + offCode) * BITCOST_MULTIPLIER); /* emulated offset cost */
 
     /* dynamic statistics */
     price = (offCode * BITCOST_MULTIPLIER) + (optPtr->offCodeSumBasePrice - WEIGHT(optPtr->offCodeFreq[offCode], optLevel));
@@ -360,7 +371,7 @@ static void ZSTD_updateStats(optState_t* const optPtr,
         optPtr->litLengthSum++;
     }
 
-    /* offset code : expected to follow storeSeq() numeric representation */
+    /* offset code : follows storeSeq() numeric representation */
     {   U32 const offCode = ZSTD_highbit32(offBase);
         assert(offCode <= MaxOff);
         optPtr->offCodeFreq[offCode]++;
@@ -395,9 +406,11 @@ MEM_STATIC U32 ZSTD_readMINMATCH(const void* memPtr, U32 length)
 
 /* Update hashTable3 up to ip (excluded)
    Assumption : always within prefix (i.e. not within extDict) */
-static U32 ZSTD_insertAndFindFirstIndexHash3 (const ZSTD_matchState_t* ms,
-                                              U32* nextToUpdate3,
-                                              const BYTE* const ip)
+static
+ZSTD_ALLOW_POINTER_OVERFLOW_ATTR
+U32 ZSTD_insertAndFindFirstIndexHash3 (const ZSTD_matchState_t* ms,
+                                       U32* nextToUpdate3,
+                                       const BYTE* const ip)
 {
     U32* const hashTable3 = ms->hashTable3;
     U32 const hashLog3 = ms->hashLog3;
@@ -424,7 +437,9 @@ static U32 ZSTD_insertAndFindFirstIndexHash3 (const ZSTD_matchState_t* ms,
  * @param ip assumed <= iend-8 .
  * @param target The target of ZSTD_updateTree_internal() - we are filling to this position
  * @return : nb of positions added */
-static U32 ZSTD_insertBt1(
+static
+ZSTD_ALLOW_POINTER_OVERFLOW_ATTR
+U32 ZSTD_insertBt1(
                 const ZSTD_matchState_t* ms,
                 const BYTE* const ip, const BYTE* const iend,
                 U32 const target,
@@ -543,6 +558,7 @@ static U32 ZSTD_insertBt1(
 }
 
 FORCE_INLINE_TEMPLATE
+ZSTD_ALLOW_POINTER_OVERFLOW_ATTR
 void ZSTD_updateTree_internal(
                 ZSTD_matchState_t* ms,
                 const BYTE* const ip, const BYTE* const iend,
@@ -569,15 +585,18 @@ void ZSTD_updateTree(ZSTD_matchState_t* ms, const BYTE* ip, const BYTE* iend) {
 }
 
 FORCE_INLINE_TEMPLATE
-U32 ZSTD_insertBtAndGetAllMatches (
-                    ZSTD_match_t* matches,   /* store result (found matches) in this table (presumed large enough) */
-                    ZSTD_matchState_t* ms,
-                    U32* nextToUpdate3,
-                    const BYTE* const ip, const BYTE* const iLimit, const ZSTD_dictMode_e dictMode,
-                    const U32 rep[ZSTD_REP_NUM],
-                    U32 const ll0,   /* tells if associated literal length is 0 or not. This value must be 0 or 1 */
-                    const U32 lengthToBeat,
-                    U32 const mls /* template */)
+ZSTD_ALLOW_POINTER_OVERFLOW_ATTR
+U32
+ZSTD_insertBtAndGetAllMatches (
+                ZSTD_match_t* matches,  /* store result (found matches) in this table (presumed large enough) */
+                ZSTD_matchState_t* ms,
+                U32* nextToUpdate3,
+                const BYTE* const ip, const BYTE* const iLimit,
+                const ZSTD_dictMode_e dictMode,
+                const U32 rep[ZSTD_REP_NUM],
+                const U32 ll0,  /* tells if associated literal length is 0 or not. This value must be 0 or 1 */
+                const U32 lengthToBeat,
+                const U32 mls /* template */)
 {
     const ZSTD_compressionParameters* const cParams = &ms->cParams;
     U32 const sufficient_len = MIN(cParams->targetLength, ZSTD_OPT_NUM -1);
@@ -808,7 +827,9 @@ typedef U32 (*ZSTD_getAllMatchesFn)(
     U32 const ll0,
     U32 const lengthToBeat);
 
-FORCE_INLINE_TEMPLATE U32 ZSTD_btGetAllMatches_internal(
+FORCE_INLINE_TEMPLATE
+ZSTD_ALLOW_POINTER_OVERFLOW_ATTR
+U32 ZSTD_btGetAllMatches_internal(
         ZSTD_match_t* matches,
         ZSTD_matchState_t* ms,
         U32* nextToUpdate3,
@@ -1049,7 +1070,9 @@ listStats(const U32* table, int lastEltID)
 
 #endif
 
-FORCE_INLINE_TEMPLATE size_t
+FORCE_INLINE_TEMPLATE
+ZSTD_ALLOW_POINTER_OVERFLOW_ATTR
+size_t
 ZSTD_compressBlock_opt_generic(ZSTD_matchState_t* ms,
                                seqStore_t* seqStore,
                                U32 rep[ZSTD_REP_NUM],
@@ -1077,6 +1100,8 @@ ZSTD_compressBlock_opt_generic(ZSTD_matchState_t* ms,
     ZSTD_match_t* const matches = optStatePtr->matchTable;
     ZSTD_optimal_t lastSequence;
     ZSTD_optLdm_t optLdm;
+
+    ZSTD_memset(&lastSequence, 0, sizeof(ZSTD_optimal_t));
 
     optLdm.seqStore = ms->ldmSeqStore ? *ms->ldmSeqStore : kNullRawSeqStore;
     optLdm.endPosInBlock = optLdm.startPosInBlock = optLdm.offset = 0;
@@ -1144,7 +1169,7 @@ ZSTD_compressBlock_opt_generic(ZSTD_matchState_t* ms,
                         U32 const matchPrice = ZSTD_getMatchPrice(offBase, pos, optStatePtr, optLevel);
                         U32 const sequencePrice = literalsPrice + matchPrice;
                         DEBUGLOG(7, "rPos:%u => set initial price : %.2f",
-                                    pos, ZSTD_fCost(sequencePrice));
+                                    pos, ZSTD_fCost((int)sequencePrice));
                         opt[pos].mlen = pos;
                         opt[pos].off = offBase;
                         opt[pos].litlen = litlen;
@@ -1336,21 +1361,27 @@ _shortestPath:   /* cur, last_pos, best_mlen, best_off have to be set */
     /* Return the last literals size */
     return (size_t)(iend - anchor);
 }
+#endif /* build exclusions */
 
+#ifndef ZSTD_EXCLUDE_BTOPT_BLOCK_COMPRESSOR
 static size_t ZSTD_compressBlock_opt0(
         ZSTD_matchState_t* ms, seqStore_t* seqStore, U32 rep[ZSTD_REP_NUM],
         const void* src, size_t srcSize, const ZSTD_dictMode_e dictMode)
 {
     return ZSTD_compressBlock_opt_generic(ms, seqStore, rep, src, srcSize, 0 /* optLevel */, dictMode);
 }
+#endif
 
+#ifndef ZSTD_EXCLUDE_BTULTRA_BLOCK_COMPRESSOR
 static size_t ZSTD_compressBlock_opt2(
         ZSTD_matchState_t* ms, seqStore_t* seqStore, U32 rep[ZSTD_REP_NUM],
         const void* src, size_t srcSize, const ZSTD_dictMode_e dictMode)
 {
     return ZSTD_compressBlock_opt_generic(ms, seqStore, rep, src, srcSize, 2 /* optLevel */, dictMode);
 }
+#endif
 
+#ifndef ZSTD_EXCLUDE_BTOPT_BLOCK_COMPRESSOR
 size_t ZSTD_compressBlock_btopt(
         ZSTD_matchState_t* ms, seqStore_t* seqStore, U32 rep[ZSTD_REP_NUM],
         const void* src, size_t srcSize)
@@ -1358,20 +1389,23 @@ size_t ZSTD_compressBlock_btopt(
     DEBUGLOG(5, "ZSTD_compressBlock_btopt");
     return ZSTD_compressBlock_opt0(ms, seqStore, rep, src, srcSize, ZSTD_noDict);
 }
+#endif
 
 
 
 
+#ifndef ZSTD_EXCLUDE_BTULTRA_BLOCK_COMPRESSOR
 /* ZSTD_initStats_ultra():
  * make a first compression pass, just to seed stats with more accurate starting values.
  * only works on first block, with no dictionary and no ldm.
- * this function cannot error, hence its contract must be respected.
+ * this function cannot error out, its narrow contract must be respected.
  */
-static void
-ZSTD_initStats_ultra(ZSTD_matchState_t* ms,
-                     seqStore_t* seqStore,
-                     U32 rep[ZSTD_REP_NUM],
-               const void* src, size_t srcSize)
+static
+ZSTD_ALLOW_POINTER_OVERFLOW_ATTR
+void ZSTD_initStats_ultra(ZSTD_matchState_t* ms,
+                          seqStore_t* seqStore,
+                          U32 rep[ZSTD_REP_NUM],
+                    const void* src, size_t srcSize)
 {
     U32 tmpRep[ZSTD_REP_NUM];  /* updated rep codes will sink here */
     ZSTD_memcpy(tmpRep, rep, sizeof(tmpRep));
@@ -1384,7 +1418,7 @@ ZSTD_initStats_ultra(ZSTD_matchState_t* ms,
 
     ZSTD_compressBlock_opt2(ms, seqStore, tmpRep, src, srcSize, ZSTD_noDict);   /* generate stats into ms->opt*/
 
-    /* invalidate first scan from history */
+    /* invalidate first scan from history, only keep entropy stats */
     ZSTD_resetSeqStore(seqStore);
     ms->window.base -= srcSize;
     ms->window.dictLimit += (U32)srcSize;
@@ -1408,39 +1442,34 @@ size_t ZSTD_compressBlock_btultra2(
     U32 const curr = (U32)((const BYTE*)src - ms->window.base);
     DEBUGLOG(5, "ZSTD_compressBlock_btultra2 (srcSize=%zu)", srcSize);
 
-    /* 2-pass strategy:
+    /* 2-passes strategy:
      * this strategy makes a first pass over first block to collect statistics
-     * and seed next round's statistics with it.
-     * After 1st pass, function forgets everything, and starts a new block.
+     * in order to seed next round's statistics with it.
+     * After 1st pass, function forgets history, and starts a new block.
      * Consequently, this can only work if no data has been previously loaded in tables,
      * aka, no dictionary, no prefix, no ldm preprocessing.
      * The compression ratio gain is generally small (~0.5% on first block),
-     * the cost is 2x cpu time on first block. */
+    ** the cost is 2x cpu time on first block. */
     assert(srcSize <= ZSTD_BLOCKSIZE_MAX);
     if ( (ms->opt.litLengthSum==0)   /* first block */
       && (seqStore->sequences == seqStore->sequencesStart)  /* no ldm */
       && (ms->window.dictLimit == ms->window.lowLimit)   /* no dictionary */
-      && (curr == ms->window.dictLimit)   /* start of frame, nothing already loaded nor skipped */
-      && (srcSize > ZSTD_PREDEF_THRESHOLD)
+      && (curr == ms->window.dictLimit)    /* start of frame, nothing already loaded nor skipped */
+      && (srcSize > ZSTD_PREDEF_THRESHOLD) /* input large enough to not employ default stats */
       ) {
         ZSTD_initStats_ultra(ms, seqStore, rep, src, srcSize);
     }
 
     return ZSTD_compressBlock_opt2(ms, seqStore, rep, src, srcSize, ZSTD_noDict);
 }
+#endif
 
+#ifndef ZSTD_EXCLUDE_BTOPT_BLOCK_COMPRESSOR
 size_t ZSTD_compressBlock_btopt_dictMatchState(
         ZSTD_matchState_t* ms, seqStore_t* seqStore, U32 rep[ZSTD_REP_NUM],
         const void* src, size_t srcSize)
 {
     return ZSTD_compressBlock_opt0(ms, seqStore, rep, src, srcSize, ZSTD_dictMatchState);
-}
-
-size_t ZSTD_compressBlock_btultra_dictMatchState(
-        ZSTD_matchState_t* ms, seqStore_t* seqStore, U32 rep[ZSTD_REP_NUM],
-        const void* src, size_t srcSize)
-{
-    return ZSTD_compressBlock_opt2(ms, seqStore, rep, src, srcSize, ZSTD_dictMatchState);
 }
 
 size_t ZSTD_compressBlock_btopt_extDict(
@@ -1449,6 +1478,15 @@ size_t ZSTD_compressBlock_btopt_extDict(
 {
     return ZSTD_compressBlock_opt0(ms, seqStore, rep, src, srcSize, ZSTD_extDict);
 }
+#endif
+
+#ifndef ZSTD_EXCLUDE_BTULTRA_BLOCK_COMPRESSOR
+size_t ZSTD_compressBlock_btultra_dictMatchState(
+        ZSTD_matchState_t* ms, seqStore_t* seqStore, U32 rep[ZSTD_REP_NUM],
+        const void* src, size_t srcSize)
+{
+    return ZSTD_compressBlock_opt2(ms, seqStore, rep, src, srcSize, ZSTD_dictMatchState);
+}
 
 size_t ZSTD_compressBlock_btultra_extDict(
         ZSTD_matchState_t* ms, seqStore_t* seqStore, U32 rep[ZSTD_REP_NUM],
@@ -1456,6 +1494,7 @@ size_t ZSTD_compressBlock_btultra_extDict(
 {
     return ZSTD_compressBlock_opt2(ms, seqStore, rep, src, srcSize, ZSTD_extDict);
 }
+#endif
 
 /* note : no btultra2 variant for extDict nor dictMatchState,
  * because btultra2 is not meant to work with dictionaries
