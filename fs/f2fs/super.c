@@ -141,6 +141,10 @@ enum {
 	Opt_checkpoint_enable,
 	Opt_checkpoint_merge,
 	Opt_nocheckpoint_merge,
+	Opt_gc_merge,
+	Opt_nogc_merge,
+	Opt_atgc,
+	Opt_age_extent_cache,
 	Opt_err,
 };
 
@@ -205,6 +209,10 @@ static match_table_t f2fs_tokens = {
 	{Opt_checkpoint_enable, "checkpoint=enable"},
 	{Opt_checkpoint_merge, "checkpoint_merge"},
 	{Opt_nocheckpoint_merge, "nocheckpoint_merge"},
+	{Opt_gc_merge, "gc_merge"},
+	{Opt_nogc_merge, "nogc_merge"},
+	{Opt_atgc, "atgc"},
+	{Opt_age_extent_cache, "age_extent_cache"},
 	{Opt_err, NULL},
 };
 
@@ -498,7 +506,8 @@ static int parse_options(struct super_block *sb, char *options)
 		case Opt_active_logs:
 			if (args->from && match_int(args, &arg))
 				return -EINVAL;
-			if (arg != 2 && arg != 4 && arg != NR_CURSEG_TYPE)
+			if (arg != 2 && arg != 4 &&
+				arg != NR_CURSEG_PERSIST_TYPE)
 				return -EINVAL;
 			F2FS_OPTION(sbi).active_logs = arg;
 			break;
@@ -527,10 +536,10 @@ static int parse_options(struct super_block *sb, char *options)
 			set_opt(sbi, FASTBOOT);
 			break;
 		case Opt_extent_cache:
-			set_opt(sbi, EXTENT_CACHE);
+			set_opt(sbi, READ_EXTENT_CACHE);
 			break;
 		case Opt_noextent_cache:
-			clear_opt(sbi, EXTENT_CACHE);
+			clear_opt(sbi, READ_EXTENT_CACHE);
 			break;
 		case Opt_noinline_data:
 			clear_opt(sbi, INLINE_DATA);
@@ -799,6 +808,18 @@ static int parse_options(struct super_block *sb, char *options)
 		case Opt_nocheckpoint_merge:
 			clear_opt(sbi, MERGE_CHECKPOINT);
 			break;
+		case Opt_gc_merge:
+			set_opt(sbi, GC_MERGE);
+			break;
+		case Opt_nogc_merge:
+			clear_opt(sbi, GC_MERGE);
+			break;
+		case Opt_atgc:
+			set_opt(sbi, ATGC);
+			break;
+		case Opt_age_extent_cache:
+			set_opt(sbi, AGE_EXTENT_CACHE);
+			break;
 		default:
 			f2fs_err(sbi, "Unrecognized mount option \"%s\" or missing value",
 				 p);
@@ -855,7 +876,7 @@ static int parse_options(struct super_block *sb, char *options)
 	}
 
 	/* Not pass down write hints if the number of active logs is lesser
-	 * than NR_CURSEG_TYPE.
+	 * than NR_CURSEG_PERSIST_TYPE.
 	 */
 	if (F2FS_OPTION(sbi).active_logs != NR_CURSEG_TYPE)
 		F2FS_OPTION(sbi).whint_mode = WHINT_MODE_OFF;
@@ -1098,7 +1119,6 @@ static void f2fs_put_super(struct super_block *sb)
 	 * above failed with error.
 	 */
 	f2fs_destroy_stats(sbi);
-	f2fs_gc_sbi_list_del(sbi);
 
 	/* destroy f2fs internal modules */
 	f2fs_destroy_node_manager(sbi);
@@ -1320,6 +1340,8 @@ static int f2fs_show_options(struct seq_file *seq, struct dentry *root)
 	} else {
 		seq_printf(seq, ",background_gc=%s", "off");
 	}
+	if (test_opt(sbi, GC_MERGE))
+		seq_puts(seq, ",gc_merge");
 	if (test_opt(sbi, DISABLE_ROLL_FORWARD))
 		seq_puts(seq, ",disable_roll_forward");
 	if (test_opt(sbi, DISCARD))
@@ -1365,10 +1387,12 @@ static int f2fs_show_options(struct seq_file *seq, struct dentry *root)
 		seq_puts(seq, ",nobarrier");
 	if (test_opt(sbi, FASTBOOT))
 		seq_puts(seq, ",fastboot");
-	if (test_opt(sbi, EXTENT_CACHE))
+	if (test_opt(sbi, READ_EXTENT_CACHE))
 		seq_puts(seq, ",extent_cache");
 	else
 		seq_puts(seq, ",noextent_cache");
+	if (test_opt(sbi, AGE_EXTENT_CACHE))
+		seq_puts(seq, ",age_extent_cache");
 	if (test_opt(sbi, DATA_FLUSH))
 		seq_puts(seq, ",data_flush");
 
@@ -1434,13 +1458,15 @@ static int f2fs_show_options(struct seq_file *seq, struct dentry *root)
 		seq_printf(seq, ",fsync_mode=%s", "strict");
 	else if (F2FS_OPTION(sbi).fsync_mode == FSYNC_MODE_NOBARRIER)
 		seq_printf(seq, ",fsync_mode=%s", "nobarrier");
+	if (test_opt(sbi, ATGC))
+		seq_puts(seq, ",atgc");
 	return 0;
 }
 
 static void default_options(struct f2fs_sb_info *sbi)
 {
 	/* init some FS parameters */
-	F2FS_OPTION(sbi).active_logs = NR_CURSEG_TYPE;
+	F2FS_OPTION(sbi).active_logs = NR_CURSEG_PERSIST_TYPE;
 	F2FS_OPTION(sbi).inline_xattr_size = DEFAULT_INLINE_XATTR_ADDRS;
 	F2FS_OPTION(sbi).whint_mode = WHINT_MODE_OFF;
 	F2FS_OPTION(sbi).alloc_mode = ALLOC_MODE_DEFAULT;
@@ -1449,10 +1475,12 @@ static void default_options(struct f2fs_sb_info *sbi)
 	F2FS_OPTION(sbi).s_resuid = make_kuid(&init_user_ns, F2FS_DEF_RESUID);
 	F2FS_OPTION(sbi).s_resgid = make_kgid(&init_user_ns, F2FS_DEF_RESGID);
 
+	set_opt(sbi, BG_GC);
 	set_opt(sbi, INLINE_XATTR);
 	set_opt(sbi, INLINE_DATA);
 	set_opt(sbi, INLINE_DENTRY);
-	set_opt(sbi, EXTENT_CACHE);
+	set_opt(sbi, AGE_EXTENT_CACHE);
+	set_opt(sbi, READ_EXTENT_CACHE);
 	set_opt(sbi, NOHEAP);
 	sbi->sb->s_flags |= MS_LAZYTIME;
 	clear_opt(sbi, DISABLE_CHECKPOINT);
@@ -1460,6 +1488,8 @@ static void default_options(struct f2fs_sb_info *sbi)
 	F2FS_OPTION(sbi).unusable_cap = 0;
 	set_opt(sbi, FLUSH_MERGE);
 	set_opt(sbi, DISCARD);
+	set_opt(sbi, GC_MERGE);
+	set_opt(sbi, ATGC);
 	if (f2fs_sb_has_blkzoned(sbi))
 		set_opt_mode(sbi, F2FS_MOUNT_LFS);
 	else
@@ -1538,6 +1568,9 @@ restore_flag:
 
 static void f2fs_enable_checkpoint(struct f2fs_sb_info *sbi)
 {
+	/* we should flush all the data to keep data consistency */
+	sync_inodes_sb(sbi->sb);
+
 	down_write(&sbi->gc_lock);
 	f2fs_dirty_to_prefree(sbi);
 
@@ -1556,9 +1589,11 @@ static int f2fs_remount(struct super_block *sb, int *flags, char *data)
 	int err;
 	bool need_restart_gc = false;
 	bool need_stop_gc = false;
-	bool no_extent_cache = !test_opt(sbi, EXTENT_CACHE);
+	bool no_read_extent_cache = !test_opt(sbi, READ_EXTENT_CACHE);
+	bool no_age_extent_cache = !test_opt(sbi, AGE_EXTENT_CACHE);
 	bool disable_checkpoint = test_opt(sbi, DISABLE_CHECKPOINT);
 	bool no_io_align = !F2FS_IO_ALIGNED(sbi);
+	bool no_atgc = !test_opt(sbi, ATGC);
 	bool checkpoint_changed;
 #ifdef CONFIG_QUOTA
 	int i, j;
@@ -1631,10 +1666,23 @@ static int f2fs_remount(struct super_block *sb, int *flags, char *data)
 		}
 	}
 #endif
+	/* disallow enable atgc dynamically */
+	if (no_atgc == !!test_opt(sbi, ATGC)) {
+		err = -EINVAL;
+		f2fs_warn(sbi, "switch atgc option is not allowed");
+		goto restore_opts;
+	}
+
 	/* disallow enable/disable extent_cache dynamically */
-	if (no_extent_cache == !!test_opt(sbi, EXTENT_CACHE)) {
+	if (no_read_extent_cache == !!test_opt(sbi, READ_EXTENT_CACHE)) {
 		err = -EINVAL;
 		f2fs_warn(sbi, "switch extent_cache option is not allowed");
+		goto restore_opts;
+	}
+	/* disallow enable/disable age extent_cache dynamically */
+	if (no_age_extent_cache == !!test_opt(sbi, AGE_EXTENT_CACHE)) {
+		err = -EINVAL;
+		f2fs_warn(sbi, "switch age_extent_cache option is not allowed");
 		goto restore_opts;
 	}
 
@@ -1655,7 +1703,8 @@ static int f2fs_remount(struct super_block *sb, int *flags, char *data)
 	 * or if background_gc = off is passed in mount
 	 * option. Also sync the filesystem.
 	 */
-	if ((*flags & MS_RDONLY) || !test_opt(sbi, BG_GC)) {
+	if ((*flags & MS_RDONLY) ||
+			(!test_opt(sbi, BG_GC) && !test_opt(sbi, GC_MERGE))) {
 		if (sbi->gc_thread) {
 			f2fs_stop_gc_thread(sbi);
 			need_restart_gc = true;
@@ -1774,8 +1823,7 @@ repeat:
 		page = read_cache_page_gfp(mapping, blkidx, GFP_NOFS);
 		if (IS_ERR(page)) {
 			if (PTR_ERR(page) == -ENOMEM) {
-				congestion_wait(BLK_RW_ASYNC,
-						DEFAULT_IO_TIMEOUT);
+				congestion_wait(BLK_RW_ASYNC, HZ/50);
 				goto repeat;
 			}
 			set_sbi_flag(F2FS_SB(sb), SBI_QUOTA_NEED_REPAIR);
@@ -1829,8 +1877,7 @@ retry:
 							&page, NULL);
 		if (unlikely(err)) {
 			if (err == -ENOMEM) {
-				congestion_wait(BLK_RW_ASYNC,
-						DEFAULT_IO_TIMEOUT);
+				congestion_wait(BLK_RW_ASYNC, HZ/50);
 				goto retry;
 			}
 			set_sbi_flag(F2FS_SB(sb), SBI_QUOTA_NEED_REPAIR);
@@ -2777,7 +2824,7 @@ int f2fs_sanity_check_ckpt(struct f2fs_sb_info *sbi)
 	cp_payload = __cp_payload(sbi);
 	if (cp_pack_start_sum < cp_payload + 1 ||
 		cp_pack_start_sum > blocks_per_seg - 1 -
-			NR_CURSEG_TYPE) {
+			NR_CURSEG_PERSIST_TYPE) {
 		f2fs_err(sbi, "Wrong cp_pack_start_sum: %u",
 			 cp_pack_start_sum);
 		return 1;
@@ -3259,8 +3306,7 @@ try_onemore:
 	sbi->valid_super_block = valid_super_block;
 	init_rwsem(&sbi->gc_lock);
 	mutex_init(&sbi->writepages);
-	mutex_init(&sbi->cp_mutex);
-	mutex_init(&sbi->resize_mutex);
+	init_rwsem(&sbi->cp_global_sem);
 	init_rwsem(&sbi->node_write);
 	init_rwsem(&sbi->node_change);
 
@@ -3431,8 +3477,6 @@ try_onemore:
 		goto free_stats;
 	}
 
-	f2fs_gc_sbi_list_add(sbi);
-
 	/* read root inode and dentry */
 	root = f2fs_iget(sb, F2FS_ROOT_INO(sbi));
 	if (IS_ERR(root)) {
@@ -3514,6 +3558,7 @@ try_onemore:
 		}
 	}
 reset_checkpoint:
+	f2fs_init_inmem_curseg(sbi);
 	/* f2fs_recover_fsync_data() cleared this already */
 	clear_sbi_flag(sbi, SBI_POR_DOING);
 
@@ -3529,7 +3574,8 @@ reset_checkpoint:
 	 * If filesystem is not mounted as read-only then
 	 * do start the gc_thread.
 	 */
-	if (test_opt(sbi, BG_GC) && !f2fs_readonly(sb)) {
+	if ((test_opt(sbi, BG_GC) || test_opt(sbi, GC_MERGE))
+			&& !f2fs_readonly(sb)) {
 		/* After POR, we can run background GC thread.*/
 		err = f2fs_start_gc_thread(sbi);
 		if (err)
@@ -3585,7 +3631,6 @@ free_node_inode:
 	iput(sbi->node_inode);
 	sbi->node_inode = NULL;
 free_stats:
-	f2fs_gc_sbi_list_del(sbi);
 	f2fs_destroy_stats(sbi);
 free_nm:
 	f2fs_destroy_node_manager(sbi);
@@ -3714,9 +3759,12 @@ static int __init init_f2fs_fs(void)
 	err = f2fs_create_extent_cache();
 	if (err)
 		goto free_checkpoint_caches;
-	err = f2fs_init_sysfs();
+	err = f2fs_create_garbage_collection_cache();
 	if (err)
 		goto free_extent_cache;
+	err = f2fs_init_sysfs();
+	if (err)
+		goto free_garbage_collection_cache;
 	err = register_shrinker(&f2fs_shrinker_info);
 	if (err)
 		goto free_sysfs;
@@ -3733,8 +3781,6 @@ static int __init init_f2fs_fs(void)
 	err = f2fs_init_bioset();
 	if (err)
 		goto free_bio_enrty_cache;
-	f2fs_init_rapid_gc();
-
 	return 0;
 free_bio_enrty_cache:
 	f2fs_destroy_bio_entry_cache();
@@ -3747,6 +3793,8 @@ free_shrinker:
 	unregister_shrinker(&f2fs_shrinker_info);
 free_sysfs:
 	f2fs_exit_sysfs();
+free_garbage_collection_cache:
+	f2fs_destroy_garbage_collection_cache();
 free_extent_cache:
 	f2fs_destroy_extent_cache();
 free_checkpoint_caches:
@@ -3763,7 +3811,6 @@ fail:
 
 static void __exit exit_f2fs_fs(void)
 {
-	f2fs_destroy_rapid_gc();
 	f2fs_destroy_bioset();
 	f2fs_destroy_bio_entry_cache();
 	f2fs_destroy_post_read_processing();
@@ -3771,6 +3818,7 @@ static void __exit exit_f2fs_fs(void)
 	unregister_filesystem(&f2fs_fs_type);
 	unregister_shrinker(&f2fs_shrinker_info);
 	f2fs_exit_sysfs();
+	f2fs_destroy_garbage_collection_cache();
 	f2fs_destroy_extent_cache();
 	f2fs_destroy_checkpoint_caches();
 	f2fs_destroy_segment_manager_caches();
