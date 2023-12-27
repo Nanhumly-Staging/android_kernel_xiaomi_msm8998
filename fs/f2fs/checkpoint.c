@@ -226,6 +226,7 @@ int f2fs_ra_meta_pages(struct f2fs_sb_info *sbi, block_t start, int nrpages,
 		.is_por = (type == META_POR),
 	};
 	struct blk_plug plug;
+	int err;
 
 	if (unlikely(type == META_POR))
 		fio.op_flags &= ~REQ_META;
@@ -246,6 +247,8 @@ int f2fs_ra_meta_pages(struct f2fs_sb_info *sbi, block_t start, int nrpages,
 					blkno * NAT_ENTRY_PER_BLOCK);
 			break;
 		case META_SIT:
+			if (unlikely(blkno >= TOTAL_SEGS(sbi)))
+				goto out;
 			/* get sit block addr */
 			fio.new_blkaddr = current_sit_addr(sbi,
 					blkno * SIT_ENTRY_PER_BLOCK);
@@ -269,8 +272,8 @@ int f2fs_ra_meta_pages(struct f2fs_sb_info *sbi, block_t start, int nrpages,
 		}
 
 		fio.page = page;
-		f2fs_submit_page_bio(&fio);
-		f2fs_put_page(page, 0);
+		err = f2fs_submit_page_bio(&fio);
+		f2fs_put_page(page, err ? 1 : 0);
 	}
 out:
 	blk_finish_plug(&plug);
@@ -346,13 +349,13 @@ static int f2fs_write_meta_pages(struct address_space *mapping,
 		goto skip_write;
 
 	/* if locked failed, cp will flush dirty pages instead */
-	if (!mutex_trylock(&sbi->cp_mutex))
+	if (!down_write_trylock(&sbi->cp_global_sem))
 		goto skip_write;
 
 	trace_f2fs_writepages(mapping->host, wbc, META);
 	diff = nr_pages_to_write(sbi, META, wbc);
 	written = f2fs_sync_meta_pages(sbi, META, wbc->nr_to_write, FS_META_IO);
-	mutex_unlock(&sbi->cp_mutex);
+	up_write(&sbi->cp_global_sem);
 	wbc->nr_to_write = max((long)0, wbc->nr_to_write - written - diff);
 	return 0;
 
@@ -646,7 +649,7 @@ static int recover_orphan_inode(struct f2fs_sb_info *sbi, nid_t ino)
 	/* truncate all the data during iput */
 	iput(inode);
 
-	err = f2fs_get_node_info(sbi, ino, &ni);
+	err = f2fs_get_node_info(sbi, ino, &ni, false);
 	if (err)
 		goto err_out;
 
@@ -1139,7 +1142,8 @@ static bool __need_flush_quota(struct f2fs_sb_info *sbi)
 	if (!is_journalled_quota(sbi))
 		return false;
 
-	down_write(&sbi->quota_sem);
+	if (!down_write_trylock(&sbi->quota_sem))
+		return true;
 	if (is_sbi_flag_set(sbi, SBI_QUOTA_SKIP_FLUSH)) {
 		ret = false;
 	} else if (is_sbi_flag_set(sbi, SBI_QUOTA_NEED_REPAIR)) {
@@ -1165,6 +1169,11 @@ static int block_operations(struct f2fs_sb_info *sbi)
 		.for_reclaim = 0,
 	};
 	int err = 0, cnt = 0;
+
+	/*
+	 * Let's flush inline_data in dirty node pages.
+	 */
+	f2fs_flush_inline_data(sbi);
 
 retry_flush_quotas:
 	f2fs_lock_all(sbi);
@@ -1251,15 +1260,20 @@ void f2fs_wait_on_all_pages(struct f2fs_sb_info *sbi, int type)
 	DEFINE_WAIT(wait);
 
 	for (;;) {
-		prepare_to_wait(&sbi->cp_wait, &wait, TASK_UNINTERRUPTIBLE);
-
 		if (!get_pages(sbi, type))
 			break;
 
 		if (unlikely(f2fs_cp_error(sbi)))
 			break;
 
-		io_schedule_timeout(DEFAULT_IO_TIMEOUT);
+		if (type == F2FS_DIRTY_META)
+			f2fs_sync_meta_pages(sbi, META, LONG_MAX,
+							FS_CP_META_IO);
+		else if (type == F2FS_WB_CP_DATA)
+			f2fs_submit_merged_write(sbi, DATA);
+
+		prepare_to_wait(&sbi->cp_wait, &wait, TASK_UNINTERRUPTIBLE);
+		io_schedule_timeout(HZ/50);
 	}
 	finish_wait(&sbi->cp_wait, &wait);
 }
@@ -1554,7 +1568,8 @@ int f2fs_write_checkpoint(struct f2fs_sb_info *sbi, struct cp_control *cpc)
 			return 0;
 		f2fs_warn(sbi, "Start checkpoint disabled!");
 	}
-	mutex_lock(&sbi->cp_mutex);
+	if (cpc->reason != CP_RESIZE)
+		down_write(&sbi->cp_global_sem);
 
 	if (!is_sbi_flag_set(sbi, SBI_IS_DIRTY) &&
 		((cpc->reason & CP_FASTBOOT) || (cpc->reason & CP_SYNC) ||
@@ -1609,12 +1624,17 @@ int f2fs_write_checkpoint(struct f2fs_sb_info *sbi, struct cp_control *cpc)
 
 	f2fs_flush_sit_entries(sbi, cpc);
 
+	/* save inmem log status */
+	f2fs_save_inmem_curseg(sbi);
+
 	/* unlock all the fs_lock[] in do_checkpoint() */
 	err = do_checkpoint(sbi, cpc);
 	if (err)
 		f2fs_release_discard_addrs(sbi);
 	else
 		f2fs_clear_prefree_segments(sbi, cpc);
+
+	f2fs_restore_inmem_curseg(sbi);
 stop:
 	unblock_operations(sbi);
 	stat_inc_cp_count(sbi->stat_info);
@@ -1626,7 +1646,8 @@ stop:
 	f2fs_update_time(sbi, CP_TIME);
 	trace_f2fs_write_checkpoint(sbi->sb, cpc->reason, "finish checkpoint");
 out:
-	mutex_unlock(&sbi->cp_mutex);
+	if (cpc->reason != CP_RESIZE)
+		up_write(&sbi->cp_global_sem);
 	return err;
 }
 
@@ -1644,7 +1665,7 @@ void f2fs_init_ino_entry_info(struct f2fs_sb_info *sbi)
 	}
 
 	sbi->max_orphans = (sbi->blocks_per_seg - F2FS_CP_PACKS -
-			NR_CURSEG_TYPE - __cp_payload(sbi)) *
+			NR_CURSEG_PERSIST_TYPE - __cp_payload(sbi)) *
 				F2FS_ORPHANS_PER_BLOCK;
 }
 

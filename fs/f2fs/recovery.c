@@ -527,7 +527,7 @@ retry_dn:
 	err = f2fs_get_dnode_of_data(&dn, start, ALLOC_NODE);
 	if (err) {
 		if (err == -ENOMEM) {
-			congestion_wait(BLK_RW_ASYNC, DEFAULT_IO_TIMEOUT);
+			congestion_wait(BLK_RW_ASYNC, HZ/50);
 			goto retry_dn;
 		}
 		goto out;
@@ -535,7 +535,7 @@ retry_dn:
 
 	f2fs_wait_on_page_writeback(dn.node_page, NODE, true, true);
 
-	err = f2fs_get_node_info(sbi, dn.nid, &ni);
+	err = f2fs_get_node_info(sbi, dn.nid, &ni, false);
 	if (err)
 		goto err;
 
@@ -610,8 +610,7 @@ retry_prev:
 			err = check_index_in_prev_nodes(sbi, dest, &dn);
 			if (err) {
 				if (err == -ENOMEM) {
-					congestion_wait(BLK_RW_ASYNC,
-							DEFAULT_IO_TIMEOUT);
+					congestion_wait(BLK_RW_ASYNC, HZ/50);
 					goto retry_prev;
 				}
 				goto err;
@@ -704,7 +703,7 @@ next:
 		f2fs_put_page(page, 1);
 	}
 	if (!err)
-		f2fs_allocate_new_segments(sbi, NO_CHECK_TYPE);
+		f2fs_allocate_new_segments(sbi);
 	return err;
 }
 
@@ -744,7 +743,7 @@ int f2fs_recover_fsync_data(struct f2fs_sb_info *sbi, bool check_only)
 	INIT_LIST_HEAD(&dir_list);
 
 	/* prevent checkpoint */
-	mutex_lock(&sbi->cp_mutex);
+	down_write(&sbi->cp_global_sem);
 
 	/* step #1: find fsynced inode numbers */
 	err = find_fsync_dnodes(sbi, &inode_list, check_only);
@@ -780,7 +779,8 @@ skip:
 	} else {
 		clear_sbi_flag(sbi, SBI_POR_DOING);
 	}
-	mutex_unlock(&sbi->cp_mutex);
+
+	up_write(&sbi->cp_global_sem);
 
 	/* let's drop all the directory inodes for clean checkpoint */
 	destroy_fsync_dnodes(&dir_list, err);

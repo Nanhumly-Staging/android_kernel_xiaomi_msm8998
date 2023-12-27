@@ -83,6 +83,23 @@
 /* Rt = Rn[0]; Rt2 = Rn[8]; Rn += 16; */
 #define A64_POP(Rt, Rt2, Rn)  A64_LS_PAIR(Rt, Rt2, Rn, 16, LOAD, POST_INDEX)
 
+/* Load/store exclusive */
+#define A64_SIZE(sf) \
+	((sf) ? AARCH64_INSN_SIZE_64 : AARCH64_INSN_SIZE_32)
+#define A64_LSX(sf, Rt, Rn, Rs, type) \
+	aarch64_insn_gen_load_store_ex(Rt, Rn, Rs, A64_SIZE(sf), \
+				       AARCH64_INSN_LDST_##type)
+/* Rt = [Rn]; (atomic) */
+#define A64_LDXR(sf, Rt, Rn) \
+	A64_LSX(sf, Rt, Rn, A64_ZR, LOAD_EX)
+/* [Rn] = Rt; (atomic) Rs = [state] */
+#define A64_STXR(sf, Rt, Rn, Rs) \
+	A64_LSX(sf, Rt, Rn, Rs, STORE_EX)
+
+/* LSE atomics */
+#define A64_STADD(sf, Rn, Rs) \
+	aarch64_insn_gen_stadd(Rn, Rs, A64_SIZE(sf))
+
 /* Add/subtract (immediate) */
 #define A64_ADDSUB_IMM(sf, Rd, Rn, imm12, type) \
 	aarch64_insn_gen_add_sub_imm(Rd, Rn, imm12, \

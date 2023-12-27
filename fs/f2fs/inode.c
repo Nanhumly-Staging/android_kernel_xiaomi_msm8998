@@ -251,8 +251,8 @@ static bool sanity_check_inode(struct inode *inode, struct page *node_page)
 		return false;
 	}
 
-	if (F2FS_I(inode)->extent_tree) {
-		struct extent_info *ei = &F2FS_I(inode)->extent_tree->largest;
+	if (fi->extent_tree[EX_READ]) {
+		struct extent_info *ei = &fi->extent_tree[EX_READ]->largest;
 
 		if (ei->len &&
 			(!f2fs_is_valid_blkaddr(sbi, ei->blk,
@@ -327,13 +327,10 @@ static int do_read_inode(struct inode *inode)
 	fi->i_flags = le32_to_cpu(ri->i_flags);
 	if (S_ISREG(inode->i_mode))
 		fi->i_flags &= ~F2FS_PROJINHERIT_FL;
-	fi->flags = 0;
+	bitmap_zero(fi->flags, FI_MAX);
 	fi->i_advise = ri->i_advise;
 	fi->i_pino = le32_to_cpu(ri->i_pino);
 	fi->i_dir_level = ri->i_dir_level;
-
-	if (f2fs_init_extent_tree(inode, &ri->i_ext))
-		set_page_dirty(node_page);
 
 	get_inline_info(inode, ri);
 
@@ -407,6 +404,11 @@ static int do_read_inode(struct inode *inode)
 	F2FS_I(inode)->i_disk_time[1] = inode->i_ctime;
 	F2FS_I(inode)->i_disk_time[2] = inode->i_mtime;
 	F2FS_I(inode)->i_disk_time[3] = F2FS_I(inode)->i_crtime;
+
+	/* Need all the flag bits */
+	f2fs_init_read_extent_tree(inode, node_page);
+	f2fs_init_age_extent_tree(inode);
+
 	f2fs_put_page(node_page, 1);
 
 	stat_inc_inline_xattr(inode);
@@ -486,7 +488,7 @@ retry:
 	inode = f2fs_iget(sb, ino);
 	if (IS_ERR(inode)) {
 		if (PTR_ERR(inode) == -ENOMEM) {
-			congestion_wait(BLK_RW_ASYNC, DEFAULT_IO_TIMEOUT);
+			congestion_wait(BLK_RW_ASYNC, HZ/50);
 			goto retry;
 		}
 	}
@@ -496,7 +498,7 @@ retry:
 void f2fs_update_inode(struct inode *inode, struct page *node_page)
 {
 	struct f2fs_inode *ri;
-	struct extent_tree *et = F2FS_I(inode)->extent_tree;
+	struct extent_tree *et = F2FS_I(inode)->extent_tree[EX_READ];
 
 	f2fs_wait_on_page_writeback(node_page, NODE, true, true);
 	set_page_dirty(node_page);
@@ -515,7 +517,7 @@ void f2fs_update_inode(struct inode *inode, struct page *node_page)
 
 	if (et) {
 		read_lock(&et->lock);
-		set_raw_extent(&et->largest, &ri->i_ext);
+		set_raw_read_extent(&et->largest, &ri->i_ext);
 		read_unlock(&et->lock);
 	} else {
 		memset(&ri->i_ext, 0, sizeof(ri->i_ext));
@@ -770,7 +772,7 @@ void f2fs_handle_failed_inode(struct inode *inode)
 	 * so we can prevent losing this orphan when encoutering checkpoint
 	 * and following suddenly power-off.
 	 */
-	err = f2fs_get_node_info(sbi, inode->i_ino, &ni);
+	err = f2fs_get_node_info(sbi, inode->i_ino, &ni, false);
 	if (err) {
 		set_sbi_flag(sbi, SBI_NEED_FSCK);
 		f2fs_warn(sbi, "May loss orphan inode, run fsck to fix.");
