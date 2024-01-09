@@ -158,27 +158,57 @@ static bool bpf_is_jmp_and_has_target(const struct bpf_insn *insn)
 	       BPF_OP(insn->code) != BPF_EXIT;
 }
 
-static void bpf_adj_branches(struct bpf_prog *prog, u32 pos, u32 delta)
+static int bpf_adj_delta_to_off(struct bpf_insn *insn, u32 pos, u32 delta,
+				u32 curr, const bool probe_pass)
 {
+	const s32 off_min = S16_MIN, off_max = S16_MAX;
+	s32 off = insn->off;
+
+	if (curr < pos && curr + off + 1 > pos)
+		off += delta;
+	else if (curr > pos + delta && curr + off + 1 <= pos + delta)
+		off -= delta;
+	if (off < off_min || off > off_max)
+		return -ERANGE;
+	if (!probe_pass)
+		insn->off = off;
+	return 0;
+}
+
+static int bpf_adj_branches(struct bpf_prog *prog, u32 pos, u32 delta,
+			    const bool probe_pass)
+{
+	u32 i, insn_cnt = prog->len + (probe_pass ? delta : 0);
 	struct bpf_insn *insn = prog->insnsi;
-	u32 i, insn_cnt = prog->len;
+	int ret = 0;
 
 	for (i = 0; i < insn_cnt; i++, insn++) {
+		/* In the probing pass we still operate on the original,
+		 * unpatched image in order to check overflows before we
+		 * do any other adjustments. Therefore skip the patchlet.
+		 */
+		if (probe_pass && i == pos) {
+			i += delta + 1;
+			insn++;
+		}
+
 		if (!bpf_is_jmp_and_has_target(insn))
 			continue;
 
-		/* Adjust offset of jmps if we cross boundaries. */
-		if (i < pos && i + insn->off + 1 > pos)
-			insn->off += delta;
-		else if (i > pos + delta && i + insn->off + 1 <= pos + delta)
-			insn->off -= delta;
+		/* Adjust offset of jmps if we cross patch boundaries. */
+		ret = bpf_adj_delta_to_off(insn, pos, delta, i, probe_pass);
+		if (ret)
+			break;
 	}
+
+	return ret;
 }
 
 struct bpf_prog *bpf_patch_insn_single(struct bpf_prog *prog, u32 off,
 				       const struct bpf_insn *patch, u32 len)
 {
 	u32 insn_adj_cnt, insn_rest, insn_delta = len - 1;
+	const u32 cnt_max = S16_MAX;
 	struct bpf_prog *prog_adj;
 
 	/* Since our patchlet doesn't expand the image, we're done. */
@@ -188,6 +218,15 @@ struct bpf_prog *bpf_patch_insn_single(struct bpf_prog *prog, u32 off,
 	}
 
 	insn_adj_cnt = prog->len + insn_delta;
+
+	/* Reject anything that would potentially let the insn->off
+	 * target overflow when we have excessive program expansions.
+	 * We need to probe here before we do any reallocation where
+	 * we afterwards may not fail anymore.
+	 */
+	if (insn_adj_cnt > cnt_max &&
+	    bpf_adj_branches(prog, off, insn_delta, true))
+		return NULL;
 
 	/* Several new instructions need to be inserted. Make room
 	 * for them. Likely, there's no need for a new allocation as
@@ -214,7 +253,11 @@ struct bpf_prog *bpf_patch_insn_single(struct bpf_prog *prog, u32 off,
 		sizeof(*patch) * insn_rest);
 	memcpy(prog_adj->insnsi + off, patch, sizeof(*patch) * len);
 
-	bpf_adj_branches(prog_adj, off, insn_delta);
+	/* We are guaranteed to not fail at this point, otherwise
+	 * the ship has sailed to reverse to the original state. An
+	 * overflow cannot happen at this point.
+	 */
+	BUG_ON(bpf_adj_branches(prog_adj, off, insn_delta, false));
 
 	return prog_adj;
 }
@@ -245,7 +288,7 @@ static int __init bpf_jit_charge_init(void)
 {
 	/* Only used as heuristic here to derive limit. */
 	bpf_jit_limit_max = bpf_jit_alloc_exec_limit();
-	bpf_jit_limit = min_t(u64, round_up(bpf_jit_limit_max >> 2,
+	bpf_jit_limit = min_t(u64, round_up(bpf_jit_limit_max >> 1,
 					    PAGE_SIZE), LONG_MAX);
 	return 0;
 }
@@ -277,6 +320,24 @@ bool __weak arch_bpf_jit_check_func(const struct bpf_prog *prog)
 EXPORT_SYMBOL(arch_bpf_jit_check_func);
 #endif
 
+void *__weak bpf_jit_alloc_exec(unsigned long size)
+{
+#ifdef CONFIG_MODULES
+	return module_alloc(size);
+#else
+	return vmalloc_exec(size);
+#endif
+}
+
+void __weak bpf_jit_free_exec(void *addr)
+{
+#ifdef CONFIG_MODULES
+	module_memfree(addr);
+#else
+	vfree(addr);
+#endif
+}
+
 struct bpf_binary_header *
 bpf_jit_binary_alloc(unsigned int proglen, u8 **image_ptr,
 		     unsigned int alignment,
@@ -294,8 +355,8 @@ bpf_jit_binary_alloc(unsigned int proglen, u8 **image_ptr,
 
 	if (bpf_jit_charge_modmem(pages))
 		return NULL;
-	hdr = module_alloc(size);
-	if (!hdr) {
+	hdr = bpf_jit_alloc_exec(size);
+		if (!hdr) {
 		bpf_jit_uncharge_modmem(pages);
 		return NULL;
 	}
@@ -319,7 +380,7 @@ void bpf_jit_binary_free(struct bpf_binary_header *hdr)
 {
 	u32 pages = hdr->pages;
 
-	module_memfree(hdr);
+	bpf_jit_free_exec(hdr);
 	bpf_jit_uncharge_modmem(pages);
 }
 
@@ -373,9 +434,13 @@ static int bpf_jit_blind_insn(const struct bpf_insn *from,
 	case BPF_JMP | BPF_JEQ  | BPF_K:
 	case BPF_JMP | BPF_JNE  | BPF_K:
 	case BPF_JMP | BPF_JGT  | BPF_K:
+	case BPF_JMP | BPF_JLT  | BPF_K:
 	case BPF_JMP | BPF_JGE  | BPF_K:
+	case BPF_JMP | BPF_JLE  | BPF_K:
 	case BPF_JMP | BPF_JSGT | BPF_K:
+	case BPF_JMP | BPF_JSLT | BPF_K:
 	case BPF_JMP | BPF_JSGE | BPF_K:
+	case BPF_JMP | BPF_JSLE | BPF_K:
 	case BPF_JMP | BPF_JSET | BPF_K:
 		/* Accommodate for extra offset in case of a backjump. */
 		off = from->off;
@@ -604,7 +669,7 @@ static unsigned int __bpf_prog_run(const struct sk_buff *ctx, const struct bpf_i
 		[BPF_ALU64 | BPF_NEG] = &&ALU64_NEG,
 		/* Call instruction */
 		[BPF_JMP | BPF_CALL] = &&JMP_CALL,
-		[BPF_JMP | BPF_CALL | BPF_X] = &&JMP_TAIL_CALL,
+		[BPF_JMP | BPF_TAIL_CALL] = &&JMP_TAIL_CALL,
 		/* Jumps */
 		[BPF_JMP | BPF_JA] = &&JMP_JA,
 		[BPF_JMP | BPF_JEQ | BPF_X] = &&JMP_JEQ_X,
@@ -613,12 +678,20 @@ static unsigned int __bpf_prog_run(const struct sk_buff *ctx, const struct bpf_i
 		[BPF_JMP | BPF_JNE | BPF_K] = &&JMP_JNE_K,
 		[BPF_JMP | BPF_JGT | BPF_X] = &&JMP_JGT_X,
 		[BPF_JMP | BPF_JGT | BPF_K] = &&JMP_JGT_K,
+		[BPF_JMP | BPF_JLT | BPF_X] = &&JMP_JLT_X,
+		[BPF_JMP | BPF_JLT | BPF_K] = &&JMP_JLT_K,
 		[BPF_JMP | BPF_JGE | BPF_X] = &&JMP_JGE_X,
 		[BPF_JMP | BPF_JGE | BPF_K] = &&JMP_JGE_K,
+		[BPF_JMP | BPF_JLE | BPF_X] = &&JMP_JLE_X,
+		[BPF_JMP | BPF_JLE | BPF_K] = &&JMP_JLE_K,
 		[BPF_JMP | BPF_JSGT | BPF_X] = &&JMP_JSGT_X,
 		[BPF_JMP | BPF_JSGT | BPF_K] = &&JMP_JSGT_K,
+		[BPF_JMP | BPF_JSLT | BPF_X] = &&JMP_JSLT_X,
+		[BPF_JMP | BPF_JSLT | BPF_K] = &&JMP_JSLT_K,
 		[BPF_JMP | BPF_JSGE | BPF_X] = &&JMP_JSGE_X,
 		[BPF_JMP | BPF_JSGE | BPF_K] = &&JMP_JSGE_K,
+		[BPF_JMP | BPF_JSLE | BPF_X] = &&JMP_JSLE_X,
+		[BPF_JMP | BPF_JSLE | BPF_K] = &&JMP_JSLE_K,
 		[BPF_JMP | BPF_JSET | BPF_X] = &&JMP_JSET_X,
 		[BPF_JMP | BPF_JSET | BPF_K] = &&JMP_JSET_K,
 		/* Program return */
@@ -856,6 +929,18 @@ out:
 			CONT_JMP;
 		}
 		CONT;
+	JMP_JLT_X:
+		if (DST < SRC) {
+			insn += insn->off;
+			CONT_JMP;
+		}
+		CONT;
+	JMP_JLT_K:
+		if (DST < IMM) {
+			insn += insn->off;
+			CONT_JMP;
+		}
+		CONT;
 	JMP_JGE_X:
 		if (DST >= SRC) {
 			insn += insn->off;
@@ -864,6 +949,18 @@ out:
 		CONT;
 	JMP_JGE_K:
 		if (DST >= IMM) {
+			insn += insn->off;
+			CONT_JMP;
+		}
+		CONT;
+	JMP_JLE_X:
+		if (DST <= SRC) {
+			insn += insn->off;
+			CONT_JMP;
+		}
+		CONT;
+	JMP_JLE_K:
+		if (DST <= IMM) {
 			insn += insn->off;
 			CONT_JMP;
 		}
@@ -880,6 +977,18 @@ out:
 			CONT_JMP;
 		}
 		CONT;
+	JMP_JSLT_X:
+		if (((s64) DST) < ((s64) SRC)) {
+			insn += insn->off;
+			CONT_JMP;
+		}
+		CONT;
+	JMP_JSLT_K:
+		if (((s64) DST) < ((s64) IMM)) {
+			insn += insn->off;
+			CONT_JMP;
+		}
+		CONT;
 	JMP_JSGE_X:
 		if (((s64) DST) >= ((s64) SRC)) {
 			insn += insn->off;
@@ -888,6 +997,18 @@ out:
 		CONT;
 	JMP_JSGE_K:
 		if (((s64) DST) >= ((s64) IMM)) {
+			insn += insn->off;
+			CONT_JMP;
+		}
+		CONT;
+	JMP_JSLE_X:
+		if (((s64) DST) <= ((s64) SRC)) {
+			insn += insn->off;
+			CONT_JMP;
+		}
+		CONT;
+	JMP_JSLE_K:
+		if (((s64) DST) <= ((s64) IMM)) {
 			insn += insn->off;
 			CONT_JMP;
 		}

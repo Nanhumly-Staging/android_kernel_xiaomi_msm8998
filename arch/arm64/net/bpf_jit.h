@@ -44,8 +44,12 @@
 #define A64_COND_NE	AARCH64_INSN_COND_NE /* != */
 #define A64_COND_CS	AARCH64_INSN_COND_CS /* unsigned >= */
 #define A64_COND_HI	AARCH64_INSN_COND_HI /* unsigned > */
+#define A64_COND_LS	AARCH64_INSN_COND_LS /* unsigned <= */
+#define A64_COND_CC	AARCH64_INSN_COND_CC /* unsigned < */
 #define A64_COND_GE	AARCH64_INSN_COND_GE /* signed >= */
 #define A64_COND_GT	AARCH64_INSN_COND_GT /* signed > */
+#define A64_COND_LE	AARCH64_INSN_COND_LE /* signed <= */
+#define A64_COND_LT	AARCH64_INSN_COND_LT /* signed < */
 #define A64_B_(cond, imm19) A64_COND_BRANCH(cond, (imm19) << 2)
 
 /* Unconditional branch (immediate) */
@@ -178,6 +182,9 @@
 /* Rd = Ra + Rn * Rm */
 #define A64_MADD(sf, Rd, Ra, Rn, Rm) aarch64_insn_gen_data3(Rd, Ra, Rn, Rm, \
 	A64_VARIANT(sf), AARCH64_INSN_DATA3_MADD)
+/* Rd = Ra - Rn * Rm */
+#define A64_MSUB(sf, Rd, Ra, Rn, Rm) aarch64_insn_gen_data3(Rd, Ra, Rn, Rm, \
+	A64_VARIANT(sf), AARCH64_INSN_DATA3_MSUB)
 /* Rd = Rn * Rm */
 #define A64_MUL(sf, Rd, Rn, Rm) A64_MADD(sf, Rd, A64_ZR, Rn, Rm)
 

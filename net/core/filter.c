@@ -466,11 +466,18 @@ do_pass:
 
 #define BPF_EMIT_JMP							\
 	do {								\
+		const s32 off_min = S16_MIN, off_max = S16_MAX;		\
+		s32 off;						\
+									\
 		if (target >= len || target < 0)			\
 			goto err;					\
-		insn->off = addrs ? addrs[target] - addrs[i] - 1 : 0;	\
+		off = addrs ? addrs[target] - addrs[i] - 1 : 0;		\
 		/* Adjust pc relative offset for 2nd or 3rd insn. */	\
-		insn->off -= insn - tmp_insns;				\
+		off -= insn - tmp_insns;				\
+		/* Reject anything not fitting into insn->off. */	\
+		if (off < off_min || off > off_max)			\
+			goto err;					\
+		insn->off = off;					\
 	} while (0)
 
 		case BPF_JMP | BPF_JA:
@@ -512,14 +519,27 @@ do_pass:
 				break;
 			}
 
-			/* Convert JEQ into JNE when 'jump_true' is next insn. */
-			if (fp->jt == 0 && BPF_OP(fp->code) == BPF_JEQ) {
-				insn->code = BPF_JMP | BPF_JNE | bpf_src;
+			/* Convert some jumps when 'jump_true' is next insn. */
+			if (fp->jt == 0) {
+				switch (BPF_OP(fp->code)) {
+				case BPF_JEQ:
+					insn->code = BPF_JMP | BPF_JNE | bpf_src;
+					break;
+				case BPF_JGT:
+					insn->code = BPF_JMP | BPF_JLE | bpf_src;
+					break;
+				case BPF_JGE:
+					insn->code = BPF_JMP | BPF_JLT | bpf_src;
+					break;
+				default:
+					goto jmp_rest;
+				}
+
 				target = i + fp->jf + 1;
 				BPF_EMIT_JMP;
 				break;
 			}
-
+jmp_rest:
 			/* Other jumps are mapped into two insns: Jxx and JA. */
 			target = i + fp->jt + 1;
 			insn->code = BPF_JMP | BPF_OP(fp->code) | bpf_src;

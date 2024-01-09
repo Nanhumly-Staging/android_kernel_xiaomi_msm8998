@@ -859,6 +859,10 @@ static int check_mem_access(struct bpf_verifier_env *env, int insn_idx, u32 regn
 			verbose("invalid stack off=%d size=%d\n", off, size);
 			return -EACCES;
 		}
+
+		if (env->prog->aux->stack_depth < -off)
+			env->prog->aux->stack_depth = -off;
+
 		if (t == BPF_WRITE) {
 			if (!env->allow_ptr_leaks &&
 			    state->stack_slot_type[MAX_BPF_STACK + off] == STACK_SPILL &&
@@ -975,6 +979,9 @@ static int check_stack_boundary(struct bpf_verifier_env *env, int regno,
 			regno, off, access_size);
 		return -EACCES;
 	}
+
+	if (env->prog->aux->stack_depth < -off)
+		env->prog->aux->stack_depth = -off;
 
 	if (meta && meta->raw_mode) {
 		meta->access_size = access_size;
@@ -3157,7 +3164,8 @@ process_bpf_exit:
 		insn_idx++;
 	}
 
-	verbose("processed %d insns\n", insn_processed);
+	verbose("processed %d insns, stack depth %d\n",
+		insn_processed, env->prog->aux->stack_depth);
 	return 0;
 }
 
@@ -3496,7 +3504,7 @@ static int fixup_bpf_calls(struct bpf_verifier_env *env)
 			 * that doesn't support bpf_tail_call yet
  			 */
 			insn->imm = 0;
-			insn->code |= BPF_X;
+			insn->code = BPF_JMP | BPF_TAIL_CALL;
 
 			/* instead of changing every JIT dealing with tail_call
 			 * emit two extra insns:
