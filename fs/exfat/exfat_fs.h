@@ -11,9 +11,14 @@
 #include <linux/ratelimit.h>
 #include <linux/nls.h>
 
-#define EXFAT_VERSION		"5.10.1"
-
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0)
+#include <linux/magic.h>
+#else
 #define EXFAT_SUPER_MAGIC       0x2011BAB0UL
+#endif
+
+#define EXFAT_VERSION		"6.0.0"
+
 #define EXFAT_ROOT_INO		1
 
 #define EXFAT_CLUSTERS_UNTRACKED (~0u)
@@ -31,9 +36,9 @@ enum exfat_error_mode {
  * exfat nls lossy flag
  */
 enum {
-	NLS_NAME_NO_LOSSY,	/* no lossy */
-	NLS_NAME_LOSSY,		/* just detected incorrect filename(s) */
-	NLS_NAME_OVERLEN,	/* the length is over than its limit */
+	NLS_NAME_NO_LOSSY =	0,	/* no lossy */
+	NLS_NAME_LOSSY =	1 << 0,	/* just detected incorrect filename(s) */
+	NLS_NAME_OVERLEN =	1 << 1,	/* the length is over than its limit */
 };
 
 #define EXFAT_HASH_BITS		8
@@ -213,7 +218,9 @@ struct exfat_mount_options {
 	/* on error: continue, panic, remount-ro */
 	enum exfat_error_mode errors;
 	unsigned utf8:1, /* Use of UTF-8 character set */
-		 discard:1; /* Issue discard requests on deletions */
+		 sys_tz:1, /* Use local timezone */
+		 discard:1, /* Issue discard requests on deletions */
+		 keep_last_dots:1; /* Keep trailing periods in paths */
 	int time_offset; /* Offset of timestamps from UTC (in minutes) */
 };
 
@@ -247,6 +254,7 @@ struct exfat_sb_info {
 	unsigned int used_clusters; /* number of used clusters */
 
 	struct mutex s_lock; /* superblock lock */
+	struct mutex bitmap_lock; /* bitmap lock */
 	struct exfat_mount_options options;
 	struct nls_table *nls_io; /* Charset used for input and display */
 	struct ratelimit_state ratelimit;
@@ -393,6 +401,12 @@ static inline int exfat_sector_to_cluster(struct exfat_sb_info *sbi,
 		EXFAT_RESERVED_CLUSTERS;
 }
 
+static inline bool is_valid_cluster(struct exfat_sb_info *sbi,
+		unsigned int clus)
+{
+	return clus >= EXFAT_FIRST_CLUSTER && clus < sbi->num_clusters;
+}
+
 /* super.c */
 int exfat_set_volume_dirty(struct super_block *sb);
 int exfat_clear_volume_dirty(struct super_block *sb);
@@ -401,7 +415,7 @@ int exfat_clear_volume_dirty(struct super_block *sb);
 #define exfat_get_next_cluster(sb, pclu) exfat_ent_get(sb, *(pclu), pclu)
 
 int exfat_alloc_cluster(struct inode *inode, unsigned int num_alloc,
-		struct exfat_chain *p_chain);
+		struct exfat_chain *p_chain, bool sync_bmap);
 int exfat_free_cluster(struct inode *inode, struct exfat_chain *p_chain);
 int exfat_ent_get(struct super_block *sb, unsigned int loc,
 		unsigned int *content);
@@ -420,15 +434,24 @@ int exfat_count_num_clusters(struct super_block *sb,
 /* balloc.c */
 int exfat_load_bitmap(struct super_block *sb);
 void exfat_free_bitmap(struct exfat_sb_info *sbi);
-int exfat_set_bitmap(struct inode *inode, unsigned int clu);
-void exfat_clear_bitmap(struct inode *inode, unsigned int clu);
+int exfat_set_bitmap(struct inode *inode, unsigned int clu, bool sync);
+void exfat_clear_bitmap(struct inode *inode, unsigned int clu, bool sync);
 unsigned int exfat_find_free_bitmap(struct super_block *sb, unsigned int clu);
 int exfat_count_used_clusters(struct super_block *sb, unsigned int *ret_count);
+int exfat_trim_fs(struct inode *inode, struct fstrim_range *range);
 
 /* file.c */
 extern const struct file_operations exfat_file_operations;
 int __exfat_truncate(struct inode *inode, loff_t new_size);
 void exfat_truncate(struct inode *inode, loff_t size);
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
+int exfat_setattr(struct user_namespace *mnt_userns, struct dentry *dentry,
+		  struct iattr *attr);
+int exfat_getattr(struct user_namespace *mnt_userns, const struct path *path,
+		  struct kstat *stat, unsigned int request_mask,
+		  unsigned int query_flags);
+#else
 int exfat_setattr(struct dentry *dentry, struct iattr *attr);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
 int exfat_getattr(const struct path *path, struct kstat *stat,
@@ -437,7 +460,11 @@ int exfat_getattr(const struct path *path, struct kstat *stat,
 int exfat_getattr(struct vfsmount *mnt, struct dentry *dentry,
 		struct kstat *stat);
 #endif
+#endif
 int exfat_file_fsync(struct file *file, loff_t start, loff_t end, int datasync);
+long exfat_ioctl(struct file *filp, unsigned int cmd, unsigned long arg);
+long exfat_compat_ioctl(struct file *filp, unsigned int cmd,
+				unsigned long arg);
 
 
 /* namei.c */
@@ -469,13 +496,10 @@ void exfat_update_dir_chksum_with_entry_set(struct exfat_entry_set_cache *es);
 int exfat_calc_num_entries(struct exfat_uni_name *p_uniname);
 int exfat_find_dir_entry(struct super_block *sb, struct exfat_inode_info *ei,
 		struct exfat_chain *p_dir, struct exfat_uni_name *p_uniname,
-		int num_entries, unsigned int type);
+		int num_entries, unsigned int type, struct exfat_hint *hint_opt);
 int exfat_alloc_new_dir(struct inode *inode, struct exfat_chain *clu);
-int exfat_find_location(struct super_block *sb, struct exfat_chain *p_dir,
-		int entry, sector_t *sector, int *offset);
 struct exfat_dentry *exfat_get_dentry(struct super_block *sb,
-		struct exfat_chain *p_dir, int entry, struct buffer_head **bh,
-		sector_t *sector);
+		struct exfat_chain *p_dir, int entry, struct buffer_head **bh);
 struct exfat_dentry *exfat_get_dentry_cached(struct exfat_entry_set_cache *es,
 		int num);
 struct exfat_entry_set_cache *exfat_get_dentry_set(struct super_block *sb,
@@ -491,6 +515,7 @@ struct inode *exfat_build_inode(struct super_block *sb,
 void exfat_hash_inode(struct inode *inode, loff_t i_pos);
 void exfat_unhash_inode(struct inode *inode);
 struct inode *exfat_iget(struct super_block *sb, loff_t i_pos);
+int __exfat_write_inode(struct inode *inode, int sync);
 int exfat_write_inode(struct inode *inode, struct writeback_control *wbc);
 void exfat_evict_inode(struct inode *inode);
 int exfat_block_truncate_page(struct inode *inode, loff_t from);
@@ -516,14 +541,16 @@ void __exfat_fs_error(struct super_block *sb, int report, const char *fmt, ...)
 #define exfat_fs_error_ratelimit(sb, fmt, args...) \
 		__exfat_fs_error(sb, __ratelimit(&EXFAT_SB(sb)->ratelimit), \
 		fmt, ## args)
-void exfat_msg(struct super_block *sb, const char *lv, const char *fmt, ...)
-		__printf(3, 4) __cold;
+
+/* expand to pr_*() with prefix */
 #define exfat_err(sb, fmt, ...)						\
-	exfat_msg(sb, KERN_ERR, fmt, ##__VA_ARGS__)
+	pr_err("exFAT-fs (%s): " fmt "\n", (sb)->s_id, ##__VA_ARGS__)
 #define exfat_warn(sb, fmt, ...)					\
-	exfat_msg(sb, KERN_WARNING, fmt, ##__VA_ARGS__)
+	pr_warn("exFAT-fs (%s): " fmt "\n", (sb)->s_id, ##__VA_ARGS__)
 #define exfat_info(sb, fmt, ...)					\
-	exfat_msg(sb, KERN_INFO, fmt, ##__VA_ARGS__)
+	pr_info("exFAT-fs (%s): " fmt "\n", (sb)->s_id, ##__VA_ARGS__)
+#define exfat_debug(sb, fmt, ...)					\
+	pr_debug("exFAT-fs (%s): " fmt "\n", (sb)->s_id, ##__VA_ARGS__)
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0)
 void exfat_get_entry_time(struct exfat_sb_info *sbi, struct timespec64 *ts,
