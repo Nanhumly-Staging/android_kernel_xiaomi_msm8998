@@ -1209,11 +1209,10 @@ static void __init_discard_policy(struct f2fs_sb_info *sbi,
 		if (utilization(sbi) > dcc->discard_urgent_util) {
 			dpolicy->granularity = 1;
 			if (atomic_read(&dcc->discard_cmd_cnt))
-				dpolicy->max_interval =
-					dcc->min_discard_issue_time;
+				dpolicy->max_interval = 10000;
 		}
 	} else if (discard_type == DPOLICY_FORCE) {
-		dpolicy->min_interval = dcc->min_discard_issue_time;
+		dpolicy->min_interval = 1;
 		dpolicy->mid_interval = dcc->mid_discard_issue_time;
 		dpolicy->max_interval = dcc->max_discard_issue_time;
 		dpolicy->io_aware = false;
@@ -1841,7 +1840,8 @@ static int issue_discard_thread(void *data)
 		wait_event_interruptible_timeout(*q,
 				kthread_should_stop() || freezing(current) ||
 				dcc->discard_wake,
-				msecs_to_jiffies(wait_ms));
+				msecs_to_jiffies((sbi->gc_mode == GC_URGENT) ?
+						 1 : wait_ms));
 
 		if (dcc->discard_wake)
 			dcc->discard_wake = 0;

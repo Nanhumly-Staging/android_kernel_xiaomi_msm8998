@@ -20,7 +20,6 @@ struct proc_dir_entry *f2fs_proc_root;
 
 /* Sysfs support for f2fs */
 enum {
-	GC_THREAD,	/* struct f2fs_gc_thread */
 	SM_INFO,	/* struct f2fs_sm_info */
 	DCC_INFO,	/* struct discard_cmd_control */
 	NM_INFO,	/* struct f2fs_nm_info */
@@ -52,9 +51,7 @@ static ssize_t f2fs_sbi_show(struct f2fs_attr *a,
 
 static unsigned char *__struct_ptr(struct f2fs_sb_info *sbi, int struct_type)
 {
-	if (struct_type == GC_THREAD)
-		return (unsigned char *)sbi->gc_thread;
-	else if (struct_type == SM_INFO)
+	if (struct_type == SM_INFO)
 		return (unsigned char *)SM_I(sbi);
 	else if (struct_type == DCC_INFO)
 		return (unsigned char *)SM_I(sbi)->dcc_info;
@@ -90,13 +87,6 @@ static ssize_t free_segments_show(struct f2fs_attr *a,
 {
 	return sprintf(buf, "%llu\n",
 			(unsigned long long)(free_segments(sbi)));
-}
-
-static ssize_t reserved_segments_show(struct f2fs_attr *a,
-		struct f2fs_sb_info *sbi, char *buf)
-{
-	return snprintf(buf, PAGE_SIZE, "%llu\n",
-		(unsigned long long)(reserved_segments(sbi)));
 }
 
 static ssize_t lifetime_write_kbytes_show(struct f2fs_attr *a,
@@ -397,26 +387,6 @@ out:
 	if (!strcmp(a->attr.name, "trim_sections"))
 		return -EINVAL;
 
-	if (!strcmp(a->attr.name, "gc_urgent")) {
-		if (t >= 1) {
-			sbi->gc_mode = GC_URGENT;
-			if (sbi->gc_thread) {
-				sbi->gc_thread->gc_wake = 1;
-				wake_up_interruptible_all(
-					&sbi->gc_thread->gc_wait_queue_head);
-				wake_up_discard_thread(sbi, true);
-			}
-		} else {
-			sbi->gc_mode = GC_NORMAL;
-		}
-		return count;
-	}
-
-	if (!strcmp(a->attr.name, "gc_urgent_sleep_time")) {
-		*ui = t ? (unsigned int)t : DEF_GC_THREAD_URGENT_SLEEP_TIME;
-		return count;
-	}
-
 	if (!strcmp(a->attr.name, "gc_idle")) {
 		if (t == GC_IDLE_CB) {
 			sbi->gc_mode = GC_IDLE_CB;
@@ -429,11 +399,6 @@ out:
 		} else {
 			sbi->gc_mode = GC_NORMAL;
 		}
-		return count;
-	}
-
-	if (!strcmp(a->attr.name, "gc_booster")) {
-		sbi->gc_booster = !!t;
 		return count;
 	}
 
@@ -494,19 +459,7 @@ static ssize_t f2fs_sbi_store(struct f2fs_attr *a,
 			struct f2fs_sb_info *sbi,
 			const char *buf, size_t count)
 {
-	ssize_t ret;
-	bool gc_entry = (!strcmp(a->attr.name, "gc_urgent") ||
-					a->struct_type == GC_THREAD);
-
-	if (gc_entry) {
-		if (!down_read_trylock(&sbi->sb->s_umount))
-			return -EAGAIN;
-	}
-	ret = __sbi_store(a, sbi, buf, count);
-	if (gc_entry)
-		up_read(&sbi->sb->s_umount);
-
-	return ret;
+	return __sbi_store(a, sbi, buf, count);
 }
 
 static ssize_t f2fs_attr_show(struct kobject *kobj,
@@ -602,14 +555,6 @@ static struct f2fs_attr f2fs_attr_##_name = {			\
 	.offset = offsetof(struct _struct_name, _elname),       \
 }
 
-F2FS_RW_ATTR(GC_THREAD, f2fs_gc_kthread, gc_urgent_sleep_time,
-							urgent_sleep_time);
-F2FS_RW_ATTR(GC_THREAD, f2fs_gc_kthread, gc_min_sleep_time, min_sleep_time);
-F2FS_RW_ATTR(GC_THREAD, f2fs_gc_kthread, gc_max_sleep_time, max_sleep_time);
-F2FS_RW_ATTR(GC_THREAD, f2fs_gc_kthread, gc_no_gc_sleep_time, no_gc_sleep_time);
-F2FS_RW_ATTR(F2FS_SBI, f2fs_sb_info, gc_idle, gc_mode);
-F2FS_RW_ATTR(F2FS_SBI, f2fs_sb_info, gc_urgent, gc_mode);
-F2FS_RW_ATTR(F2FS_SBI, f2fs_sb_info, gc_booster, gc_booster);
 F2FS_RW_ATTR(SM_INFO, f2fs_sm_info, reclaim_segments, rec_prefree_segments);
 F2FS_RW_ATTR(SM_INFO, f2fs_sm_info, main_blkaddr, main_blkaddr);
 F2FS_RW_ATTR(DCC_INFO, discard_cmd_control, max_small_discards, max_discards);
@@ -637,7 +582,6 @@ F2FS_RW_ATTR(F2FS_SBI, f2fs_sb_info, cp_interval, interval_time[CP_TIME]);
 F2FS_RW_ATTR(F2FS_SBI, f2fs_sb_info, idle_interval, interval_time[REQ_TIME]);
 F2FS_RW_ATTR(F2FS_SBI, f2fs_sb_info, discard_idle_interval,
 					interval_time[DISCARD_TIME]);
-F2FS_RW_ATTR(F2FS_SBI, f2fs_sb_info, gc_idle_interval, interval_time[GC_TIME]);
 F2FS_RW_ATTR(F2FS_SBI, f2fs_sb_info,
 		umount_discard_timeout, interval_time[UMOUNT_DISCARD_TIMEOUT]);
 F2FS_RW_ATTR(F2FS_SBI, f2fs_sb_info, iostat_enable, iostat_enable);
@@ -651,7 +595,6 @@ F2FS_RW_ATTR(FAULT_INFO_TYPE, f2fs_fault_info, inject_type, inject_type);
 F2FS_RW_ATTR(CPRC_INFO, ckpt_req_control, ckpt_thread_ioprio, ckpt_thread_ioprio);
 F2FS_GENERAL_RO_ATTR(dirty_segments);
 F2FS_GENERAL_RO_ATTR(free_segments);
-F2FS_GENERAL_RO_ATTR(reserved_segments);
 F2FS_GENERAL_RO_ATTR(lifetime_write_kbytes);
 F2FS_GENERAL_RO_ATTR(features);
 F2FS_GENERAL_RO_ATTR(current_reserved_blocks);
@@ -695,13 +638,6 @@ F2FS_RW_ATTR(F2FS_SBI, f2fs_sb_info, last_age_weight, last_age_weight);
 
 #define ATTR_LIST(name) (&f2fs_attr_##name.attr)
 static struct attribute *f2fs_attrs[] = {
-	ATTR_LIST(gc_urgent_sleep_time),
-	ATTR_LIST(gc_min_sleep_time),
-	ATTR_LIST(gc_max_sleep_time),
-	ATTR_LIST(gc_no_gc_sleep_time),
-	ATTR_LIST(gc_idle),
-	ATTR_LIST(gc_urgent),
-	ATTR_LIST(gc_booster),
 	ATTR_LIST(reclaim_segments),
 	ATTR_LIST(main_blkaddr),
 	ATTR_LIST(max_small_discards),
@@ -728,7 +664,6 @@ static struct attribute *f2fs_attrs[] = {
 	ATTR_LIST(cp_interval),
 	ATTR_LIST(idle_interval),
 	ATTR_LIST(discard_idle_interval),
-	ATTR_LIST(gc_idle_interval),
 	ATTR_LIST(umount_discard_timeout),
 	ATTR_LIST(iostat_enable),
 	ATTR_LIST(readdir_ra),
@@ -741,7 +676,6 @@ static struct attribute *f2fs_attrs[] = {
 	ATTR_LIST(ckpt_thread_ioprio),
 	ATTR_LIST(dirty_segments),
 	ATTR_LIST(free_segments),
-	ATTR_LIST(reserved_segments),
 	ATTR_LIST(unusable),
 	ATTR_LIST(lifetime_write_kbytes),
 	ATTR_LIST(features),
