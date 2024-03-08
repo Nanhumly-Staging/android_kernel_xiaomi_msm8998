@@ -145,7 +145,8 @@ static __always_inline ssize_t __mcopy_atomic(struct mm_struct *dst_mm,
 					      unsigned long dst_start,
 					      unsigned long src_start,
 					      unsigned long len,
-					      bool zeropage)
+					      bool zeropage,
+					      __u64 mode)
 {
 	struct vm_area_struct *dst_vma;
 	ssize_t err;
@@ -169,7 +170,13 @@ static __always_inline ssize_t __mcopy_atomic(struct mm_struct *dst_mm,
 	copied = 0;
 	page = NULL;
 retry:
-	down_read(&dst_mm->mmap_sem);
+	err = -EAGAIN;
+	if (mode & UFFDIO_MODE_MMAP_TRYLOCK) {
+		if (!down_read_trylock(&dst_mm->mmap_sem))
+			goto out;
+	} else {
+		down_read(&dst_mm->mmap_sem);
+	}
 
 	/*
 	 * Make sure the vma is not shared, that the dst range is
@@ -295,13 +302,15 @@ out:
 }
 
 ssize_t mcopy_atomic(struct mm_struct *dst_mm, unsigned long dst_start,
-		     unsigned long src_start, unsigned long len)
+		     unsigned long src_start, unsigned long len,
+		     __u64 mode)
 {
-	return __mcopy_atomic(dst_mm, dst_start, src_start, len, false);
+	return __mcopy_atomic(dst_mm, dst_start, src_start, len, false, mode);
 }
 
 ssize_t mfill_zeropage(struct mm_struct *dst_mm, unsigned long start,
-		       unsigned long len)
+		       unsigned long len,
+		       __u64 mode)
 {
-	return __mcopy_atomic(dst_mm, start, 0, len, true);
+	return __mcopy_atomic(dst_mm, start, 0, len, true, mode);
 }
