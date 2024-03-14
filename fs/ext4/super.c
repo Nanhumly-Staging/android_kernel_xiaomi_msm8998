@@ -1014,6 +1014,7 @@ void ext4_clear_inode(struct inode *inode)
 	if (EXT4_I(inode)->i_crypt_info)
 		ext4_free_encryption_info(inode, EXT4_I(inode)->i_crypt_info);
 #endif
+	fsverity_cleanup_inode(inode);
 }
 
 static struct inode *ext4_nfs_get_inode(struct super_block *sb,
@@ -2276,7 +2277,7 @@ static void ext4_orphan_cleanup(struct super_block *sb,
 				struct ext4_super_block *es)
 {
 	unsigned int s_flags = sb->s_flags;
-	int nr_orphans = 0, nr_truncates = 0;
+	int ret, nr_orphans = 0, nr_truncates = 0;
 #ifdef CONFIG_QUOTA
 	int quota_update = 0;
 	int i;
@@ -2377,7 +2378,9 @@ static void ext4_orphan_cleanup(struct super_block *sb,
 				  inode->i_ino, inode->i_size);
 			mutex_lock(&inode->i_mutex);
 			truncate_inode_pages(inode->i_mapping, inode->i_size);
-			ext4_truncate(inode);
+			ret = ext4_truncate(inode);
+			if (ret)
+				ext4_std_error(inode->i_sb, ret);
 			mutex_unlock(&inode->i_mutex);
 			nr_truncates++;
 		} else {
@@ -3888,6 +3891,9 @@ static int ext4_fill_super(struct super_block *sb, void *data, int silent)
 	sb->s_op = &ext4_sops;
 	sb->s_export_op = &ext4_export_ops;
 	sb->s_xattr = ext4_xattr_handlers;
+#ifdef CONFIG_FS_VERITY
+	sb->s_vop = &ext4_verityops;
+#endif
 #ifdef CONFIG_QUOTA
 	sb->dq_op = &ext4_quota_operations;
 	if (ext4_has_feature_quota(sb))
@@ -4011,6 +4017,11 @@ no_journal:
 	    (blocksize != PAGE_CACHE_SIZE)) {
 		ext4_msg(sb, KERN_ERR,
 			 "Unsupported blocksize for fs encryption");
+		goto failed_mount_wq;
+	}
+
+	if (ext4_has_feature_verity(sb) && blocksize != PAGE_CACHE_SIZE) {
+		ext4_msg(sb, KERN_ERR, "Unsupported blocksize for fs-verity");
 		goto failed_mount_wq;
 	}
 

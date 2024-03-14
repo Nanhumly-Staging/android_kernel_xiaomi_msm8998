@@ -176,16 +176,10 @@ msm8998-qrd-skuk-overlay.dtbo-base :=  msm8998-qrd-skuk.dtb
 
 else
 ifeq ($(CONFIG_MACH_SAGIT),y)
-dtb-$(CONFIG_ARCH_MSM8998) += \
-	sagit-msm8998-mtp.dtb \
-	sagit-msm8998-v2-mtp.dtb \
-	sagit-msm8998-v2.1-mtp.dtb
+dtb-$(CONFIG_ARCH_MSM8998) += sagit-msm8998-v2.1-mtp.dtb
 else
 ifeq ($(CONFIG_MACH_CHIRON),y)
-dtb-$(CONFIG_ARCH_MSM8998) += \
-	chiron-msm8998-mtp.dtb \
-	chiron-msm8998-v2-mtp.dtb \
-	chiron-msm8998-v2.1-mtp.dtb
+dtb-$(CONFIG_ARCH_MSM8998) += chiron-msm8998-v2.1-mtp.dtb
 else
 dtb-$(CONFIG_ARCH_MSM8998) += msm8998-sim.dtb \
 	msm8998-rumi.dtb \
