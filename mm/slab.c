@@ -2172,19 +2172,6 @@ __kmem_cache_create (struct kmem_cache *cachep, unsigned long flags)
 		else
 			size += BYTES_PER_WORD;
 	}
-#endif
-
-	kasan_cache_create(cachep, &size, &flags);
-
-	size = ALIGN(size, cachep->align);
-	/*
-	 * We should restrict the number of objects in a slab to implement
-	 * byte sized index. Refer comment on SLAB_OBJ_MIN_SIZE definition.
-	 */
-	if (FREELIST_BYTE_INDEX && size < SLAB_OBJ_MIN_SIZE)
-		size = ALIGN(SLAB_OBJ_MIN_SIZE, cachep->align);
-
-#if DEBUG
 	/*
 	 * To activate debug pagealloc, off-slab management is necessary
 	 * requirement. In early phase of initialization, small sized slab
@@ -2488,7 +2475,7 @@ static void cache_init_objs_debug(struct kmem_cache *cachep, struct page *page)
 
 	for (i = 0; i < cachep->num; i++) {
 		void *objp = index_to_obj(cachep, page, i);
-		kasan_init_slab_obj(cachep, objp);
+#if DEBUG
 		if (cachep->flags & SLAB_STORE_USER)
 			*dbg_userword(cachep, objp) = NULL;
 
@@ -2520,7 +2507,9 @@ static void cache_init_objs_debug(struct kmem_cache *cachep, struct page *page)
 			poison_obj(cachep, objp, POISON_FREE);
 			slab_kernel_map(cachep, objp, 0, 0);
 		}
-	}
+#else
+		if (cachep->ctor)
+			cachep->ctor(objp);
 #endif
 }
 

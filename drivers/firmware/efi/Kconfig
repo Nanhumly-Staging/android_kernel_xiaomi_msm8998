@@ -87,6 +87,25 @@ config EFI_RUNTIME_WRAPPERS
 config EFI_ARMSTUB
 	bool
 
+config EFI_CAPSULE_LOADER
+	tristate "EFI capsule loader"
+	depends on EFI
+	help
+	  This option exposes a loader interface "/dev/efi_capsule_loader" for
+	  users to load EFI capsules. This driver requires working runtime
+	  capsule support in the firmware, which many OEMs do not provide.
+
+	  Most users should say N.
+
+config EFI_CAPSULE_QUIRK_QUARK_CSH
+	boolean "Add support for Quark capsules with non-standard headers"
+	depends on X86 && !64BIT
+	select EFI_CAPSULE_LOADER
+	default y
+	help
+	  Add support for processing Quark X1000 EFI capsules, whose header
+	  layout deviates from the layout mandated by the UEFI specification.
+
 endmenu
 
 config UEFI_CPER

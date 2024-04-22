@@ -551,7 +551,10 @@ static void flush_to_ldisc(struct kthread_work *work)
 
 void tty_flip_buffer_push(struct tty_port *port)
 {
-	tty_schedule_flip(port);
+	struct tty_bufhead *buf = &port->buf;
+
+	tty_flip_buffer_commit(buf->tail);
+	queue_kthread_work(&port->worker, &port->buf.work);
 }
 EXPORT_SYMBOL(tty_flip_buffer_push);
 

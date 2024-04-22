@@ -286,6 +286,8 @@ static struct snd_pcm_chmap_elem *convert_chmap(int channels, unsigned int bits,
 		0 /* terminator */
 	};
 	struct snd_pcm_chmap_elem *chmap;
+	const unsigned int *maps;
+	int c;
 
 	if (channels > ARRAY_SIZE(chmap->map))
 		return NULL;
@@ -294,41 +296,26 @@ static struct snd_pcm_chmap_elem *convert_chmap(int channels, unsigned int bits,
 	if (!chmap)
 		return NULL;
 
+	maps = protocol == UAC_VERSION_2 ? uac2_maps : uac1_maps;
 	chmap->channels = channels;
+	c = 0;
 
-	if (protocol == UAC_VERSION_3) {
-		switch (channels) {
-		case 1:
-			chmap->map[0] = SNDRV_CHMAP_MONO;
-			break;
-		case 2:
-			chmap->map[0] = SNDRV_CHMAP_FL;
-			chmap->map[1] = SNDRV_CHMAP_FR;
-			break;
-		}
+	if (bits) {
+		for (; bits && *maps; maps++, bits >>= 1)
+			if (bits & 1)
+				chmap->map[c++] = *maps;
 	} else {
-		int c = 0;
-		const unsigned int *maps =
-			protocol == UAC_VERSION_2 ? uac2_maps : uac1_maps;
-
-		if (bits) {
-			for (; bits && *maps; maps++, bits >>= 1)
-				if (bits & 1)
-					chmap->map[c++] = *maps;
-		} else {
-			/*
-			 * If we're missing wChannelConfig, then guess something
-			 * to make sure the channel map is not skipped entirely
-			 */
-			if (channels == 1)
-				chmap->map[c++] = SNDRV_CHMAP_MONO;
-			else
-				for (; c < channels && *maps; maps++)
-					chmap->map[c++] = *maps;
-		}
-		for (; c < channels; c++)
-			chmap->map[c] = SNDRV_CHMAP_UNKNOWN;
+		/* If we're missing wChannelConfig, then guess something
+		    to make sure the channel map is not skipped entirely */
+		if (channels == 1)
+			chmap->map[c++] = SNDRV_CHMAP_MONO;
+		else
+			for (; c < channels && *maps; maps++)
+				chmap->map[c++] = *maps;
 	}
+
+	for (; c < channels; c++)
+		chmap->map[c] = SNDRV_CHMAP_UNKNOWN;
 
 	return chmap;
 }
@@ -526,7 +513,7 @@ int snd_usb_parse_audio_interface(struct snd_usb_audio *chip, int iface_no)
 	 * Dallas DS4201 workaround: It presents 5 altsettings, but the last
 	 * one misses syncpipe, and does not produce any sound.
 	 */
-	if (chip->usb_id == USB_ID(0x04fa, 0x4201))
+	if (chip->usb_id == USB_ID(0x04fa, 0x4201) && num >= 4)
 		num = 4;
 
 	for (i = 0; i < num; i++) {

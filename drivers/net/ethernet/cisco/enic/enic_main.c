@@ -2747,6 +2747,8 @@ static int enic_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	netdev->priv_flags |= IFF_UNICAST_FLT;
 	netdev->mtu = enic->port_mtu;
 
+	netdev->mtu	= enic->port_mtu;
+
 	err = register_netdev(netdev);
 	if (err) {
 		dev_err(dev, "Cannot register net device, aborting\n");

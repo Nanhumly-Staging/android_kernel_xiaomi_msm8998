@@ -1897,7 +1897,7 @@ unlock:
 EXPORT_SYMBOL_GPL(dev_pm_opp_of_remove_table);
 
 /* Returns opp descriptor node for a device, caller must do of_node_put() */
-struct device_node *_of_get_opp_desc_node(struct device *dev)
+struct device_node *dev_pm_opp_of_get_opp_desc_node(struct device *dev)
 {
 	/*
 	 * TODO: Support for multiple OPP tables.
@@ -1908,6 +1908,7 @@ struct device_node *_of_get_opp_desc_node(struct device *dev)
 
 	return of_parse_phandle(dev->of_node, "operating-points-v2", 0);
 }
+EXPORT_SYMBOL_GPL(dev_pm_opp_of_get_opp_desc_node);
 
 /* Initializes OPP tables based on new bindings */
 static int _of_add_opp_table_v2(struct device *dev, struct device_node *opp_np)
@@ -2036,7 +2037,7 @@ int dev_pm_opp_of_add_table(struct device *dev)
 	 * OPPs have two version of bindings now. The older one is deprecated,
 	 * try for the new binding first.
 	 */
-	opp_np = _of_get_opp_desc_node(dev);
+	opp_np = dev_pm_opp_of_get_opp_desc_node(dev);
 	if (!opp_np) {
 		/*
 		 * Try old-deprecated bindings for backward compatibility with

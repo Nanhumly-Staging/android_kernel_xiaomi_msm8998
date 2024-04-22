@@ -18,6 +18,7 @@
 #include <linux/dmaengine.h>
 #include <linux/err.h>
 #include <linux/gpio.h>
+#include <linux/gpio/consumer.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
 #include <linux/kernel.h>
@@ -54,7 +55,11 @@ struct sh_msiof_spi_priv {
 	void *rx_dma_page;
 	dma_addr_t tx_dma_addr;
 	dma_addr_t rx_dma_addr;
+	bool native_cs_inited;
+	bool native_cs_high;
 };
+
+#define MAX_SS	3	/* Maximum number of native chip selects */
 
 #define TMDR1	0x00	/* Transmit Mode Register 1 */
 #define TMDR2	0x04	/* Transmit Mode Register 2 */
@@ -522,8 +527,7 @@ static int sh_msiof_spi_setup(struct spi_device *spi)
 {
 	struct device_node	*np = spi->master->dev.of_node;
 	struct sh_msiof_spi_priv *p = spi_master_get_devdata(spi->master);
-
-	pm_runtime_get_sync(&p->pdev->dev);
+	u32 clr, set, tmp;
 
 	if (!np) {
 		/*
@@ -533,19 +537,28 @@ static int sh_msiof_spi_setup(struct spi_device *spi)
 		spi->cs_gpio = (uintptr_t)spi->controller_data;
 	}
 
-	/* Configure pins before deasserting CS */
-	sh_msiof_spi_set_pin_regs(p, !!(spi->mode & SPI_CPOL),
-				  !!(spi->mode & SPI_CPHA),
-				  !!(spi->mode & SPI_3WIRE),
-				  !!(spi->mode & SPI_LSB_FIRST),
-				  !!(spi->mode & SPI_CS_HIGH));
+	if (gpio_is_valid(spi->cs_gpio)) {
+		gpio_direction_output(spi->cs_gpio, !(spi->mode & SPI_CS_HIGH));
+		return 0;
+	}
 
-	if (spi->cs_gpio >= 0)
-		gpio_set_value(spi->cs_gpio, !(spi->mode & SPI_CS_HIGH));
+	if (p->native_cs_inited &&
+	    (p->native_cs_high == !!(spi->mode & SPI_CS_HIGH)))
+		return 0;
 
-
+	/* Configure native chip select mode/polarity early */
+	clr = MDR1_SYNCMD_MASK;
+	set = MDR1_TRMD | TMDR1_PCON | MDR1_SYNCMD_SPI;
+	if (spi->mode & SPI_CS_HIGH)
+		clr |= BIT(MDR1_SYNCAC_SHIFT);
+	else
+		set |= BIT(MDR1_SYNCAC_SHIFT);
+	pm_runtime_get_sync(&p->pdev->dev);
+	tmp = sh_msiof_read(p, TMDR1) & ~clr;
+	sh_msiof_write(p, TMDR1, tmp | set);
 	pm_runtime_put(&p->pdev->dev);
-
+	p->native_cs_high = spi->mode & SPI_CS_HIGH;
+	p->native_cs_inited = true;
 	return 0;
 }
 
@@ -554,13 +567,18 @@ static int sh_msiof_prepare_message(struct spi_master *master,
 {
 	struct sh_msiof_spi_priv *p = spi_master_get_devdata(master);
 	const struct spi_device *spi = msg->spi;
+	u32 cs_high;
+
+	if (gpio_is_valid(spi->cs_gpio))
+		cs_high = p->native_cs_high;
+	else
+		cs_high = !!(spi->mode & SPI_CS_HIGH);
 
 	/* Configure pins before asserting CS */
 	sh_msiof_spi_set_pin_regs(p, !!(spi->mode & SPI_CPOL),
 				  !!(spi->mode & SPI_CPHA),
 				  !!(spi->mode & SPI_3WIRE),
-				  !!(spi->mode & SPI_LSB_FIRST),
-				  !!(spi->mode & SPI_CS_HIGH));
+				  !!(spi->mode & SPI_LSB_FIRST), cs_high);
 	return 0;
 }
 
@@ -975,13 +993,16 @@ static const struct sh_msiof_chipdata r8a779x_data = {
 };
 
 static const struct of_device_id sh_msiof_match[] = {
-	{ .compatible = "renesas,sh-msiof",        .data = &sh_data },
 	{ .compatible = "renesas,sh-mobile-msiof", .data = &sh_data },
+	{ .compatible = "renesas,msiof-r8a7743",   .data = &r8a779x_data },
+	{ .compatible = "renesas,msiof-r8a7745",   .data = &r8a779x_data },
 	{ .compatible = "renesas,msiof-r8a7790",   .data = &r8a779x_data },
 	{ .compatible = "renesas,msiof-r8a7791",   .data = &r8a779x_data },
 	{ .compatible = "renesas,msiof-r8a7792",   .data = &r8a779x_data },
 	{ .compatible = "renesas,msiof-r8a7793",   .data = &r8a779x_data },
 	{ .compatible = "renesas,msiof-r8a7794",   .data = &r8a779x_data },
+	{ .compatible = "renesas,rcar-gen2-msiof", .data = &r8a779x_data },
+	{ .compatible = "renesas,sh-msiof",        .data = &sh_data }, // Deprecated
 	{},
 };
 MODULE_DEVICE_TABLE(of, sh_msiof_match);
@@ -1016,6 +1037,45 @@ static struct sh_msiof_spi_info *sh_msiof_spi_parse_dt(struct device *dev)
 	return NULL;
 }
 #endif
+
+static int sh_msiof_get_cs_gpios(struct sh_msiof_spi_priv *p)
+{
+	struct device *dev = &p->pdev->dev;
+	unsigned int used_ss_mask = 0;
+	unsigned int cs_gpios = 0;
+	unsigned int num_cs, i;
+	int ret;
+
+	ret = gpiod_count(dev, "cs");
+	if (ret <= 0)
+		return 0;
+
+	num_cs = max_t(unsigned int, ret, p->master->num_chipselect);
+	for (i = 0; i < num_cs; i++) {
+		struct gpio_desc *gpiod;
+
+		gpiod = devm_gpiod_get_index(dev, "cs", i, GPIOD_ASIS);
+		if (!IS_ERR(gpiod)) {
+			cs_gpios++;
+			continue;
+		}
+
+		if (PTR_ERR(gpiod) != -ENOENT)
+			return PTR_ERR(gpiod);
+
+		if (i >= MAX_SS) {
+			dev_err(dev, "Invalid native chip select %d\n", i);
+			return -EINVAL;
+		}
+		used_ss_mask |= BIT(i);
+	}
+	used_ss_mask = ffz(used_ss_mask);
+	if (cs_gpios && used_ss_mask >= MAX_SS) {
+		dev_err(dev, "No unused native chip select available\n");
+		return -EINVAL;
+	}
+	return 0;
+}
 
 static struct dma_chan *sh_msiof_request_dma_chan(struct device *dev,
 	enum dma_transfer_direction dir, unsigned int id, dma_addr_t port_addr)
@@ -1228,13 +1288,18 @@ static int sh_msiof_spi_probe(struct platform_device *pdev)
 	if (p->info->rx_fifo_override)
 		p->rx_fifo_size = p->info->rx_fifo_override;
 
+	/* Setup GPIO chip selects */
+	master->num_chipselect = p->info->num_chipselect;
+	ret = sh_msiof_get_cs_gpios(p);
+	if (ret)
+		goto err1;
+
 	/* init master code */
 	master->mode_bits = SPI_CPOL | SPI_CPHA | SPI_CS_HIGH;
 	master->mode_bits |= SPI_LSB_FIRST | SPI_3WIRE;
 	master->flags = p->chipdata->master_flags;
 	master->bus_num = pdev->id;
 	master->dev.of_node = pdev->dev.of_node;
-	master->num_chipselect = p->info->num_chipselect;
 	master->setup = sh_msiof_spi_setup;
 	master->prepare_message = sh_msiof_prepare_message;
 	master->bits_per_word_mask = SPI_BPW_RANGE_MASK(8, 32);

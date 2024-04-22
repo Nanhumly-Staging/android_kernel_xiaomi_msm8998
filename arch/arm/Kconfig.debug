@@ -840,12 +840,20 @@ choice
 		  via SCIF2 on Renesas R-Car H1 (R8A7779).
 
 	config DEBUG_RCAR_GEN2_SCIF0
-		bool "Kernel low-level debugging messages via SCIF0 on R8A7790/R8A7791/R8A7793"
-		depends on ARCH_R8A7790 || ARCH_R8A7791 || ARCH_R8A7793
+		bool "Kernel low-level debugging messages via SCIF0 on R-Car Gen2 and RZ/G1"
+		depends on ARCH_R8A7743 || ARCH_R8A7744 || ARCH_R8A7790 || \
+			ARCH_R8A7791 || ARCH_R8A7793
 		help
 		  Say Y here if you want kernel low-level debugging support
-		  via SCIF0 on Renesas R-Car H2 (R8A7790), M2-W (R8A7791), or
-		  M2-N (R8A7793).
+		  via SCIF0 on Renesas RZ/G1M (R8A7743), RZ/G1N (R8A7744),
+		  R-Car H2 (R8A7790), M2-W (R8A7791), or M2-N (R8A7793).
+
+	config DEBUG_RCAR_GEN2_SCIF1
+		bool "Kernel low-level debugging messages via SCIF1 on R8A77470"
+		depends on ARCH_R8A77470
+		help
+		  Say Y here if you want kernel low-level debugging support
+		  via SCIF1 on Renesas RZ/G1C (R8A77470).
 
 	config DEBUG_RCAR_GEN2_SCIF2
 		bool "Kernel low-level debugging messages via SCIF2 on R8A7794"
@@ -853,6 +861,20 @@ choice
 		help
 		  Say Y here if you want kernel low-level debugging support
 		  via SCIF2 on Renesas R-Car E2 (R8A7794).
+
+	config DEBUG_RCAR_GEN2_SCIF4
+		bool "Kernel low-level debugging messages via SCIF4 on R8A7745"
+		depends on ARCH_R8A7745
+		help
+		  Say Y here if you want kernel low-level debugging support
+		  via SCIF4 on Renesas RZ/G1E (R8A7745).
+
+	config DEBUG_RCAR_GEN2_SCIFA2
+		bool "Kernel low-level debugging messages via SCIFA2 on R8A7742"
+		depends on ARCH_R8A7742
+		help
+		  Say Y here if you want kernel low-level debugging support
+		  via SCIFA2 on Renesas RZ/G1H (R8A7742).
 
 	config DEBUG_RMOBILE_SCIFA0
 		bool "Kernel low-level debugging messages via SCIFA0 on R8A73A4"
@@ -1356,7 +1378,10 @@ config DEBUG_LL_INCLUDE
 	default "debug/renesas-scif.S" if DEBUG_RCAR_GEN1_SCIF0
 	default "debug/renesas-scif.S" if DEBUG_RCAR_GEN1_SCIF2
 	default "debug/renesas-scif.S" if DEBUG_RCAR_GEN2_SCIF0
+	default "debug/renesas-scif.S" if DEBUG_RCAR_GEN2_SCIF1
 	default "debug/renesas-scif.S" if DEBUG_RCAR_GEN2_SCIF2
+	default "debug/renesas-scif.S" if DEBUG_RCAR_GEN2_SCIF4
+	default "debug/renesas-scif.S" if DEBUG_RCAR_GEN2_SCIFA2
 	default "debug/renesas-scif.S" if DEBUG_RMOBILE_SCIFA0
 	default "debug/renesas-scif.S" if DEBUG_RMOBILE_SCIFA1
 	default "debug/renesas-scif.S" if DEBUG_RMOBILE_SCIFA4
@@ -1454,9 +1479,12 @@ config DEBUG_UART_PHYS
 	default 0xe4007000 if DEBUG_HIP04_UART
 	default 0xe6c40000 if DEBUG_RMOBILE_SCIFA0
 	default 0xe6c50000 if DEBUG_RMOBILE_SCIFA1
+	default 0xe6c60000 if DEBUG_RCAR_GEN2_SCIFA2
 	default 0xe6c80000 if DEBUG_RMOBILE_SCIFA4
 	default 0xe6e58000 if DEBUG_RCAR_GEN2_SCIF2
 	default 0xe6e60000 if DEBUG_RCAR_GEN2_SCIF0
+	default 0xe6e68000 if DEBUG_RCAR_GEN2_SCIF1
+	default 0xe6ee0000 if DEBUG_RCAR_GEN2_SCIF4
 	default 0xe8008000 if DEBUG_R7S72100_SCIF2
 	default 0xf0000be0 if ARCH_EBSA110
 	default 0xf040ab00 if DEBUG_BRCMSTB_UART
@@ -1489,7 +1517,9 @@ config DEBUG_UART_PHYS
 		DEBUG_NETX_UART || \
 		DEBUG_QCOM_UARTDM || DEBUG_R7S72100_SCIF2 || \
 		DEBUG_RCAR_GEN1_SCIF0 || DEBUG_RCAR_GEN1_SCIF2 || \
-		DEBUG_RCAR_GEN2_SCIF0 || DEBUG_RCAR_GEN2_SCIF2 || \
+		DEBUG_RCAR_GEN2_SCIF0 || DEBUG_RCAR_GEN2_SCIF1 || \
+		DEBUG_RCAR_GEN2_SCIF2 || DEBUG_RCAR_GEN2_SCIF4 || \
+		DEBUG_RCAR_GEN2_SCIFA2 || \
 		DEBUG_RMOBILE_SCIFA0 || DEBUG_RMOBILE_SCIFA1 || \
 		DEBUG_RMOBILE_SCIFA4 || DEBUG_S3C24XX_UART || \
 		DEBUG_BCM63XX_UART || DEBUG_ASM9260_UART || \

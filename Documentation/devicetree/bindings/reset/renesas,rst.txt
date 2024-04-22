@@ -1,0 +1,27 @@
+DT bindings for the Renesas R-Car and RZ/G Reset Controllers
+
+The R-Car and RZ/G Reset Controllers provide reset control.
+
+Required properties:
+  - compatible: Should be
+		  - "renesas,<soctype>-rst" for R-Car Gen2 and RZ/G
+		Examples with soctypes are:
+		  - "renesas,r8a7742-rst" (RZ/G1H)
+		  - "renesas,r8a7743-rst" (RZ/G1M)
+		  - "renesas,r8a7744-rst" (RZ/G1N)
+		  - "renesas,r8a7745-rst" (RZ/G1E)
+		  - "renesas,r8a77470-rst" (RZ/G1C)
+		  - "renesas,r8a7790-rst" (R-Car H2)
+		  - "renesas,r8a7791-rst" (R-Car M2-W)
+		  - "renesas,r8a7792-rst" (R-Car V2H
+		  - "renesas,r8a7793-rst" (R-Car M2-N)
+		  - "renesas,r8a7794-rst" (R-Car E2)
+  - reg: Address start and address range for the device.
+
+
+Example:
+
+	rst: reset-controller@e6160000 {
+		compatible = "renesas,r8a7743-rst";
+		reg = <0 0xe6160000 0 0x100>;
+	};

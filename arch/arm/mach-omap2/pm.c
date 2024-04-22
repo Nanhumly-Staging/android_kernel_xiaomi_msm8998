@@ -281,6 +281,9 @@ static inline void omap_init_cpufreq(void)
 
 	if (!of_have_populated_dt())
 		devinfo.name = "omap-cpufreq";
+	else if (of_machine_is_compatible("ti,am33xx") ||
+		 of_machine_is_compatible("ti,dra7"))
+		return;
 	else
 		devinfo.name = "cpufreq-dt";
 	platform_device_register_full(&devinfo);
