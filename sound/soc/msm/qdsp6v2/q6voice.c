@@ -1,5 +1,5 @@
 /*  Copyright (c) 2012-2018, 2020, The Linux Foundation. All rights reserved.
- *
+ *  Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
  * only version 2 as published by the Free Software Foundation.
@@ -17,6 +17,7 @@
 #include <linux/wait.h>
 #include <linux/mutex.h>
 #include <linux/msm_audio_ion.h>
+#include <linux/overflow.h>
 
 #include <soc/qcom/socinfo.h>
 #include <linux/qdsp6v2/apr_tal.h>
@@ -6771,7 +6772,7 @@ static int32_t qdsp_cvs_callback(struct apr_client_data *data, void *priv)
 			 VSS_ISTREAM_EVT_OOB_NOTIFY_ENC_BUFFER_READY) {
 		int ret = 0;
 		u16 cvs_handle;
-		uint32_t *cvs_voc_pkt;
+		uint32_t *cvs_voc_pkt, tot_buf_sz;
 		struct cvs_enc_buffer_consumed_cmd send_enc_buf_consumed_cmd;
 		void *apr_cvs;
 
@@ -6800,9 +6801,15 @@ static int32_t qdsp_cvs_callback(struct apr_client_data *data, void *priv)
 			VSS_ISTREAM_EVT_OOB_NOTIFY_ENC_BUFFER_CONSUMED;
 
 		cvs_voc_pkt = v->shmem_info.sh_buf.buf[1].data;
+
+                if (__unsigned_add_overflow(cvs_voc_pkt[2],
+			(uint32_t)(3 * sizeof(uint32_t)), &tot_buf_sz)) {
+			pr_err("%s: integer overflow detected\n", __func__);
+			return -EINVAL;
+		}
+
 		if (cvs_voc_pkt != NULL &&  common.mvs_info.ul_cb != NULL) {
-			if (v->shmem_info.sh_buf.buf[1].size <
-			    ((3 * sizeof(uint32_t)) + cvs_voc_pkt[2])) {
+			if (v->shmem_info.sh_buf.buf[1].size < tot_buf_sz) {
 				pr_err("%s: invalid voc pkt size\n", __func__);
 				return -EINVAL;
 			}
