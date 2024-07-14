@@ -3620,7 +3620,7 @@ static int ffs_func_setup(struct usb_function *f,
 
 	ffs_log("exit");
 
-	return creq->wLength == 0 ? USB_GADGET_DELAYED_STATUS : 0;
+	return ffs->ev.setup.wLength == 0 ? USB_GADGET_DELAYED_STATUS : 0;
 }
 
 static void ffs_func_suspend(struct usb_function *f)
