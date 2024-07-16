@@ -4928,9 +4928,8 @@ static int __init cfq_init(void)
 	ret = blkcg_policy_register(&blkcg_policy_cfq);
 	if (ret)
 		return ret;
-#else
-	cfq_group_idle = 0;
 #endif
+	cfq_group_idle = 0;
 
 	ret = -ENOMEM;
 	cfq_pool = KMEM_CACHE(cfq_queue, 0);

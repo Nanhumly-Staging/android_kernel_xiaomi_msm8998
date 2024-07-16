@@ -16,6 +16,7 @@
 #include <drm/drmP.h>
 #include <drm/drm_crtc.h>
 #include <drm/drm_crtc_helper.h>
+#include <drm/drm_panel.h>
 
 #include "rcar_du_drv.h"
 #include "rcar_du_encoder.h"
@@ -23,6 +24,7 @@
 #include "rcar_du_hdmienc.h"
 #include "rcar_du_kms.h"
 #include "rcar_du_lvdscon.h"
+#include "rcar_du_rgbcon.h"
 #include "rcar_du_lvdsenc.h"
 #include "rcar_du_vgacon.h"
 
@@ -41,6 +43,26 @@ rcar_du_connector_best_encoder(struct drm_connector *connector)
 /* -----------------------------------------------------------------------------
  * Encoder
  */
+
+static unsigned int rcar_du_encoder_count_ports(struct device_node *node)
+{
+	struct device_node *ports;
+	struct device_node *port;
+	unsigned int num_ports = 0;
+
+	ports = of_get_child_by_name(node, "ports");
+	if (!ports)
+		ports = of_node_get(node);
+
+	for_each_child_of_node(ports, port) {
+		if (of_node_name_eq(port, "port"))
+			num_ports++;
+	}
+
+	of_node_put(ports);
+
+	return num_ports;
+}
 
 static void rcar_du_encoder_disable(struct drm_encoder *encoder)
 {
@@ -127,6 +149,7 @@ int rcar_du_encoder_init(struct rcar_du_device *rcdu,
 {
 	struct rcar_du_encoder *renc;
 	struct drm_encoder *encoder;
+	struct drm_panel *panel;
 	unsigned int encoder_type;
 	int ret;
 
@@ -191,6 +214,19 @@ int rcar_du_encoder_init(struct rcar_du_device *rcdu,
 
 	case DRM_MODE_ENCODER_TMDS:
 		ret = rcar_du_hdmi_connector_init(rcdu, renc);
+		break;
+
+	case DRM_MODE_ENCODER_NONE:
+		if ((output == RCAR_DU_OUTPUT_DPAD0 ||
+		     output == RCAR_DU_OUTPUT_DPAD1) &&
+		    rcar_du_encoder_count_ports(con_node) == 1) {
+			panel = of_drm_find_panel(con_node);
+			if (!panel)
+				ret = -EPROBE_DEFER;
+			else
+				ret = rcar_du_rgb_connector_init(rcdu, renc,
+								 panel);
+		}
 		break;
 
 	default:

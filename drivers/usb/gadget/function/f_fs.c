@@ -41,6 +41,8 @@
 #include "configfs.h"
 
 #define FUNCTIONFS_MAGIC	0xa647361 /* Chosen by a honest dice roll ;) */
+#define ENDPOINT_ALLOC_MAX	(1 << 25) /* Max endpoint buffer size, 32 MB */
+
 
 #define NUM_PAGES	10 /* # of pages for ipc logging */
 
@@ -165,6 +167,11 @@ struct ffs_epfile {
 
 	struct dentry			*dentry;
 
+	char				*alloc_buffer;
+						/* P: ffs->eps_lock */
+	unsigned			alloc_len;
+						/* P: ffs->eps_lock */
+
 	char				name[5];
 
 	unsigned char			in;	/* P: ffs->eps_lock */
@@ -242,6 +249,11 @@ static int __ffs_ep0_queue_wait(struct ffs_data *ffs, char *data, size_t len)
 {
 	struct usb_request *req = ffs->ep0req;
 	int ret;
+
+	if (!req) {
+		spin_unlock_irq(&ffs->ev.waitq.lock);
+		return -EINVAL;
+	}
 
 	req->zero     = len < le16_to_cpu(ffs->ev.setup.wLength);
 
@@ -890,7 +902,9 @@ retry:
 			data_len = usb_ep_align_maybe(gadget, ep->ep, data_len);
 		spin_unlock_irq(&epfile->ffs->eps_lock);
 
-		data = kmalloc(data_len, GFP_KERNEL);
+		data = (data_len > epfile->alloc_len || io_data->aio)
+			? kmalloc(data_len, GFP_KERNEL)
+			: epfile->alloc_buffer;
 		if (unlikely(!data))
 			return -ENOMEM;
 		if (!io_data->read) {
@@ -1072,7 +1086,8 @@ retry:
 					}
 				}
 			}
-			kfree(data);
+			if (data_len > epfile->alloc_len || io_data->aio)
+				kfree(data);
 		}
 	}
 
@@ -1086,7 +1101,8 @@ error_lock:
 	spin_unlock_irq(&epfile->ffs->eps_lock);
 	mutex_unlock(&epfile->mutex);
 error:
-	kfree(data);
+	if (data_len > epfile->alloc_len || io_data->aio)
+		kfree(data);
 
 	ffs_log("exit: ret %zu", ret);
 
@@ -1268,6 +1284,9 @@ ffs_epfile_release(struct inode *inode, struct file *file)
 	smp_mb__before_atomic();
 	atomic_set(&epfile->opened, 0);
 	atomic_set(&epfile->error, 1);
+	epfile->alloc_len = 0;
+	kfree(epfile->alloc_buffer);
+	epfile->alloc_buffer = NULL;
 	ffs_data_closed(epfile->ffs);
 	file->private_data = NULL;
 
@@ -1334,6 +1353,29 @@ static long ffs_epfile_ioctl(struct file *file, unsigned code,
 			if (ret)
 				ret = -EFAULT;
 			return ret;
+		}
+		case FUNCTIONFS_ENDPOINT_ALLOC:
+		{
+			char *temp = epfile->alloc_buffer;
+			epfile->alloc_len = 0;
+			epfile->alloc_buffer = NULL;
+			spin_unlock_irq(&epfile->ffs->eps_lock);
+
+			kfree(temp);
+			if (!value)
+				return 0;
+			if (value > ENDPOINT_ALLOC_MAX)
+				return -EINVAL;
+
+			temp = kmalloc(value, GFP_KERNEL);
+			if (unlikely(!temp))
+				return -ENOMEM;
+
+			spin_lock_irq(&epfile->ffs->eps_lock);
+			epfile->alloc_buffer = temp;
+			epfile->alloc_len = value;
+			ret = 0;
+			break;
 		}
 		default:
 			ret = -ENOTTY;
@@ -1951,12 +1993,16 @@ static void functionfs_unbind(struct ffs_data *ffs)
 	ENTER();
 
 	if (!WARN_ON(!ffs->gadget)) {
+		/* dequeue before freeing ep0req */
+		usb_ep_dequeue(ffs->gadget->ep0, ffs->ep0req);
+		mutex_lock(&ffs->mutex);
 		usb_ep_free_request(ffs->gadget->ep0, ffs->ep0req);
 		ffs->ep0req = NULL;
 		ffs->gadget = NULL;
 		clear_bit(FFS_FL_BOUND, &ffs->flags);
 		ffs_log("state %d setup_state %d flag %lu gadget %pK\n",
 			ffs->state, ffs->setup_state, ffs->flags, ffs->gadget);
+		mutex_unlock(&ffs->mutex);
 		ffs_data_put(ffs);
 	}
 }
@@ -3574,7 +3620,7 @@ static int ffs_func_setup(struct usb_function *f,
 
 	ffs_log("exit");
 
-	return creq->wLength == 0 ? USB_GADGET_DELAYED_STATUS : 0;
+	return ffs->ev.setup.wLength == 0 ? USB_GADGET_DELAYED_STATUS : 0;
 }
 
 static void ffs_func_suspend(struct usb_function *f)
@@ -3972,6 +4018,7 @@ static void ffs_func_unbind(struct usb_configuration *c,
 		ffs->func = NULL;
 	}
 
+	ffs_event_add(ffs, FUNCTIONFS_UNBIND);
 	if (!--opts->refcnt)
 		functionfs_unbind(ffs);
 
@@ -3995,8 +4042,6 @@ static void ffs_func_unbind(struct usb_configuration *c,
 	func->function.hs_descriptors = NULL;
 	func->function.ss_descriptors = NULL;
 	func->interfaces_nums = NULL;
-
-	ffs_event_add(ffs, FUNCTIONFS_UNBIND);
 
 	ffs_log("exit: state %d setup_state %d flag %lu", ffs->state,
 	ffs->setup_state, ffs->flags);

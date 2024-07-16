@@ -451,6 +451,7 @@ out_free_mem:
 static int clear_wdm_read_flag(struct wdm_device *desc)
 {
 	int rv = 0;
+	int used;
 
 	clear_bit(WDM_READ, &desc->flags);
 
@@ -458,7 +459,10 @@ static int clear_wdm_read_flag(struct wdm_device *desc)
 	if (!desc->resp_count || !--desc->resp_count)
 		goto out;
 
-	set_bit(WDM_RESPONDING, &desc->flags);
+	used = test_and_set_bit(WDM_RESPONDING, &desc->flags);
+	if (used)
+		goto out;
+
 	spin_unlock_irq(&desc->iuspin);
 	rv = usb_submit_urb(desc->response, GFP_KERNEL);
 	spin_lock_irq(&desc->iuspin);
@@ -724,6 +728,7 @@ static int wdm_release(struct inode *inode, struct file *file)
 			kill_urbs(desc);
 			spin_lock_irq(&desc->iuspin);
 			desc->resp_count = 0;
+			clear_bit(WDM_RESPONDING, &desc->flags);
 			spin_unlock_irq(&desc->iuspin);
 			desc->manage_power(desc->intf, 0);
 		} else {

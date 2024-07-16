@@ -25,7 +25,6 @@
 #include <linux/delay.h>
 #include <linux/init.h>
 #include <linux/io.h>
-#include <linux/jiffies.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/moduleparam.h>
@@ -34,7 +33,6 @@
 #include <linux/platform_device.h>
 #include <linux/reboot.h>
 #include <linux/regmap.h>
-#include <linux/timer.h>
 #include <linux/watchdog.h>
 
 #define DRIVER_NAME "imx2-wdt"
@@ -62,7 +60,6 @@
 struct imx2_wdt_device {
 	struct clk *clk;
 	struct regmap *regmap;
-	struct timer_list timer;	/* Pings the watchdog when closed */
 	struct watchdog_device wdog;
 	struct notifier_block restart_handler;
 };
@@ -151,16 +148,6 @@ static int imx2_wdt_ping(struct watchdog_device *wdog)
 	return 0;
 }
 
-static void imx2_wdt_timer_ping(unsigned long arg)
-{
-	struct watchdog_device *wdog = (struct watchdog_device *)arg;
-	struct imx2_wdt_device *wdev = watchdog_get_drvdata(wdog);
-
-	/* ping it every wdog->timeout / 2 seconds to prevent reboot */
-	imx2_wdt_ping(wdog);
-	mod_timer(&wdev->timer, jiffies + wdog->timeout * HZ / 2);
-}
-
 static void __imx2_wdt_set_timeout(struct watchdog_device *wdog,
 				   unsigned int new_timeout)
 {
@@ -183,40 +170,19 @@ static int imx2_wdt_start(struct watchdog_device *wdog)
 {
 	struct imx2_wdt_device *wdev = watchdog_get_drvdata(wdog);
 
-	if (imx2_wdt_is_running(wdev)) {
-		/* delete the timer that pings the watchdog after close */
-		del_timer_sync(&wdev->timer);
+	if (imx2_wdt_is_running(wdev))
 		imx2_wdt_set_timeout(wdog, wdog->timeout);
-	} else
+	else
 		imx2_wdt_setup(wdog);
 
+	set_bit(WDOG_HW_RUNNING, &wdog->status);
+
 	return imx2_wdt_ping(wdog);
-}
-
-static int imx2_wdt_stop(struct watchdog_device *wdog)
-{
-	/*
-	 * We don't need a clk_disable, it cannot be disabled once started.
-	 * We use a timer to ping the watchdog while /dev/watchdog is closed
-	 */
-	imx2_wdt_timer_ping((unsigned long)wdog);
-	return 0;
-}
-
-static inline void imx2_wdt_ping_if_active(struct watchdog_device *wdog)
-{
-	struct imx2_wdt_device *wdev = watchdog_get_drvdata(wdog);
-
-	if (imx2_wdt_is_running(wdev)) {
-		imx2_wdt_set_timeout(wdog, wdog->timeout);
-		imx2_wdt_timer_ping((unsigned long)wdog);
-	}
 }
 
 static const struct watchdog_ops imx2_wdt_ops = {
 	.owner = THIS_MODULE,
 	.start = imx2_wdt_start,
-	.stop = imx2_wdt_stop,
 	.ping = imx2_wdt_ping,
 	.set_timeout = imx2_wdt_set_timeout,
 };
@@ -263,7 +229,7 @@ static int __init imx2_wdt_probe(struct platform_device *pdev)
 	wdog->info		= &imx2_wdt_info;
 	wdog->ops		= &imx2_wdt_ops;
 	wdog->min_timeout	= 1;
-	wdog->max_timeout	= IMX2_WDT_MAX_TIME;
+	wdog->max_hw_heartbeat_ms = IMX2_WDT_MAX_TIME * 1000;
 	wdog->parent		= &pdev->dev;
 
 	ret = clk_prepare_enable(wdev->clk);
@@ -283,9 +249,10 @@ static int __init imx2_wdt_probe(struct platform_device *pdev)
 	watchdog_set_nowayout(wdog, nowayout);
 	watchdog_init_timeout(wdog, timeout, &pdev->dev);
 
-	setup_timer(&wdev->timer, imx2_wdt_timer_ping, (unsigned long)wdog);
-
-	imx2_wdt_ping_if_active(wdog);
+	if (imx2_wdt_is_running(wdev)) {
+		imx2_wdt_set_timeout(wdog, wdog->timeout);
+		set_bit(WDOG_HW_RUNNING, &wdog->status);
+	}
 
 	/*
 	 * Disable the watchdog power down counter at boot. Otherwise the power
@@ -326,7 +293,6 @@ static int __exit imx2_wdt_remove(struct platform_device *pdev)
 	watchdog_unregister_device(wdog);
 
 	if (imx2_wdt_is_running(wdev)) {
-		del_timer_sync(&wdev->timer);
 		imx2_wdt_ping(wdog);
 		dev_crit(&pdev->dev, "Device removed: Expect reboot!\n");
 	}
@@ -340,10 +306,9 @@ static void imx2_wdt_shutdown(struct platform_device *pdev)
 
 	if (imx2_wdt_is_running(wdev)) {
 		/*
-		 * We are running, we need to delete the timer but will
-		 * give max timeout before reboot will take place
+		 * We are running, configure max timeout before reboot
+		 * will take place.
 		 */
-		del_timer_sync(&wdev->timer);
 		imx2_wdt_set_timeout(wdog, IMX2_WDT_MAX_TIME);
 		imx2_wdt_ping(wdog);
 		dev_crit(&pdev->dev, "Device shutdown: Expect reboot!\n");
@@ -365,10 +330,6 @@ static int imx2_wdt_suspend(struct device *dev)
 		 */
 		__imx2_wdt_set_timeout(wdog, IMX2_WDT_MAX_TIME);
 		imx2_wdt_ping(wdog);
-
-		/* The watchdog is not active */
-		if (!watchdog_active(wdog))
-			del_timer_sync(&wdev->timer);
 	}
 
 	clk_disable_unprepare(wdev->clk);
@@ -394,19 +355,10 @@ static int imx2_wdt_resume(struct device *dev)
 		 * watchdog again.
 		 */
 		imx2_wdt_setup(wdog);
+	}
+	if (imx2_wdt_is_running(wdev)) {
 		imx2_wdt_set_timeout(wdog, wdog->timeout);
 		imx2_wdt_ping(wdog);
-	} else if (imx2_wdt_is_running(wdev)) {
-		/* Resuming from non-deep sleep state. */
-		imx2_wdt_set_timeout(wdog, wdog->timeout);
-		imx2_wdt_ping(wdog);
-		/*
-		 * But the watchdog is not active, then start
-		 * the timer again.
-		 */
-		if (!watchdog_active(wdog))
-			mod_timer(&wdev->timer,
-				  jiffies + wdog->timeout * HZ / 2);
 	}
 
 	return 0;

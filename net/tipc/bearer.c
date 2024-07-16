@@ -58,7 +58,7 @@ static const struct nla_policy
 tipc_nl_bearer_policy[TIPC_NLA_BEARER_MAX + 1]	= {
 	[TIPC_NLA_BEARER_UNSPEC]		= { .type = NLA_UNSPEC },
 	[TIPC_NLA_BEARER_NAME] = {
-		.type = NLA_STRING,
+		.type = NLA_NUL_STRING,
 		.len = TIPC_MAX_BEARER_NAME
 	},
 	[TIPC_NLA_BEARER_PROP]			= { .type = NLA_NESTED },
@@ -989,7 +989,7 @@ int tipc_nl_media_get(struct sk_buff *skb, struct genl_info *info)
 	struct tipc_nl_msg msg;
 	struct tipc_media *media;
 	struct sk_buff *rep;
-	struct nlattr *attrs[TIPC_NLA_BEARER_MAX + 1];
+	struct nlattr *attrs[TIPC_NLA_MEDIA_MAX + 1];
 
 	if (!info->attrs[TIPC_NLA_MEDIA])
 		return -EINVAL;
@@ -1037,7 +1037,7 @@ int tipc_nl_media_set(struct sk_buff *skb, struct genl_info *info)
 	int err;
 	char *name;
 	struct tipc_media *m;
-	struct nlattr *attrs[TIPC_NLA_BEARER_MAX + 1];
+	struct nlattr *attrs[TIPC_NLA_MEDIA_MAX + 1];
 
 	if (!info->attrs[TIPC_NLA_MEDIA])
 		return -EINVAL;

@@ -876,7 +876,7 @@
 		renesas,has-lut;
 		renesas,has-sru;
 		renesas,#rpf = <5>;
-		renesas,#uds = <3>;
+		renesas,#uds = <1>;
 		renesas,#wpf = <4>;
 	};
 
@@ -891,7 +891,7 @@
 		renesas,has-lut;
 		renesas,#rpf = <4>;
 		renesas,#uds = <1>;
-		renesas,#wpf = <4>;
+		renesas,#wpf = <1>;
 	};
 
 	vsp1@fe938000 {
@@ -905,7 +905,7 @@
 		renesas,has-lut;
 		renesas,#rpf = <4>;
 		renesas,#uds = <1>;
-		renesas,#wpf = <4>;
+		renesas,#wpf = <1>;
 	};
 
 	du: display@feb00000 {
