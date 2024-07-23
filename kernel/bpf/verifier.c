@@ -539,6 +539,7 @@ static void reset_reg_range_values(struct bpf_reg_state *regs, u32 regno)
 {
 	regs[regno].min_value = BPF_REGISTER_MIN_RANGE;
 	regs[regno].max_value = BPF_REGISTER_MAX_RANGE;
+	regs[regno].value_from_signed = false;
 	regs[regno].min_align = 0;
 }
 
@@ -2127,6 +2128,7 @@ static int check_alu_op(struct bpf_verifier_env *env, struct bpf_insn *insn)
 			regs[insn->dst_reg].max_value = imm;
 			regs[insn->dst_reg].min_value = imm;
 			regs[insn->dst_reg].min_align = calc_align(imm);
+			regs[insn->dst_reg].value_from_signed = false;
 		}
 
 	} else if (opcode > BPF_END) {
