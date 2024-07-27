@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -31,7 +31,7 @@
 #include "nan_api.h"
 #include "wlan_hdd_main.h"
 #include "wlan_hdd_nan.h"
-#include "cds_concurrency.h"
+#include <qca_vendor.h>
 
 /**
  * __wlan_hdd_cfg80211_nan_request() - cfg80211 NAN request handler
@@ -55,38 +55,23 @@ static int __wlan_hdd_cfg80211_nan_request(struct wiphy *wiphy,
 	tNanRequestReq nan_req;
 	QDF_STATUS status;
 	int ret_val;
-	hdd_context_t *hdd_ctx = wiphy_priv(wiphy);
+	struct hdd_context *hdd_ctx = wiphy_priv(wiphy);
 
-	ENTER_DEV(wdev->netdev);
+	hdd_enter_dev(wdev->netdev);
 
 	ret_val = wlan_hdd_validate_context(hdd_ctx);
 	if (ret_val)
 		return ret_val;
 
 	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam()) {
-		hdd_err("Command not allowed in FTM mode");
+		hdd_err_rl("Command not allowed in FTM mode");
 		return -EPERM;
 	}
 
 	if (!hdd_ctx->config->enable_nan_support) {
-		hdd_err("NaN support is not enabled in INI");
+		hdd_err_rl("NaN support is not enabled in INI");
 		return -EPERM;
 	}
-
-	/*
-	 * Note: NAN commands in DBS hw_mode are not supported.
-	 *
-	 * When STA + SAP is operating in DBS mode and if the SAP is stopped,
-	 * then after 10 seconds dbs opportunistic timer handler is invoked
-	 * to move hw_mode to single mac.
-	 *
-	 * Meanwhile in this 10 seconds window, if there is NAN enable request,
-	 * then firmware rejects it, since hw_mode is in DBS.
-	 *
-	 * Therefore, when NAN request is issued try to change hw_mode to
-	 * single MAC.
-	 */
-	cds_check_and_stop_opportunistic_timer();
 
 	nan_req.request_data_len = data_len;
 	nan_req.request_data = data;
@@ -125,32 +110,11 @@ int wlan_hdd_cfg80211_nan_request(struct wiphy *wiphy,
 	return ret;
 }
 
-/**
- * wlan_hdd_cfg80211_nan_callback() - cfg80211 NAN event handler
- * @ctx: global HDD context
- * @msg: NAN event message
- *
- * This is a callback function and it gets called when we need to report
- * a nan event to userspace.  The wlan host driver simply encapsulates the
- * event into a netlink payload and then forwards it to userspace via a
- * cfg80211 vendor event.
- *
- * Return: nothing
- */
-void wlan_hdd_cfg80211_nan_callback(void *ctx, tSirNanEvent *msg)
+static void
+wlan_hdd_cfg80211_send_nan_msg(struct hdd_context *hdd_ctx,
+			       tSirNanEvent *msg)
 {
-	hdd_context_t *hdd_ctx = ctx;
 	struct sk_buff *vendor_event;
-	int status;
-
-	if (NULL == msg) {
-		hdd_err("msg received here is null");
-		return;
-	}
-
-	status = wlan_hdd_validate_context(hdd_ctx);
-	if (status)
-		return;
 
 	vendor_event =
 		cfg80211_vendor_event_alloc(hdd_ctx->wiphy,
@@ -170,4 +134,45 @@ void wlan_hdd_cfg80211_nan_callback(void *ctx, tSirNanEvent *msg)
 		return;
 	}
 	cfg80211_vendor_event(vendor_event, GFP_KERNEL);
+}
+
+void wlan_hdd_cfg80211_nan_callback(hdd_handle_t hdd_handle, tSirNanEvent *msg)
+{
+	struct hdd_context *hdd_ctx = hdd_handle_to_context(hdd_handle);
+	int status;
+
+	if (!msg) {
+		hdd_err("msg received here is null");
+		return;
+	}
+
+	status = wlan_hdd_validate_context(hdd_ctx);
+	if (status)
+		return;
+
+	wlan_hdd_cfg80211_send_nan_msg(hdd_ctx, msg);
+}
+
+QDF_STATUS hdd_nan_disable_ind_to_userspace(struct hdd_context *hdd_ctx)
+{
+	tSirNanEvent *disable_ind;
+	struct nan_disable_ind_msg msg = {
+		.msg_hdr.msg_id = NAN_MSG_ID_DISABLE_INDICATION,
+		.reason = 0, /* success */ };
+
+	disable_ind = qdf_mem_malloc(sizeof(tSirNanEvent) +
+				     sizeof(msg));
+	if (!disable_ind) {
+		hdd_err("failed to alloc disable_ind");
+		return QDF_STATUS_E_NOMEM;
+	}
+	disable_ind->event_data_len = sizeof(msg);
+	qdf_mem_copy(disable_ind->event_data, &msg,
+		     disable_ind->event_data_len);
+
+	wlan_hdd_cfg80211_send_nan_msg(hdd_ctx, disable_ind);
+	hdd_err("NAN disable event sent");
+	qdf_mem_free(disable_ind);
+
+	return QDF_STATUS_SUCCESS;
 }

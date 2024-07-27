@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018, 2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -37,7 +37,7 @@ static struct ll_stats_buf ll_stats;
 
 static DEFINE_MUTEX(llstats_mutex);
 
-void hdd_debugfs_process_iface_stats(hdd_adapter_t *adapter,
+void hdd_debugfs_process_iface_stats(struct hdd_adapter *adapter,
 		void *data, uint32_t num_peers)
 {
 	tpSirWifiIfaceStat iface_stat;
@@ -50,7 +50,7 @@ void hdd_debugfs_process_iface_stats(hdd_adapter_t *adapter,
 	ssize_t len = 0;
 	uint8_t *buffer;
 
-	ENTER();
+	hdd_enter();
 
 	mutex_lock(&llstats_mutex);
 	if (!ll_stats.result) {
@@ -148,10 +148,10 @@ void hdd_debugfs_process_iface_stats(hdd_adapter_t *adapter,
 
 	ll_stats.len += len;
 	mutex_unlock(&llstats_mutex);
-	EXIT();
+	hdd_exit();
 }
 
-void hdd_debugfs_process_peer_stats(hdd_adapter_t *adapter, void *data)
+void hdd_debugfs_process_peer_stats(struct hdd_adapter *adapter, void *data)
 {
 	tpSirWifiPeerStat peer_stat;
 	tpSirWifiPeerInfo peer_info;
@@ -160,7 +160,7 @@ void hdd_debugfs_process_peer_stats(hdd_adapter_t *adapter, void *data)
 	ssize_t len = 0;
 	uint8_t *buffer;
 
-	ENTER();
+	hdd_enter();
 
 	mutex_lock(&llstats_mutex);
 	if (!ll_stats.result) {
@@ -212,11 +212,11 @@ void hdd_debugfs_process_peer_stats(hdd_adapter_t *adapter, void *data)
 	}
 	ll_stats.len += len;
 	mutex_unlock(&llstats_mutex);
-	EXIT();
+	hdd_exit();
 
 }
 
-void hdd_debugfs_process_radio_stats(hdd_adapter_t *adapter,
+void hdd_debugfs_process_radio_stats(struct hdd_adapter *adapter,
 		uint32_t more_data, void *data, uint32_t num_radio)
 {
 	int i, j;
@@ -225,7 +225,7 @@ void hdd_debugfs_process_radio_stats(hdd_adapter_t *adapter,
 	tSirWifiRadioStat *radio_stat = (tpSirWifiRadioStat) data;
 	tSirWifiChannelStats *chan_stat;
 
-	ENTER();
+	hdd_enter();
 
 	mutex_lock(&llstats_mutex);
 	if (!ll_stats.result) {
@@ -286,13 +286,24 @@ void hdd_debugfs_process_radio_stats(hdd_adapter_t *adapter,
 				chan_stat->channel.centerFreq0,
 				chan_stat->channel.centerFreq1,
 				chan_stat->onTime, chan_stat->ccaBusyTime);
+
+			if (adapter->hdd_ctx &&
+			    adapter->hdd_ctx->ll_stats_per_chan_rx_tx_time) {
+				buffer += len;
+				ll_stats.len += len;
+				len = scnprintf(
+					buffer,
+					DEBUGFS_LLSTATS_BUF_SIZE - ll_stats.len,
+					", tx_time: %u, rx_time: %u",
+					chan_stat->tx_time, chan_stat->rx_time);
+			}
 		}
 
 		radio_stat++;
 	}
 	ll_stats.len += len;
 	mutex_unlock(&llstats_mutex);
-	EXIT();
+	hdd_exit();
 }
 
 static inline void wlan_hdd_llstats_free_buf(void)
@@ -339,7 +350,7 @@ static ssize_t hdd_debugfs_stats_update(char __user *buf, size_t count,
 {
 	ssize_t ret_cnt;
 
-	ENTER();
+	hdd_enter();
 	mutex_lock(&llstats_mutex);
 	if (!ll_stats.result) {
 		mutex_unlock(&llstats_mutex);
@@ -352,7 +363,7 @@ static ssize_t hdd_debugfs_stats_update(char __user *buf, size_t count,
 	mutex_unlock(&llstats_mutex);
 	hdd_debug("LL stats read req: count: %zu, pos: %lld", count, *pos);
 
-	EXIT();
+	hdd_exit();
 	return ret_cnt;
 }
 
@@ -368,13 +379,13 @@ static ssize_t hdd_debugfs_stats_update(char __user *buf, size_t count,
 static ssize_t __wlan_hdd_read_ll_stats_debugfs(struct file *file,
 			char __user *buf, size_t count, loff_t *pos)
 {
-	hdd_adapter_t *adapter;
-	hdd_context_t *hdd_ctx;
+	struct hdd_adapter *adapter;
+	struct hdd_context *hdd_ctx;
 	ssize_t ret = 0;
 
-	ENTER();
+	hdd_enter();
 
-	adapter = (hdd_adapter_t *)file->private_data;
+	adapter = (struct hdd_adapter *)file->private_data;
 	if ((!adapter) || (WLAN_HDD_ADAPTER_MAGIC != adapter->magic)) {
 		hdd_err("Invalid adapter or adapter has invalid magic");
 		return -EINVAL;
@@ -387,9 +398,9 @@ static ssize_t __wlan_hdd_read_ll_stats_debugfs(struct file *file,
 
 	/* All the events are received and buffer is populated */
 	ret = hdd_debugfs_stats_update(buf, count, pos);
-	hdd_info("%zu characters written into debugfs", ret);
+	hdd_debug("%zu characters written into debugfs", ret);
 
-	EXIT();
+	hdd_exit();
 	return ret;
 
 }
@@ -426,16 +437,16 @@ static ssize_t wlan_hdd_read_ll_stats_debugfs(struct file *file,
 static int __wlan_hdd_open_ll_stats_debugfs(struct inode *inode,
 					    struct file *file)
 {
-	hdd_adapter_t *adapter;
-	hdd_context_t *hdd_ctx;
+	struct hdd_adapter *adapter;
+	struct hdd_context *hdd_ctx;
 	int errno;
 
-	ENTER();
+	hdd_enter();
 
 	if (inode->i_private)
 		file->private_data = inode->i_private;
 
-	adapter = (hdd_adapter_t *)file->private_data;
+	adapter = (struct hdd_adapter *)file->private_data;
 	errno = hdd_validate_adapter(adapter);
 	if (errno)
 		return errno;
@@ -451,16 +462,20 @@ static int __wlan_hdd_open_ll_stats_debugfs(struct inode *inode,
 
 	errno = wlan_hdd_ll_stats_get(adapter, DEBUGFS_LLSTATS_REQID,
 				      DEBUGFS_LLSTATS_REQMASK);
-	if (errno) {
-		wlan_hdd_llstats_free_buf();
-		return errno;
-	}
+	if (errno)
+		goto free_buf;
 
-	EXIT();
+	hdd_exit();
 
 	return 0;
-}
 
+free_buf:
+	wlan_hdd_llstats_free_buf();
+
+	hdd_exit();
+
+	return errno;
+}
 
 /**
  * wlan_hdd_open_ll_stats_debugfs() - SSR wrapper function to save private
@@ -492,16 +507,16 @@ static int wlan_hdd_open_ll_stats_debugfs(struct inode *inode,
 static int __wlan_hdd_release_ll_stats_debugfs(struct inode *inode,
 					    struct file *file)
 {
-	hdd_adapter_t *adapter;
-	hdd_context_t *hdd_ctx;
+	struct hdd_adapter *adapter;
+	struct hdd_context *hdd_ctx;
 	int ret;
 
-	ENTER();
+	hdd_enter();
 
 	if (inode->i_private)
 		file->private_data = inode->i_private;
 
-	adapter = (hdd_adapter_t *)file->private_data;
+	adapter = (struct hdd_adapter *)file->private_data;
 	if ((NULL == adapter) || (WLAN_HDD_ADAPTER_MAGIC != adapter->magic)) {
 		hdd_err("Invalid adapter or adapter has invalid magic");
 		return -EINVAL;
@@ -514,7 +529,7 @@ static int __wlan_hdd_release_ll_stats_debugfs(struct inode *inode,
 
 	wlan_hdd_llstats_free_buf();
 
-	EXIT();
+	hdd_exit();
 	return 0;
 }
 
@@ -546,7 +561,7 @@ static const struct file_operations fops_ll_stats_debugfs = {
 	.llseek = default_llseek,
 };
 
-int wlan_hdd_create_ll_stats_file(hdd_adapter_t *adapter)
+int wlan_hdd_create_ll_stats_file(struct hdd_adapter *adapter)
 {
 	if (!debugfs_create_file("ll_stats", 0444, adapter->debugfs_phy,
 				 adapter, &fops_ll_stats_debugfs))

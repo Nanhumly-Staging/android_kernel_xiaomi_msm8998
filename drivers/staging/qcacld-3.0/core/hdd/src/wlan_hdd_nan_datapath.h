@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2016-2018 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2016-2018, 2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -25,10 +24,10 @@
 #ifndef __WLAN_HDD_NAN_DATAPATH_H
 #define __WLAN_HDD_NAN_DATAPATH_H
 
-struct hdd_context_s;
+struct hdd_context;
 struct hdd_tgt_cfg;
 struct hdd_config;
-struct hdd_adapter_s;
+struct hdd_adapter;
 struct wireless_dev;
 
 /* NAN Social channels */
@@ -36,120 +35,102 @@ struct wireless_dev;
 #define NAN_SOCIAL_CHANNEL_5GHZ_LOWER_BAND 44
 #define NAN_SOCIAL_CHANNEL_5GHZ_UPPER_BAND 149
 
-#define NDP_PMK_LEN 32
-#define NDP_SCID_BUF_LEN 256
-#define NDP_NUM_INSTANCE_ID 255
-
-#define NAN_MAX_SERVICE_NAME_LEN 255
-#define NAN_PASSPHRASE_MIN_LEN 8
-#define NAN_PASSPHRASE_MAX_LEN 63
-
 #define NDP_BROADCAST_STAID           (0)
-
-#define NAN_CH_INFO_MAX_LEN \
-	(SIR_NAN_CH_INFO_MAX_CHANNELS * sizeof(uint32_t) * 2)
 
 #ifdef WLAN_FEATURE_NAN_DATAPATH
 #define WLAN_HDD_IS_NDI(adapter) ((adapter)->device_mode == QDF_NDI_MODE)
 
 #define WLAN_HDD_IS_NDI_CONNECTED(adapter) ( \
 	eConnectionState_NdiConnected ==\
-		(adapter)->sessionCtx.station.conn_info.connState)
+		(adapter)->session.station.conn_info.connState)
 #else
 #define WLAN_HDD_IS_NDI(adapter)	(false)
 #define WLAN_HDD_IS_NDI_CONNECTED(adapter) (false)
 #endif /* WLAN_FEATURE_NAN_DATAPATH */
 
+#define NAN_MSG_ID_DISABLE_INDICATION 26
 /**
- * enum qca_wlan_vendor_attr_ndp_cfg_security - vendor security attribute
- * @QCA_WLAN_VENDOR_ATTR_NDP_SECURITY_ENABLE: Security enabled
+ * struct nan_msg_hdr - NAN msg header to be sent to userspace
+ * @msg_version: NAN msg version
+ * @msg_id: NAN message id
+ * @reserved: Reserved for now to avoid padding
+ *
+ * 8-byte control message header used by NAN
+ *
  */
-enum qca_wlan_vendor_attr_ndp_cfg_security {
-	QCA_WLAN_VENDOR_ATTR_NDP_SECURITY_ENABLE = 1,
+struct nan_msg_hdr {
+	uint16_t msg_version:4;
+	uint16_t msg_id:12;
+	uint16_t reserved[3];
 };
 
-/**
- * enum qca_wlan_vendor_attr_ndp_qos - vendor qos attribute
- * @QCA_WLAN_VENDOR_ATTR_NDP_QOS_CONFIG: NDP QoS configuration
- */
-enum qca_wlan_vendor_attr_ndp_qos {
-	QCA_WLAN_VENDOR_ATTR_NDP_QOS_CONFIG = 1,
-};
-
-/** enum nan_datapath_state - NAN datapath states
- * @NAN_DATA_NDI_CREATING_STATE: NDI create is in progress
- * @NAN_DATA_NDI_CREATED_STATE: NDI successfully crated
- * @NAN_DATA_NDI_DELETING_STATE: NDI delete is in progress
- * @NAN_DATA_NDI_DELETED_STATE: NDI delete is in progress
- * @NAN_DATA_PEER_CREATE_STATE: Peer create is in progress
- * @NAN_DATA_PEER_DELETE_STATE: Peer delete is in progrss
- * @NAN_DATA_CONNECTING_STATE: Data connection in progress
- * @NAN_DATA_CONNECTED_STATE: Data connection successful
- * @NAN_DATA_END_STATE: NDP end is in progress
- * @NAN_DATA_DISCONNECTED_STATE: NDP is in disconnected state
- */
-enum nan_datapath_state {
-	NAN_DATA_NDI_CREATING_STATE = 0,
-	NAN_DATA_NDI_CREATED_STATE = 1,
-	NAN_DATA_NDI_DELETING_STATE = 2,
-	NAN_DATA_NDI_DELETED_STATE = 3,
-	NAN_DATA_PEER_CREATE_STATE = 4,
-	NAN_DATA_PEER_DELETE_STATE = 5,
-	NAN_DATA_CONNECTING_STATE = 6,
-	NAN_DATA_CONNECTED_STATE = 7,
-	NAN_DATA_END_STATE = 8,
-	NAN_DATA_DISCONNECTED_STATE = 9,
-};
+#define NAN_STATUS_SUCCESS 0
+#define NAN_STATUS_UNSUPPORTED_CONCURRENCY_NAN_DISABLED 12
 
 /**
- * struct nan_datapath_ctx - context for nan data path
- * @state: Current state of NDP
- * @active_ndp_sessions: active ndp sessions per adapter
- * @active_ndp_peers: number of active ndp peers
- * @ndp_create_transaction_id: transaction id for create req
- * @ndp_delete_transaction_id: transaction id for delete req
- * @ndp_key_installed: NDP security key installed
- * @ndp_enc_key: NDP encryption key info
- * @ndp_debug_state: debug state info
- * @ndi_delete_rsp_reason: reason code for ndi_delete rsp
- * @ndi_delete_rsp_status: status for ndi_delete rsp
+ * struct nan_disable_ind_msg - NAN disable ind params
+ * @msg_hdr: NAN msg header
+ * @reason: NAN disable reason, below are valid reasons for NAN disable ind
+ *          NAN_STATUS_SUCCESS
+ *          NAN_STATUS_UNSUPPORTED_CONCURRENCY_NAN_DISABLED
+ * @reserved: Reserved for now to avoid padding
  */
-struct nan_datapath_ctx {
-	enum nan_datapath_state state;
-	/* idx in following array should follow conn_info.peerMacAddress */
-	uint32_t active_ndp_sessions[MAX_PEERS];
-	uint32_t active_ndp_peers;
-	uint16_t ndp_create_transaction_id;
-	uint16_t ndp_delete_transaction_id;
-	bool ndp_key_installed;
-	tCsrRoamSetKey ndp_enc_key;
-	uint32_t ndp_debug_state;
-	uint32_t ndi_delete_rsp_reason;
-	uint32_t ndi_delete_rsp_status;
+struct nan_disable_ind_msg {
+	struct nan_msg_hdr msg_hdr;
+	uint16_t reason;
+	uint16_t reserved;
 };
-
 #ifdef WLAN_FEATURE_NAN_DATAPATH
-void hdd_ndp_print_ini_config(struct hdd_context_s *hdd_ctx);
-void hdd_nan_datapath_target_config(struct hdd_context_s *hdd_ctx,
+void hdd_ndp_print_ini_config(struct hdd_context *hdd_ctx);
+void hdd_nan_datapath_target_config(struct hdd_context *hdd_ctx,
 						struct wma_tgt_cfg *cfg);
-void hdd_ndp_event_handler(struct hdd_adapter_s *adapter,
-	tCsrRoamInfo *roam_info, uint32_t roam_id, eRoamCmdStatus roam_status,
-	eCsrRoamResult roam_result);
+void hdd_ndp_event_handler(struct hdd_adapter *adapter,
+			   struct csr_roam_info *roam_info,
+			   uint32_t roam_id, eRoamCmdStatus roam_status,
+			   eCsrRoamResult roam_result);
 int wlan_hdd_cfg80211_process_ndp_cmd(struct wiphy *wiphy,
 	struct wireless_dev *wdev, const void *data, int data_len);
-int hdd_init_nan_data_mode(struct hdd_adapter_s *adapter);
-void hdd_ndp_session_end_handler(hdd_adapter_t *adapter);
+int hdd_init_nan_data_mode(struct hdd_adapter *adapter);
+void hdd_ndp_session_end_handler(struct hdd_adapter *adapter);
+
+/**
+ * hdd_cleanup_ndi(): Cleanup NDI state/resources
+ * @hdd_ctx: HDD context
+ * @adapter: Pointer to the NDI adapter
+ *
+ * Cleanup NDI state/resources allocated when NDPs are created on that NDI.
+ *
+ * Return: None
+ */
+
+void hdd_cleanup_ndi(struct hdd_context *hdd_ctx,
+		     struct hdd_adapter *adapter);
+
+/**
+ * hdd_ndi_start(): Start NDI adapter and create NDI vdev
+ * @iface_name: NDI interface name
+ * @transaction_id: Transaction id given by framework to start the NDI.
+ *                  Framework expects this in the immediate response when
+ *                  the NDI is created by it.
+ *
+ * Create NDI mode interface and vdev.
+ *
+ * Return: 0 upon success
+ */
+int hdd_ndi_start(char *iface_name, uint16_t transaction_id);
 #else
-static inline void hdd_ndp_print_ini_config(struct hdd_context_s *hdd_ctx)
+static inline void hdd_ndp_print_ini_config(struct hdd_context *hdd_ctx)
 {
 }
-static inline void hdd_nan_datapath_target_config(struct hdd_context_s *hdd_ctx,
+static inline void hdd_nan_datapath_target_config(struct hdd_context *hdd_ctx,
 						struct wma_tgt_cfg *cfg)
 {
 }
-static inline void hdd_ndp_event_handler(struct hdd_adapter_s *adapter,
-	tCsrRoamInfo *roam_info, uint32_t roam_id, eRoamCmdStatus roam_status,
-	eCsrRoamResult roam_result)
+static inline void hdd_ndp_event_handler(struct hdd_adapter *adapter,
+					 struct csr_roam_info *roam_info,
+					 uint32_t roam_id,
+					 eRoamCmdStatus roam_status,
+					 eCsrRoamResult roam_result)
 {
 }
 static inline int wlan_hdd_cfg80211_process_ndp_cmd(struct wiphy *wiphy,
@@ -157,13 +138,37 @@ static inline int wlan_hdd_cfg80211_process_ndp_cmd(struct wiphy *wiphy,
 {
 	return 0;
 }
-static inline int hdd_init_nan_data_mode(struct hdd_adapter_s *adapter)
+static inline int hdd_init_nan_data_mode(struct hdd_adapter *adapter)
 {
 	return 0;
 }
-static inline void hdd_ndp_session_end_handler(hdd_adapter_t *adapter)
+static inline void hdd_ndp_session_end_handler(struct hdd_adapter *adapter)
 {
+}
+
+static inline void hdd_cleanup_ndi(struct hdd_context *hdd_ctx,
+				   struct hdd_adapter *adapter)
+{
+}
+
+static inline int hdd_ndi_start(char *iface_name, uint16_t transaction_id)
+{
+	return 0;
 }
 #endif /* WLAN_FEATURE_NAN_DATAPATH */
 
+enum nan_datapath_state;
+struct nan_datapath_inf_create_rsp;
+
+int hdd_ndi_open(char *iface_name);
+int hdd_ndi_delete(uint8_t vdev_id, char *iface_name, uint16_t transaction_id);
+void hdd_ndi_close(uint8_t vdev_id);
+void hdd_ndi_drv_ndi_create_rsp_handler(uint8_t vdev_id,
+			       struct nan_datapath_inf_create_rsp *ndi_rsp);
+void hdd_ndi_drv_ndi_delete_rsp_handler(uint8_t vdev_id);
+int hdd_ndp_get_peer_idx(uint8_t vdev_id, struct qdf_mac_addr *addr);
+int hdd_ndp_new_peer_handler(uint8_t vdev_id, uint16_t sta_id,
+			struct qdf_mac_addr *peer_mac_addr, bool fist_peer);
+void hdd_ndp_peer_departed_handler(uint8_t vdev_id, uint16_t sta_id,
+			struct qdf_mac_addr *peer_mac_addr, bool last_peer);
 #endif /* __WLAN_HDD_NAN_DATAPATH_H */

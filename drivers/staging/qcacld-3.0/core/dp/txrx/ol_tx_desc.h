@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014-2017, 2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011, 2014-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -89,7 +89,7 @@ ol_tx_desc_hl(
 
 
 /**
- * @brief Use a tx descriptor ID to find the corresponding desriptor object.
+ * @brief Use a tx descriptor ID to find the corresponding descriptor object.
  *
  * @param pdev - the data physical device sending the data
  * @param tx_desc_id - the ID of the descriptor in question
@@ -107,7 +107,7 @@ static inline struct ol_tx_desc_t *ol_tx_desc_find(
 }
 
 /**
- * @brief Use a tx descriptor ID to find the corresponding desriptor object
+ * @brief Use a tx descriptor ID to find the corresponding descriptor object
  *    and add sanity check.
  *
  * @param pdev - the data physical device sending the data
@@ -159,7 +159,7 @@ ol_tx_desc_find_check(struct ol_txrx_pdev_t *pdev, u_int16_t tx_desc_id)
  *  Free a batch of "standard" tx descriptors and their tx frames.
  *  Free each tx descriptor, by returning it to the freelist.
  *  Unmap each netbuf, and free the netbufs as a batch.
- *  Irregular tx frames like TSO or managment frames that require
+ *  Irregular tx frames like TSO or management frames that require
  *  special handling are processed by the ol_tx_desc_frame_free_nonstd
  *  function rather than this function.
  *
@@ -213,7 +213,7 @@ ol_tx_desc_id(struct ol_txrx_pdev_t *pdev, struct ol_tx_desc_t *tx_desc)
  * @return void pointer to the beacon header for the given vdev
  */
 
-void *ol_ath_get_bcn_header(ol_pdev_handle pdev, A_UINT32 vdev_id);
+void *ol_ath_get_bcn_header(struct cdp_cfg *cfg_pdev, A_UINT32 vdev_id);
 
 /*
  * @brief Free a tx descriptor, without freeing the matching frame.
@@ -239,20 +239,7 @@ void ol_tso_num_seg_free(struct ol_txrx_pdev_t *pdev,
 void ol_free_remaining_tso_segs(ol_txrx_vdev_handle vdev,
 				struct ol_txrx_msdu_info_t *msdu_info,
 				bool is_tso_seg_mapping_done);
-/**
- * collect_tso_frags() - collect all TSO fragments
- * @pdev: The txrx pdev sending the data
- * @tso_seg: The TSO segment element to be checked
- * @netbuf: Target netbuf used to store all data from TSO fragments
- *
- * This function collects data contained in all TSO fragments related
- * to a certain TSO segment element and put them into a single netbuf.
- *
- * Return: true if TSO fragments are really collected; false otherwise
- */
-bool collect_tso_frags(struct ol_txrx_pdev_t *pdev,
-		       struct qdf_tso_seg_elem_t *tso_seg,
-		       qdf_nbuf_t netbuf);
+
 #else
 #define ol_tso_alloc_segment(pdev) /*no-op*/
 #define ol_tso_free_segment(pdev, tso_seg) /*no-op*/
@@ -260,13 +247,6 @@ bool collect_tso_frags(struct ol_txrx_pdev_t *pdev,
 #define ol_tso_num_seg_free(pdev, tso_num_seg) /*no-op*/
 /*no-op*/
 #define ol_free_remaining_tso_segs(vdev, msdu_info, is_tso_seg_mapping_done)
-static inline
-bool collect_tso_frags(struct ol_txrx_pdev_t *dev,
-		       struct qdf_tso_seg_elem_t *tso_seg,
-		       qdf_nbuf_t netbuf)
-{
-	return false;
-}
 #endif
 
 /**
@@ -309,6 +289,17 @@ void ol_tx_put_desc_global_pool(struct ol_txrx_pdev_t *pdev,
 
 
 #ifdef QCA_LL_TX_FLOW_CONTROL_V2
+
+#ifdef QCA_LL_TX_FLOW_CONTROL_RESIZE
+int ol_tx_distribute_descs_to_deficient_pools_from_global_pool(void);
+#else
+static inline
+int ol_tx_distribute_descs_to_deficient_pools_from_global_pool(void)
+{
+	return 0;
+}
+#endif
+
 int ol_tx_free_invalid_flow_pool(struct ol_tx_flow_pool_t *pool);
 /**
  * ol_tx_get_desc_flow_pool() - get descriptor from flow pool
