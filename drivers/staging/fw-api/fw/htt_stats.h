@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -24,7 +24,8 @@
 #ifndef __HTT_STATS_H__
 #define __HTT_STATS_H__
 
-#include <htt.h>
+#include <htt_deps.h> /* A_UINT32 */
+#include <htt_common.h>
 
 /*
  * htt_dbg_ext_stats_type -
@@ -337,6 +338,60 @@ enum htt_dbg_ext_stats_type {
      */
     HTT_DBG_EXT_STATS_PDEV_RX_RATE_EXT    = 30,
 
+    /* HTT_DBG_EXT_STATS_PDEV_TX_RATE_TXBF
+     * PARAMS:
+     *   - No Params
+     * RESP MSG:
+     *   - htt_tx_pdev_rate_txbf_stats_t
+     */
+    HTT_DBG_EXT_STATS_PDEV_TX_RATE_TXBF   = 31,
+
+    /* HTT_DBG_EXT_STATS_TXBF_OFDMA
+     */
+    HTT_DBG_EXT_STATS_TXBF_OFDMA          = 32,
+
+    /* HTT_DBG_EXT_STA_11AX_UL_STATS
+     * PARAMS:
+     *   - No Params
+     * RESP MSG:
+     *   - htt_sta_11ax_ul_stats
+     */
+    HTT_DBG_EXT_STA_11AX_UL_STATS = 33,
+
+    /* HTT_DBG_EXT_VDEV_RTT_RESP_STATS
+     * PARAMS:
+     *   - config_param0:
+     *      [Bit7 : Bit0]   vdev_id:8
+     *      [Bit31 : Bit8]  rsvd:24
+     * RESP MSG:
+     *   -
+     */
+    HTT_DBG_EXT_VDEV_RTT_RESP_STATS = 34,
+
+    /* HTT_DBG_EXT_PKTLOG_AND_HTT_RING_STATS
+     * PARAMS:
+     *   - No Params
+     * RESP MSG:
+     *   - htt_pktlog_and_htt_ring_stats_t
+     */
+    HTT_DBG_EXT_PKTLOG_AND_HTT_RING_STATS = 35,
+
+    /* HTT_DBG_EXT_STATS_DLPAGER_STATS
+     * PARAMS:
+     *
+     * RESP MSG:
+     *   - htt_dlpager_stats_t
+     */
+    HTT_DBG_EXT_STATS_DLPAGER_STATS = 36,
+
+    /* HTT_DBG_EXT_PHY_COUNTERS_AND_PHY_STATS
+     * PARAMS:
+     *   - No Params
+     * RESP MSG:
+     *   - htt_phy_counters_and_phy_stats_t
+     */
+    HTT_DBG_EXT_PHY_COUNTERS_AND_PHY_STATS = 37,
+
 
     /* keep this last */
     HTT_DBG_NUM_EXT_STATS = 256,
@@ -465,9 +520,52 @@ typedef enum {
     HTT_STATS_SCHED_TXQ_SUPERCYCLE_TRIGGER_TAG     = 100, /* htt_sched_txq_supercycle_triggers_tlv_v */
     HTT_STATS_PEER_CTRL_PATH_TXRX_STATS_TAG        = 101, /* htt_peer_ctrl_path_txrx_stats_tlv */
     HTT_STATS_PDEV_CTRL_PATH_TX_STATS_TAG          = 102, /* htt_pdev_ctrl_path_tx_stats_tlv */
+    HTT_STATS_RX_PDEV_RATE_EXT_STATS_TAG           = 103, /* htt_rx_pdev_rate_ext_stats_tlv */
+    HTT_STATS_TX_PDEV_DL_MU_MIMO_STATS_TAG         = 104, /* htt_tx_pdev_dl_mu_mimo_sch_stats_tlv */
+    HTT_STATS_TX_PDEV_UL_MU_MIMO_STATS_TAG         = 105, /* htt_tx_pdev_ul_mu_mimo_sch_stats_tlv */
+    HTT_STATS_TX_PDEV_DL_MU_OFDMA_STATS_TAG        = 106, /* htt_tx_pdev_dl_mu_ofdma_sch_stats_tlv */
+    HTT_STATS_TX_PDEV_UL_MU_OFDMA_STATS_TAG        = 107, /* htt_tx_pdev_ul_mu_ofdma_sch_stats_tlv */
+    HTT_STATS_PDEV_TX_RATE_TXBF_STATS_TAG          = 108, /* htt_tx_peer_rate_txbf_stats_tlv */
+    HTT_STATS_UNSUPPORTED_ERROR_STATS_TAG          = 109, /* htt_stats_error_tlv_v */
+    HTT_STATS_UNAVAILABLE_ERROR_STATS_TAG          = 110, /* htt_stats_error_tlv_v */
+    HTT_STATS_TX_SELFGEN_AC_SCHED_STATUS_STATS_TAG = 111, /* htt_tx_selfgen_ac_sched_status_stats_tlv */
+    HTT_STATS_TX_SELFGEN_AX_SCHED_STATUS_STATS_TAG = 112, /* htt_tx_selfgen_ax_sched_status_stats_tlv */
+    HTT_STATS_TXBF_OFDMA_NDPA_STATS_TAG            = 113, /* htt_txbf_ofdma_ndpa_stats_tlv */
+    HTT_STATS_TXBF_OFDMA_NDP_STATS_TAG             = 114, /* htt_txbf_ofdma_ndp_stats_tlv */
+    HTT_STATS_TXBF_OFDMA_BRP_STATS_TAG             = 115, /* htt_txbf_ofdma_brp_stats_tlv */
+    HTT_STATS_TXBF_OFDMA_STEER_STATS_TAG           = 116, /* htt_txbf_ofdma_steer_stats_tlv */
+    HTT_STATS_STA_UL_OFDMA_STATS_TAG               = 117, /* htt_sta_ul_ofdma_stats_tlv */
+    HTT_STATS_VDEV_RTT_RESP_STATS_TAG              = 118, /* htt_vdev_rtt_resp_stats_tlv */
+    HTT_STATS_PKTLOG_AND_HTT_RING_STATS_TAG        = 119, /* htt_pktlog_and_htt_ring_stats_tlv */
+    HTT_STATS_DLPAGER_STATS_TAG                    = 120, /* htt_dlpager_stats_tlv */
+    HTT_STATS_PHY_COUNTERS_TAG                     = 121, /* htt_phy_counters_tlv */
+    HTT_STATS_PHY_STATS_TAG                        = 122, /* htt_phy_stats_tlv */
+
 
     HTT_STATS_MAX_TAG,
 } htt_tlv_tag_t;
+
+/* htt_mu_stats_upload_t
+ * Enumerations for specifying whether to upload all MU stats in response to
+ * HTT_DBG_EXT_STATS_PDEV_TX_MU, or if not all, then which subset.
+ */
+typedef enum {
+    /* HTT_UPLOAD_MU_STATS: upload all MU stats:
+     * UL MU-MIMO + DL MU-MIMO + UL MU-OFDMA + DL MU-OFDMA
+     */
+    HTT_UPLOAD_MU_STATS,
+
+    /* HTT_UPLOAD_MU_MIMO_STATS: upload UL MU-MIMO + DL MU-MIMO stats */
+    HTT_UPLOAD_MU_MIMO_STATS,
+
+    /* HTT_UPLOAD_MU_OFDMA_STATS: upload UL MU-OFDMA + DL MU-OFDMA stats */
+    HTT_UPLOAD_MU_OFDMA_STATS,
+
+    HTT_UPLOAD_DL_MU_MIMO_STATS,
+    HTT_UPLOAD_UL_MU_MIMO_STATS,
+    HTT_UPLOAD_DL_MU_OFDMA_STATS,
+    HTT_UPLOAD_UL_MU_OFDMA_STATS,
+} htt_mu_stats_upload_t;
 
 #define HTT_STATS_TLV_TAG_M 0x00000fff
 #define HTT_STATS_TLV_TAG_S 0
@@ -703,6 +801,10 @@ typedef struct {
     A_UINT32 num_mu_peer_blacklisted;
     /* Num of times mu_ofdma seq posted */
     A_UINT32 mu_ofdma_seq_posted;
+    /* Num of times UL MU MIMO seq posted */
+    A_UINT32 ul_mumimo_seq_posted;
+    /* Num of times UL OFDMA seq posted */
+    A_UINT32 ul_ofdma_seq_posted;
 } htt_tx_pdev_stats_cmn_tlv;
 
 #define HTT_TX_PDEV_STATS_URRN_TLV_SZ(_num_elems) (sizeof(A_UINT32) * (_num_elems))
@@ -1256,6 +1358,7 @@ typedef enum {
 } HTT_STATS_PREAM_TYPE;
 
 #define HTT_TX_PEER_STATS_NUM_MCS_COUNTERS 12 /* 0-11 */
+#define HTT_TX_PEER_STATS_NUM_EXTRA_MCS_COUNTERS 2 /* 12, 13 */
 /* HTT_TX_PEER_STATS_NUM_GI_COUNTERS:
  * GI Index 0:  WHAL_GI_800
  * GI Index 1:  WHAL_GI_400
@@ -1305,9 +1408,17 @@ typedef struct _htt_tx_peer_rate_stats_tlv {
 
     /* Counters to track packets in dcm mcs (MCS 0, 1, 3, 4) */
     A_UINT32 tx_dcm[HTT_TX_PEER_STATS_NUM_DCM_COUNTERS];
+
+    /* Stats for MCS 12/13 */
+    A_UINT32 tx_mcs_ext[HTT_TX_PEER_STATS_NUM_EXTRA_MCS_COUNTERS];
+    A_UINT32 tx_su_mcs_ext[HTT_TX_PEER_STATS_NUM_EXTRA_MCS_COUNTERS];
+    A_UINT32 tx_mu_mcs_ext[HTT_TX_PEER_STATS_NUM_EXTRA_MCS_COUNTERS];
+    A_UINT32 tx_stbc_ext[HTT_TX_PEER_STATS_NUM_EXTRA_MCS_COUNTERS];
+    A_UINT32 tx_gi_ext[HTT_TX_PEER_STATS_NUM_GI_COUNTERS][HTT_TX_PEER_STATS_NUM_EXTRA_MCS_COUNTERS];
 } htt_tx_peer_rate_stats_tlv;
 
 #define HTT_RX_PEER_STATS_NUM_MCS_COUNTERS 12 /* 0-11 */
+#define HTT_RX_PEER_STATS_NUM_EXTRA_MCS_COUNTERS 2 /* 12, 13 */
 #define HTT_RX_PEER_STATS_NUM_GI_COUNTERS 4
 #define HTT_RX_PEER_STATS_NUM_DCM_COUNTERS 5
 #define HTT_RX_PEER_STATS_NUM_BW_COUNTERS 4
@@ -1359,6 +1470,11 @@ typedef struct _htt_rx_peer_rate_stats_tlv {
     A_UINT32 rx_ulmumimo_mpdu_fail;       /* mpdu level */
 
     A_UINT8  rssi_chain_ext[HTT_RX_PEER_STATS_NUM_SPATIAL_STREAMS][HTT_RX_PEER_STATS_NUM_BW_EXT_COUNTERS]; /* units = dB above noise floor */
+
+    /* Stats for MCS 12/13 */
+    A_UINT32 rx_mcs_ext[HTT_RX_PEER_STATS_NUM_EXTRA_MCS_COUNTERS];
+    A_UINT32 rx_stbc_ext[HTT_RX_PEER_STATS_NUM_EXTRA_MCS_COUNTERS];
+    A_UINT32 rx_gi_ext[HTT_RX_PEER_STATS_NUM_GI_COUNTERS][HTT_RX_PEER_STATS_NUM_EXTRA_MCS_COUNTERS];
 } htt_rx_peer_rate_stats_tlv;
 
 typedef enum {
@@ -1405,11 +1521,18 @@ typedef struct {
     (((_var) & HTT_DBG_EXT_PEER_CTRL_PATH_TXRX_STATS_IS_MAC_ADDR_M) >> \
      HTT_DBG_EXT_PEER_CTRL_PATH_TXRX_STATS_IS_MAC_ADDR_S)
 
-#define HTT_DBG_EXT_PEER_CTRL_PATH_TXRX_STATS_IS_peer_MAC_ADDR_SET(_var, _val) \
+#define HTT_DBG_EXT_PEER_CTRL_PATH_TXRX_STATS_IS_MAC_ADDR_SET(_var, _val) \
     do { \
         HTT_CHECK_SET_VAL(HTT_DBG_EXT_PEER_CTRL_PATH_TXRX_STATS_IS_MAC_ADDR, _val); \
         ((_var) |= ((_val) << HTT_DBG_EXT_PEER_CTRL_PATH_TXRX_STATS_IS_MAC_ADDR_S)); \
     } while (0)
+/* DEPRECATED
+ * The old IS_peer_MAC_ADDR_SET macro name is being retained for now,
+ * as an alias for the corrected macro name.
+ * If/when all references to the old name are removed, the definition of
+ * the old name will also be removed.
+ */
+#define HTT_DBG_EXT_PEER_CTRL_PATH_TXRX_STATS_IS_peer_MAC_ADDR_SET HTT_DBG_EXT_PEER_CTRL_PATH_TXRX_STATS_IS_MAC_ADDR_SET
 
 #define HTT_DBG_EXT_STATS_PEER_INFO_IS_MAC_ADDR_M 0x00000001
 #define HTT_DBG_EXT_STATS_PEER_INFO_IS_MAC_ADDR_S 0
@@ -1747,6 +1870,38 @@ typedef struct _htt_tx_hwq_stats {
         ((_var) |= ((_val) << HTT_TX_SELFGEN_CMN_STATS_MAC_ID_S)); \
     } while (0)
 
+typedef enum {
+    HTT_TXERR_NONE,
+    HTT_TXERR_RESP,    /* response timeout, mismatch,
+                        * BW mismatch, mimo ctrl mismatch,
+                        * CRC error.. */
+    HTT_TXERR_FILT,    /* blocked by tx filtering */
+    HTT_TXERR_FIFO,    /* fifo, misc errors in HW */
+    HTT_TXERR_SWABORT, /* software initialted abort (TX_ABORT) */
+
+    HTT_TXERR_RESERVED1,
+    HTT_TXERR_RESERVED2,
+    HTT_TX_PDEV_STATS_NUM_TX_ERR_STATUS = 7,
+
+    HTT_TXERR_INVALID = 0xff,
+} htt_tx_err_status_t;
+
+
+/* Matching enum for htt_tx_selfgen_sch_tsflag_error_stats */
+typedef enum {
+    HTT_TX_SELFGEN_SCH_TSFLAG_FLUSH_RCVD_ERR,
+    HTT_TX_SELFGEN_SCH_TSFLAG_FILT_SCHED_CMD_ERR,
+    HTT_TX_SELFGEN_SCH_TSFLAG_RESP_MISMATCH_ERR,
+    HTT_TX_SELFGEN_SCH_TSFLAG_RESP_CBF_MIMO_CTRL_MISMATCH_ERR,
+    HTT_TX_SELFGEN_SCH_TSFLAG_RESP_CBF_BW_MISMATCH_ERR,
+    HTT_TX_SELFGEN_SCH_TSFLAG_RETRY_COUNT_FAIL_ERR,
+    HTT_TX_SELFGEN_SCH_TSFLAG_RESP_TOO_LATE_RECEIVED_ERR,
+    HTT_TX_SELFGEN_SCH_TSFLAG_SIFS_STALL_NO_NEXT_CMD_ERR,
+
+    HTT_TX_SELFGEN_NUM_SCH_TSFLAG_ERROR_STATS = 8,
+    HTT_TX_SELFGEN_SCH_TSFLAG_ERROR_STATS_VALID = 8
+} htt_tx_selfgen_sch_tsflag_error_stats;
+
 #define HTT_TX_PDEV_STATS_NUM_AC_MUMIMO_USER_STATS 4
 #define HTT_TX_PDEV_STATS_NUM_AX_MUMIMO_USER_STATS 8
 #define HTT_TX_PDEV_STATS_NUM_OFDMA_USER_STATS 74
@@ -1770,11 +1925,17 @@ typedef struct {
     A_UINT32 delayed_bar_5; /* MU user 5 */
     A_UINT32 delayed_bar_6; /* MU user 6 */
     A_UINT32 delayed_bar_7; /* MU user 7 */
+    A_UINT32 bar_with_tqm_head_seq_num;
+    A_UINT32 bar_with_tid_seq_num;
 } htt_tx_selfgen_cmn_stats_tlv;
 
 typedef struct {
     htt_tlv_hdr_t tlv_hdr;
-    /* 11AC */
+    /* 11AC
+     *
+     * Fields with suffix as tried -> Selfgen frames tried out in the air,
+     * Fields with suffix as queued -> Selfgen frames queued to hw
+     */
     A_UINT32 ac_su_ndpa;
     A_UINT32 ac_su_ndp;
     A_UINT32 ac_mu_mimo_ndpa;
@@ -1782,32 +1943,117 @@ typedef struct {
     A_UINT32 ac_mu_mimo_brpoll_1; /* MU user 1 */
     A_UINT32 ac_mu_mimo_brpoll_2; /* MU user 2 */
     A_UINT32 ac_mu_mimo_brpoll_3; /* MU user 3 */
+    A_UINT32 ac_su_ndpa_queued;
+    A_UINT32 ac_su_ndp_queued;
+    A_UINT32 ac_mu_mimo_ndpa_queued;
+    A_UINT32 ac_mu_mimo_ndp_queued;
+    A_UINT32 ac_mu_mimo_brpoll_1_queued;
+    A_UINT32 ac_mu_mimo_brpoll_2_queued;
+    A_UINT32 ac_mu_mimo_brpoll_3_queued;
 } htt_tx_selfgen_ac_stats_tlv;
 
 typedef struct {
     htt_tlv_hdr_t tlv_hdr;
-    /* 11AX */
+    /* 11AX
+     *
+     * Fields with suffix as tried -> Selfgen frames tried out in the air,
+     * Fields with suffix as queued -> Selfgen frames queued to hw
+     */
     A_UINT32 ax_su_ndpa;
     A_UINT32 ax_su_ndp;
     A_UINT32 ax_mu_mimo_ndpa;
     A_UINT32 ax_mu_mimo_ndp;
-    A_UINT32 ax_mu_mimo_brpoll_1; /* MU user 1 */
-    A_UINT32 ax_mu_mimo_brpoll_2; /* MU user 2 */
-    A_UINT32 ax_mu_mimo_brpoll_3; /* MU user 3 */
-    A_UINT32 ax_mu_mimo_brpoll_4; /* MU user 4 */
-    A_UINT32 ax_mu_mimo_brpoll_5; /* MU user 5 */
-    A_UINT32 ax_mu_mimo_brpoll_6; /* MU user 6 */
-    A_UINT32 ax_mu_mimo_brpoll_7; /* MU user 7 */
+    union {
+        struct {
+            /* deprecated old names */
+            A_UINT32 ax_mu_mimo_brpoll_1; /* MU user 1 */
+            A_UINT32 ax_mu_mimo_brpoll_2; /* MU user 2 */
+            A_UINT32 ax_mu_mimo_brpoll_3; /* MU user 3 */
+            A_UINT32 ax_mu_mimo_brpoll_4; /* MU user 4 */
+            A_UINT32 ax_mu_mimo_brpoll_5; /* MU user 5 */
+            A_UINT32 ax_mu_mimo_brpoll_6; /* MU user 6 */
+            A_UINT32 ax_mu_mimo_brpoll_7; /* MU user 7 */
+        };
+        /* MU users 1-7 */
+        A_UINT32 ax_mu_mimo_brpoll[HTT_TX_PDEV_STATS_NUM_AX_MUMIMO_USER_STATS - 1];
+    };
     A_UINT32 ax_basic_trigger;
     A_UINT32 ax_bsr_trigger;
     A_UINT32 ax_mu_bar_trigger;
     A_UINT32 ax_mu_rts_trigger;
     A_UINT32 ax_ulmumimo_trigger;
+    A_UINT32 ax_su_ndpa_queued;
+    A_UINT32 ax_su_ndp_queued;
+    A_UINT32 ax_mu_mimo_ndpa_queued;
+    A_UINT32 ax_mu_mimo_ndp_queued;
+    A_UINT32 ax_mu_mimo_brpoll_queued[HTT_TX_PDEV_STATS_NUM_AX_MUMIMO_USER_STATS - 1];
+    A_UINT32 ax_ul_mumimo_trigger[HTT_TX_PDEV_STATS_NUM_AX_MUMIMO_USER_STATS];
 } htt_tx_selfgen_ax_stats_tlv;
 
 typedef struct {
     htt_tlv_hdr_t tlv_hdr;
-    /* 11AC error stats */
+
+    A_UINT32 ax_ofdma_ndpa_queued[HTT_TX_PDEV_STATS_NUM_OFDMA_USER_STATS];
+    A_UINT32 ax_ofdma_ndpa_tried[HTT_TX_PDEV_STATS_NUM_OFDMA_USER_STATS];
+    A_UINT32 ax_ofdma_ndpa_flushed[HTT_TX_PDEV_STATS_NUM_OFDMA_USER_STATS];
+    A_UINT32 ax_ofdma_ndpa_err[HTT_TX_PDEV_STATS_NUM_OFDMA_USER_STATS];
+} htt_txbf_ofdma_ndpa_stats_tlv;
+
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+
+    A_UINT32 ax_ofdma_ndp_queued[HTT_TX_PDEV_STATS_NUM_OFDMA_USER_STATS];
+    A_UINT32 ax_ofdma_ndp_tried[HTT_TX_PDEV_STATS_NUM_OFDMA_USER_STATS];
+    A_UINT32 ax_ofdma_ndp_flushed[HTT_TX_PDEV_STATS_NUM_OFDMA_USER_STATS];
+    A_UINT32 ax_ofdma_ndp_err[HTT_TX_PDEV_STATS_NUM_OFDMA_USER_STATS];
+} htt_txbf_ofdma_ndp_stats_tlv;
+
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+
+    A_UINT32 ax_ofdma_brpoll_queued[HTT_TX_PDEV_STATS_NUM_OFDMA_USER_STATS];
+    A_UINT32 ax_ofdma_brpoll_tried[HTT_TX_PDEV_STATS_NUM_OFDMA_USER_STATS];
+    A_UINT32 ax_ofdma_brpoll_flushed[HTT_TX_PDEV_STATS_NUM_OFDMA_USER_STATS];
+    A_UINT32 ax_ofdma_brp_err[HTT_TX_PDEV_STATS_NUM_OFDMA_USER_STATS];
+    A_UINT32 ax_ofdma_brp_err_num_cbf_rcvd[HTT_TX_PDEV_STATS_NUM_OFDMA_USER_STATS+1];
+} htt_txbf_ofdma_brp_stats_tlv;
+
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+
+    A_UINT32 ax_ofdma_num_ppdu_steer[HTT_TX_PDEV_STATS_NUM_OFDMA_USER_STATS];
+    A_UINT32 ax_ofdma_num_ppdu_ol[HTT_TX_PDEV_STATS_NUM_OFDMA_USER_STATS];
+    A_UINT32 ax_ofdma_num_usrs_prefetch[HTT_TX_PDEV_STATS_NUM_OFDMA_USER_STATS];
+    A_UINT32 ax_ofdma_num_usrs_sound[HTT_TX_PDEV_STATS_NUM_OFDMA_USER_STATS];
+    A_UINT32 ax_ofdma_num_usrs_force_sound[HTT_TX_PDEV_STATS_NUM_OFDMA_USER_STATS];
+} htt_txbf_ofdma_steer_stats_tlv;
+
+/* STATS_TYPE : HTT_DBG_EXT_STATS_TXBF_OFDMA
+ * TLV_TAGS:
+ *      - HTT_STATS_TXBF_OFDMA_NDPA_STATS_TAG
+ *      - HTT_STATS_TXBF_OFDMA_NDP_STATS_TAG
+ *      - HTT_STATS_TXBF_OFDMA_BRP_STATS_TAG
+ *      - HTT_STATS_TXBF_OFDMA_STEER_STATS_TAG
+ */
+/* NOTE:
+ * This structure is for documentation, and cannot be safely used directly.
+ * Instead, use the constituent TLV structures to fill/parse.
+ */
+typedef struct {
+    htt_txbf_ofdma_ndpa_stats_tlv ofdma_ndpa_tlv;
+    htt_txbf_ofdma_ndp_stats_tlv ofdma_ndp_tlv;
+    htt_txbf_ofdma_brp_stats_tlv ofdma_brp_tlv;
+    htt_txbf_ofdma_steer_stats_tlv ofdma_steer_tlv;
+} htt_tx_pdev_txbf_ofdma_stats_t;
+
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+    /* 11AC error stats
+     *
+     * Fields with suffix as err -> Selfgen frames failed after being tried out,
+     * Fields with suffix as flushed - Selfgen frames flushed out from hw queue
+     *     due to various reasons
+     */
     A_UINT32 ac_su_ndp_err;
     A_UINT32 ac_su_ndpa_err;
     A_UINT32 ac_mu_mimo_ndpa_err;
@@ -1815,29 +2061,83 @@ typedef struct {
     A_UINT32 ac_mu_mimo_brp1_err;
     A_UINT32 ac_mu_mimo_brp2_err;
     A_UINT32 ac_mu_mimo_brp3_err;
+    A_UINT32 ac_su_ndpa_flushed;
+    A_UINT32 ac_su_ndp_flushed;
+    A_UINT32 ac_mu_mimo_ndpa_flushed;
+    A_UINT32 ac_mu_mimo_ndp_flushed;
+    A_UINT32 ac_mu_mimo_brpoll1_flushed;
+    A_UINT32 ac_mu_mimo_brpoll2_flushed;
+    A_UINT32 ac_mu_mimo_brpoll3_flushed;
 } htt_tx_selfgen_ac_err_stats_tlv;
 
 typedef struct {
     htt_tlv_hdr_t tlv_hdr;
-    /* 11AX error stats */
+    /* 11AX error stats
+     *
+     * Fields with suffix as err -> Selfgen frames failed after being tried out,
+     * Fields with suffix as flushed - Selfgen frames flushed out from hw queue
+     *     due to various reasons
+     */
     A_UINT32 ax_su_ndp_err;
     A_UINT32 ax_su_ndpa_err;
     A_UINT32 ax_mu_mimo_ndpa_err;
     A_UINT32 ax_mu_mimo_ndp_err;
-    A_UINT32 ax_mu_mimo_brp1_err;
-    A_UINT32 ax_mu_mimo_brp2_err;
-    A_UINT32 ax_mu_mimo_brp3_err;
-    A_UINT32 ax_mu_mimo_brp4_err;
-    A_UINT32 ax_mu_mimo_brp5_err;
-    A_UINT32 ax_mu_mimo_brp6_err;
-    A_UINT32 ax_mu_mimo_brp7_err;
+    union {
+        struct {
+            /* deprecated old names */
+            A_UINT32 ax_mu_mimo_brp1_err;
+            A_UINT32 ax_mu_mimo_brp2_err;
+            A_UINT32 ax_mu_mimo_brp3_err;
+            A_UINT32 ax_mu_mimo_brp4_err;
+            A_UINT32 ax_mu_mimo_brp5_err;
+            A_UINT32 ax_mu_mimo_brp6_err;
+            A_UINT32 ax_mu_mimo_brp7_err;
+        };
+        A_UINT32 ax_mu_mimo_brp_err[HTT_TX_PDEV_STATS_NUM_AX_MUMIMO_USER_STATS - 1];
+    };
     A_UINT32 ax_basic_trigger_err;
     A_UINT32 ax_bsr_trigger_err;
     A_UINT32 ax_mu_bar_trigger_err;
     A_UINT32 ax_mu_rts_trigger_err;
     A_UINT32 ax_ulmumimo_trigger_err;
     A_UINT32 ax_mu_mimo_brp_err_num_cbf_received[HTT_TX_PDEV_STATS_NUM_AX_MUMIMO_USER_STATS];
+    A_UINT32 ax_su_ndpa_flushed;
+    A_UINT32 ax_su_ndp_flushed;
+    A_UINT32 ax_mu_mimo_ndpa_flushed;
+    A_UINT32 ax_mu_mimo_ndp_flushed;
+    A_UINT32 ax_mu_mimo_brpoll_flushed[HTT_TX_PDEV_STATS_NUM_AX_MUMIMO_USER_STATS - 1];
+    A_UINT32 ax_ul_mumimo_trigger_err[HTT_TX_PDEV_STATS_NUM_AX_MUMIMO_USER_STATS];
 } htt_tx_selfgen_ax_err_stats_tlv;
+
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+    /* 11AC sched status stats */
+    A_UINT32 ac_su_ndpa_sch_status[HTT_TX_PDEV_STATS_NUM_TX_ERR_STATUS];
+    A_UINT32 ac_su_ndp_sch_status[HTT_TX_PDEV_STATS_NUM_TX_ERR_STATUS];
+    A_UINT32 ac_su_ndp_sch_flag_err[HTT_TX_SELFGEN_NUM_SCH_TSFLAG_ERROR_STATS];
+    A_UINT32 ac_mu_mimo_ndpa_sch_status[HTT_TX_PDEV_STATS_NUM_TX_ERR_STATUS];
+    A_UINT32 ac_mu_mimo_ndp_sch_status[HTT_TX_PDEV_STATS_NUM_TX_ERR_STATUS];
+    A_UINT32 ac_mu_mimo_ndp_sch_flag_err[HTT_TX_SELFGEN_NUM_SCH_TSFLAG_ERROR_STATS];
+    A_UINT32 ac_mu_mimo_brp_sch_status[HTT_TX_PDEV_STATS_NUM_TX_ERR_STATUS];
+    A_UINT32 ac_mu_mimo_brp_sch_flag_err[HTT_TX_SELFGEN_NUM_SCH_TSFLAG_ERROR_STATS];
+} htt_tx_selfgen_ac_sched_status_stats_tlv;
+
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+    /* 11AX error stats */
+    A_UINT32 ax_su_ndpa_sch_status[HTT_TX_PDEV_STATS_NUM_TX_ERR_STATUS];
+    A_UINT32 ax_su_ndp_sch_status[HTT_TX_PDEV_STATS_NUM_TX_ERR_STATUS];
+    A_UINT32 ax_su_ndp_sch_flag_err[HTT_TX_SELFGEN_NUM_SCH_TSFLAG_ERROR_STATS];
+    A_UINT32 ax_mu_mimo_ndpa_sch_status[HTT_TX_PDEV_STATS_NUM_TX_ERR_STATUS];
+    A_UINT32 ax_mu_mimo_ndp_sch_status[HTT_TX_PDEV_STATS_NUM_TX_ERR_STATUS];
+    A_UINT32 ax_mu_mimo_ndp_sch_flag_err[HTT_TX_SELFGEN_NUM_SCH_TSFLAG_ERROR_STATS];
+    A_UINT32 ax_mu_brp_sch_status[HTT_TX_PDEV_STATS_NUM_TX_ERR_STATUS];
+    A_UINT32 ax_mu_brp_sch_flag_err[HTT_TX_SELFGEN_NUM_SCH_TSFLAG_ERROR_STATS];
+    A_UINT32 ax_mu_bar_sch_status[HTT_TX_PDEV_STATS_NUM_TX_ERR_STATUS];
+    A_UINT32 ax_mu_bar_sch_flag_err[HTT_TX_SELFGEN_NUM_SCH_TSFLAG_ERROR_STATS];
+    A_UINT32 ax_basic_trig_sch_status[HTT_TX_PDEV_STATS_NUM_TX_ERR_STATUS];
+    A_UINT32 ax_basic_trig_sch_flag_err[HTT_TX_SELFGEN_NUM_SCH_TSFLAG_ERROR_STATS];
+} htt_tx_selfgen_ax_sched_status_stats_tlv;
 
 /* STATS_TYPE : HTT_DBG_EXT_STATS_TX_SELFGEN_INFO
  * TLV_TAGS:
@@ -1861,6 +2161,10 @@ typedef struct {
     htt_tx_selfgen_ac_err_stats_tlv ac_err_tlv;
     /* 11AX error stats */
     htt_tx_selfgen_ax_err_stats_tlv ax_err_tlv;
+    /* 11AC sched stats */
+    htt_tx_selfgen_ac_sched_status_stats_tlv ac_sched_status_tlv;
+    /* 11AX sched stats */
+    htt_tx_selfgen_ax_sched_status_stats_tlv ax_sched_status_tlv;
 } htt_tx_pdev_selfgen_stats_t;
 
 /* == TX MU STATS == */
@@ -1897,7 +2201,72 @@ typedef struct {
      * for (i+1) users
      */
     A_UINT32 ax_ul_mumimo_brp_sch_nusers[HTT_TX_PDEV_STATS_NUM_UL_MUMIMO_USER_STATS];
+    A_UINT32 ac_mu_mimo_sch_posted_per_grp_sz[HTT_TX_PDEV_STATS_NUM_AC_MUMIMO_USER_STATS];
+    A_UINT32 ax_mu_mimo_sch_posted_per_grp_sz[HTT_TX_PDEV_STATS_NUM_AX_MUMIMO_USER_STATS];
 } htt_tx_pdev_mu_mimo_sch_stats_tlv;
+
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+    /* mu-mimo sw sched cmd stats */
+    A_UINT32 mu_mimo_sch_posted;
+    A_UINT32 mu_mimo_sch_failed;
+    /* MU PPDU stats per hwQ */
+    A_UINT32 mu_mimo_ppdu_posted;
+    /*
+     * Counts the number of users in each transmission of
+     * the given TX mode.
+     *
+     * Index is the number of users - 1.
+     */
+    A_UINT32 ac_mu_mimo_sch_nusers[HTT_TX_PDEV_STATS_NUM_AC_MUMIMO_USER_STATS];
+    A_UINT32 ax_mu_mimo_sch_nusers[HTT_TX_PDEV_STATS_NUM_AX_MUMIMO_USER_STATS];
+    A_UINT32 ac_mu_mimo_sch_posted_per_grp_sz[HTT_TX_PDEV_STATS_NUM_AC_MUMIMO_USER_STATS];
+    A_UINT32 ax_mu_mimo_sch_posted_per_grp_sz[HTT_TX_PDEV_STATS_NUM_AX_MUMIMO_USER_STATS];
+} htt_tx_pdev_dl_mu_mimo_sch_stats_tlv;
+
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+    A_UINT32 ax_mu_ofdma_sch_nusers[HTT_TX_PDEV_STATS_NUM_OFDMA_USER_STATS];
+} htt_tx_pdev_dl_mu_ofdma_sch_stats_tlv;
+
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+    A_UINT32 ax_ul_mu_ofdma_basic_sch_nusers[HTT_TX_PDEV_STATS_NUM_OFDMA_USER_STATS];
+    A_UINT32 ax_ul_mu_ofdma_bsr_sch_nusers[HTT_TX_PDEV_STATS_NUM_OFDMA_USER_STATS];
+    A_UINT32 ax_ul_mu_ofdma_bar_sch_nusers[HTT_TX_PDEV_STATS_NUM_OFDMA_USER_STATS];
+    A_UINT32 ax_ul_mu_ofdma_brp_sch_nusers[HTT_TX_PDEV_STATS_NUM_OFDMA_USER_STATS];
+} htt_tx_pdev_ul_mu_ofdma_sch_stats_tlv;
+
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+    /* UL MUMIMO */
+    /*
+     * ax_ul_mu_mimo_basic_sch_nusers[i] is the number of basic triggers sent
+     * for (i+1) users
+     */
+    A_UINT32 ax_ul_mu_mimo_basic_sch_nusers[HTT_TX_PDEV_STATS_NUM_UL_MUMIMO_USER_STATS];
+    /*
+     * ax_ul_mu_mimo_brp_sch_nusers[i] is the number of brp triggers sent
+     * for (i+1) users
+     */
+    A_UINT32 ax_ul_mu_mimo_brp_sch_nusers[HTT_TX_PDEV_STATS_NUM_UL_MUMIMO_USER_STATS];
+} htt_tx_pdev_ul_mu_mimo_sch_stats_tlv;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 typedef struct {
     htt_tlv_hdr_t tlv_hdr;
@@ -1960,6 +2329,10 @@ typedef struct {
  */
 typedef struct {
     htt_tx_pdev_mu_mimo_sch_stats_tlv mu_mimo_sch_stats_tlv[1]; /* WAL_TX_STATS_MAX_GROUP_SIZE */
+    htt_tx_pdev_dl_mu_mimo_sch_stats_tlv dl_mu_mimo_sch_stats_tlv[1];
+    htt_tx_pdev_ul_mu_mimo_sch_stats_tlv ul_mu_mimo_sch_stats_tlv[1];
+    htt_tx_pdev_dl_mu_ofdma_sch_stats_tlv dl_mu_ofdma_sch_stats_tlv[1];
+    htt_tx_pdev_ul_mu_ofdma_sch_stats_tlv ul_mu_ofdma_sch_stats_tlv[1];
     /*
      * Note that though mu_mimo_mpdu_stats_tlv is named MU-MIMO,
      * it can also hold MU-OFDMA stats.
@@ -2001,6 +2374,11 @@ typedef struct {
      */
     A_UINT32 sched_order_su[1]; /* HTT_TX_PDEV_NUM_SCHED_ORDER_LOG */
 } htt_sched_txq_sched_order_su_tlv_v;
+
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+    A_UINT32 htt_stats_type;
+} htt_stats_error_tlv_v;
 
 typedef enum {
     HTT_SCHED_TID_SKIP_SCHED_MASK_DISABLED = 0, /* Skip the tid when WAL_TID_DISABLE_TX_SCHED_MASK is true                                       */
@@ -2325,6 +2703,9 @@ typedef struct {
     A_UINT32 desc_threshold;
     A_UINT32 hwsch_tqm_invalid_status;
     A_UINT32 missed_tqm_gen_mpdus;
+    A_UINT32 tqm_active_tids;
+    A_UINT32 tqm_inactive_tids;
+    A_UINT32 tqm_active_msduq_flows;
 } htt_tx_tqm_cmn_stats_tlv;
 
 typedef struct {
@@ -3109,6 +3490,7 @@ typedef struct {
 /* == PDEV TX RATE CTRL STATS == */
 
 #define HTT_TX_PDEV_STATS_NUM_MCS_COUNTERS 12 /* 0-11 */
+#define HTT_TX_PDEV_STATS_NUM_EXTRA_MCS_COUNTERS 2 /* 12, 13 */
 #define HTT_TX_PDEV_STATS_NUM_GI_COUNTERS 4
 #define HTT_TX_PDEV_STATS_NUM_DCM_COUNTERS 5
 #define HTT_TX_PDEV_STATS_NUM_BW_COUNTERS 4
@@ -3211,6 +3593,15 @@ typedef struct {
     A_UINT32 ofdma_tx_gi[HTT_TX_PDEV_STATS_NUM_GI_COUNTERS][HTT_TX_PDEV_STATS_NUM_MCS_COUNTERS];
     A_UINT32 trigger_type_11ax[HTT_TX_PDEV_STATS_NUM_11AX_TRIGGER_TYPES];
     A_UINT32 tx_11ax_su_ext;
+
+    /* Stats for MCS 12/13 */
+    A_UINT32 tx_mcs_ext[HTT_TX_PDEV_STATS_NUM_EXTRA_MCS_COUNTERS];
+    A_UINT32 tx_stbc_ext[HTT_TX_PDEV_STATS_NUM_EXTRA_MCS_COUNTERS];
+    A_UINT32 tx_gi_ext[HTT_TX_PDEV_STATS_NUM_GI_COUNTERS][HTT_TX_PDEV_STATS_NUM_EXTRA_MCS_COUNTERS];
+    A_UINT32 ax_mu_mimo_tx_mcs_ext[HTT_TX_PDEV_STATS_NUM_EXTRA_MCS_COUNTERS];
+    A_UINT32 ofdma_tx_mcs_ext[HTT_TX_PDEV_STATS_NUM_EXTRA_MCS_COUNTERS];
+    A_UINT32 ax_mu_mimo_tx_gi_ext[HTT_TX_PDEV_STATS_NUM_GI_COUNTERS][HTT_TX_PDEV_STATS_NUM_EXTRA_MCS_COUNTERS];
+    A_UINT32 ofdma_tx_gi_ext[HTT_TX_PDEV_STATS_NUM_GI_COUNTERS][HTT_TX_PDEV_STATS_NUM_EXTRA_MCS_COUNTERS];
 } htt_tx_pdev_rate_stats_tlv;
 
 /* STATS_TYPE : HTT_DBG_EXT_STATS_PDEV_TX_RATE
@@ -3230,9 +3621,13 @@ typedef struct {
 #define HTT_RX_PDEV_STATS_NUM_LEGACY_CCK_STATS 4
 #define HTT_RX_PDEV_STATS_NUM_LEGACY_OFDM_STATS 8
 #define HTT_RX_PDEV_STATS_NUM_MCS_COUNTERS 12 /* 0-11 */
+#define HTT_RX_PDEV_STATS_NUM_EXTRA_MCS_COUNTERS 2 /* 12, 13 */
+#define HTT_RX_PDEV_STATS_NUM_MCS_COUNTERS_EXT 14 /* 0-13 */
 #define HTT_RX_PDEV_STATS_NUM_GI_COUNTERS 4
 #define HTT_RX_PDEV_STATS_NUM_DCM_COUNTERS 5
 #define HTT_RX_PDEV_STATS_NUM_BW_COUNTERS 4
+#define HTT_RX_PDEV_STATS_TOTAL_BW_COUNTERS \
+    (HTT_RX_PDEV_STATS_NUM_BW_EXT_COUNTERS + HTT_RX_PDEV_STATS_NUM_BW_COUNTERS)
 #define HTT_RX_PDEV_STATS_NUM_SPATIAL_STREAMS 8
 #define HTT_RX_PDEV_STATS_ULMUMIMO_NUM_SPATIAL_STREAMS 8
 #define HTT_RX_PDEV_STATS_NUM_PREAMBLE_TYPES HTT_STATS_PREAM_COUNT
@@ -3388,6 +3783,18 @@ typedef struct {
     A_INT8   rx_per_chain_rssi_ext_in_dbm[HTT_RX_PDEV_STATS_NUM_SPATIAL_STREAMS][HTT_RX_PDEV_STATS_NUM_BW_EXT_COUNTERS];
     A_INT32  rssi_mcast_in_dbm; /* rx mcast signal strength value in dBm unit */
     A_INT32  rssi_mgmt_in_dbm; /* rx mgmt packet signal Strength value in dBm unit */
+    /*
+     * Stats for MCS 0-13 since rx_pdev_rate_stats_tlv cannot be updated,
+     * due to message size limitations.
+     */
+    A_UINT32 rx_mcs_ext[HTT_RX_PDEV_STATS_NUM_MCS_COUNTERS_EXT];
+    A_UINT32 rx_stbc_ext[HTT_RX_PDEV_STATS_NUM_MCS_COUNTERS_EXT];
+    A_UINT32 rx_gi_ext[HTT_RX_PDEV_STATS_NUM_GI_COUNTERS][HTT_RX_PDEV_STATS_NUM_MCS_COUNTERS_EXT];
+    A_UINT32 ul_ofdma_rx_mcs_ext[HTT_RX_PDEV_STATS_NUM_MCS_COUNTERS_EXT];
+    A_UINT32 ul_ofdma_rx_gi_ext[HTT_TX_PDEV_STATS_NUM_GI_COUNTERS][HTT_RX_PDEV_STATS_NUM_MCS_COUNTERS_EXT];
+    A_UINT32 rx_11ax_su_txbf_mcs_ext[HTT_RX_PDEV_STATS_NUM_MCS_COUNTERS_EXT];
+    A_UINT32 rx_11ax_mu_txbf_mcs_ext[HTT_RX_PDEV_STATS_NUM_MCS_COUNTERS_EXT];
+    A_UINT32 rx_11ax_dl_ofdma_mcs_ext[HTT_RX_PDEV_STATS_NUM_MCS_COUNTERS_EXT];
 } htt_rx_pdev_rate_ext_stats_tlv;
 
 /* STATS_TYPE : HTT_DBG_EXT_STATS_PDEV_RX_RATE_EXT
@@ -3415,6 +3822,8 @@ typedef struct {
         ((_var) |= ((_val) << HTT_STATS_CMN_MAC_ID_S)); \
     } while (0)
 
+#define HTT_RX_UL_MAX_UPLINK_RSSI_TRACK 5
+
 typedef struct {
     htt_tlv_hdr_t tlv_hdr;
 
@@ -3439,6 +3848,31 @@ typedef struct {
      */
     A_UINT32 rx_ulofdma_data_ru_size_ppdu[HTT_RX_PDEV_STATS_NUM_RU_SIZE_160MHZ_CNTRS];      /* ppdu level */
     A_UINT32 rx_ulofdma_non_data_ru_size_ppdu[HTT_RX_PDEV_STATS_NUM_RU_SIZE_160MHZ_CNTRS];  /* ppdu level */
+
+    /*
+     * These arrays hold Target RSSI (rx power the AP wants),
+     * FD RSSI (rx power the AP sees) & Power headroom values of STAs
+     * which can be identified by AIDs, during trigger based RX.
+     * Array acts a circular buffer and holds values for last 5 STAs
+     * in the same order as RX.
+     */
+    /* uplink_sta_aid:
+     * STA AID array for identifying which STA the
+     * Target-RSSI / FD-RSSI / pwr headroom stats are for
+     */
+    A_UINT32 uplink_sta_aid[HTT_RX_UL_MAX_UPLINK_RSSI_TRACK];
+    /* uplink_sta_target_rssi:
+     * Trig Target RSSI for STA AID in same index - UNIT(dBm)
+     */
+    A_INT32 uplink_sta_target_rssi[HTT_RX_UL_MAX_UPLINK_RSSI_TRACK];
+    /* uplink_sta_fd_rssi:
+     * Trig FD RSSI from STA AID in same index - UNIT(dBm)
+     */
+    A_INT32 uplink_sta_fd_rssi[HTT_RX_UL_MAX_UPLINK_RSSI_TRACK];
+    /* uplink_sta_power_headroom:
+     * Trig power headroom for STA AID in same idx - UNIT(dB)
+     */
+    A_UINT32 uplink_sta_power_headroom[HTT_RX_UL_MAX_UPLINK_RSSI_TRACK];
 } htt_rx_pdev_ul_trigger_stats_tlv;
 
 /* STATS_TYPE : HTT_DBG_EXT_STATS_PDEV_UL_TRIG_STATS
@@ -3495,6 +3929,19 @@ typedef struct {
     A_UINT32 ul_mumimo_rx_bw[HTT_RX_PDEV_STATS_NUM_BW_COUNTERS];
     A_UINT32 ul_mumimo_rx_stbc;
     A_UINT32 ul_mumimo_rx_ldpc;
+
+    /* Stats for MCS 12/13 */
+    A_UINT32 ul_mumimo_rx_mcs_ext[HTT_RX_PDEV_STATS_NUM_EXTRA_MCS_COUNTERS];
+    A_UINT32 ul_mumimo_rx_gi_ext[HTT_RX_PDEV_STATS_NUM_GI_COUNTERS][HTT_RX_PDEV_STATS_NUM_EXTRA_MCS_COUNTERS];
+
+    /* RSSI in dBm for Rx TB PPDUs */
+    A_INT8 rx_ul_mumimo_chain_rssi_in_dbm[HTT_RX_PDEV_STATS_ULMUMIMO_NUM_SPATIAL_STREAMS][HTT_RX_PDEV_STATS_TOTAL_BW_COUNTERS];
+    /* Target RSSI stats for UL MUMIMO triggers. Units dBm */
+    A_INT8 rx_ul_mumimo_target_rssi[HTT_TX_PDEV_STATS_NUM_UL_MUMIMO_USER_STATS][HTT_RX_PDEV_STATS_NUM_BW_COUNTERS];
+    /* FD RSSI stats for UL TB PPDUs. Units dBm */
+    A_INT8 rx_ul_mumimo_fd_rssi[HTT_TX_PDEV_STATS_NUM_UL_MUMIMO_USER_STATS][HTT_RX_PDEV_STATS_ULMUMIMO_NUM_SPATIAL_STREAMS];
+    /* Pilot EVM Stats */
+    A_INT8 rx_ulmumimo_pilot_evm_dB_mean[HTT_TX_PDEV_STATS_NUM_UL_MUMIMO_USER_STATS][HTT_RX_PDEV_STATS_ULMUMIMO_NUM_SPATIAL_STREAMS];
 } htt_rx_pdev_ul_mumimo_trig_stats_tlv;
 
 /* STATS_TYPE : HTT_DBG_EXT_STATS_PDEV_UL_MUMIMO_TRIG_STATS
@@ -4232,6 +4679,64 @@ typedef struct {
          */
         A_UINT32 num_sr_rx_ge_pd_rssi_thr;
     };
+
+    /*
+     * Count of number of times OBSS frames were aborted and non-SRG
+     * opportunities were created. Non-SRG opportunities are created when
+     * incoming OBSS RSSI is lesser than the global configured non-SRG RSSI
+     * threshold and non-SRG OBSS color / non-SRG OBSS BSSID registers
+     * allow non-SRG TX.
+     */
+    A_UINT32 num_non_srg_opportunities;
+    /*
+     * Count of number of times TX PPDU were transmitted using non-SRG
+     * opportunities created. Incoming OBSS frame RSSI is compared with per
+     * PPDU non-SRG RSSI threshold configured in each PPDU. If incoming OBSS
+     * RSSI < non-SRG RSSI threshold configured in each PPDU, then non-SRG
+     * tranmission happens.
+     */
+    A_UINT32 num_non_srg_ppdu_tried;
+    /*
+     * Count of number of times non-SRG based TX transmissions were successful
+     */
+    A_UINT32 num_non_srg_ppdu_success;
+    /*
+     * Count of number of times OBSS frames were aborted and SRG opportunities
+     * were created. Srg opportunities are created when incoming OBSS RSSI
+     * is less than the global configured SRG RSSI threshold and SRC OBSS
+     * color / SRG OBSS BSSID / SRG partial bssid / SRG BSS color bitmap
+     * registers allow SRG TX.
+     */
+    A_UINT32 num_srg_opportunities;
+    /*
+     * Count of number of times TX PPDU were transmitted using SRG
+     * opportunities created.
+     * Incoming OBSS frame RSSI is compared with per PPDU SRG RSSI
+     * threshold configured in each PPDU.
+     * If incoming OBSS RSSI < SRG RSSI threshold configured in each PPDU,
+     * then SRG tranmission happens.
+     */
+    A_UINT32 num_srg_ppdu_tried;
+    /*
+     * Count of number of times SRG based TX transmissions were successful
+     */
+    A_UINT32 num_srg_ppdu_success;
+    /*
+     * Count of number of times PSR opportunities were created by aborting
+     * OBSS UL OFDMA HE-TB PPDU frame. HE-TB ppdu frames are aborted if the
+     * spatial reuse info in the OBSS trigger common field is set to allow PSR
+     * based spatial reuse.
+     */
+    A_UINT32 num_psr_opportunities;
+    /*
+     * Count of number of times TX PPDU were transmitted using PSR
+     * opportunities created.
+     */
+    A_UINT32 num_psr_ppdu_tried;
+    /*
+     * Count of number of times PSR based TX transmissions were successful.
+     */
+    A_UINT32 num_psr_ppdu_success;
 } htt_pdev_obss_pd_stats_tlv;
 
 /* NOTE:
@@ -4287,6 +4792,7 @@ typedef struct {
 
 #define HTT_LATENCY_PROFILE_MAX_HIST        3
 #define HTT_STATS_MAX_PROF_STATS_NAME_LEN  32
+#define HTT_INTERRUPTS_LATENCY_PROFILE_MAX_HIST 3
 typedef struct {
     htt_tlv_hdr_t   tlv_hdr;
     /* print_header:
@@ -4312,6 +4818,20 @@ typedef struct {
      */
     A_UINT32 hist_intvl;
     A_UINT32 hist[HTT_LATENCY_PROFILE_MAX_HIST];
+    A_UINT32 page_fault_max;   /* max page faults in any 1 sampling window */
+    A_UINT32 page_fault_total; /* summed over all sampling windows */
+    /* ignored_latency_count:
+     * ignore some of profile latency to avoid avg skewing
+     */
+    A_UINT32 ignored_latency_count;
+    /* interrupts_max: max interrupts within any single sampling window */
+    A_UINT32 interrupts_max;
+    /* interrupts_hist: histogram of interrupt rate
+     * bin0 contains the number of sampling windows that had 0 interrupts,
+     * bin1 contains the number of sampling windows that had 1-4 interrupts,
+     * bin2 contains the number of sampling windows that had > 4 interrupts
+     */
+    A_UINT32 interrupts_hist[HTT_INTERRUPTS_LATENCY_PROFILE_MAX_HIST];
 } htt_latency_prof_stats_tlv;
 
 typedef struct {
@@ -4473,5 +4993,398 @@ typedef struct {
     htt_rx_fse_stats_tlv rx_fse_stats;
 } htt_rx_fse_stats_t;
 
+#define HTT_TX_TXBF_RATE_STATS_NUM_MCS_COUNTERS 14
+#define HTT_TX_TXBF_RATE_STATS_NUM_BW_COUNTERS 5 /* 20, 40, 80, 160, 320 */
+
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+    /* Counters to track TxBF and OL separately */
+    A_UINT32 tx_su_txbf_mcs[HTT_TX_TXBF_RATE_STATS_NUM_MCS_COUNTERS];
+    A_UINT32 tx_su_ibf_mcs[HTT_TX_TXBF_RATE_STATS_NUM_MCS_COUNTERS];
+    A_UINT32 tx_su_ol_mcs[HTT_TX_TXBF_RATE_STATS_NUM_MCS_COUNTERS];
+    A_UINT32 tx_su_txbf_nss[HTT_TX_PDEV_STATS_NUM_SPATIAL_STREAMS];
+    A_UINT32 tx_su_ibf_nss[HTT_TX_PDEV_STATS_NUM_SPATIAL_STREAMS];
+    A_UINT32 tx_su_ol_nss[HTT_TX_PDEV_STATS_NUM_SPATIAL_STREAMS];
+    A_UINT32 tx_su_txbf_bw[HTT_TX_TXBF_RATE_STATS_NUM_BW_COUNTERS];
+    A_UINT32 tx_su_ibf_bw[HTT_TX_TXBF_RATE_STATS_NUM_BW_COUNTERS];
+    A_UINT32 tx_su_ol_bw[HTT_TX_TXBF_RATE_STATS_NUM_BW_COUNTERS];
+} htt_tx_pdev_txbf_rate_stats_tlv;
+
+/* NOTE:
+ * This structure is for documentation, and cannot be safely used directly.
+ * Instead, use the constituent TLV structures to fill/parse.
+ */
+typedef struct {
+    htt_tx_pdev_txbf_rate_stats_tlv txbf_rate_stats;
+} htt_pdev_txbf_rate_stats_t;
+
+typedef enum {
+  HTT_ULTRIG_QBOOST_TRIGGER = 0,
+  HTT_ULTRIG_PSPOLL_TRIGGER,
+  HTT_ULTRIG_UAPSD_TRIGGER,
+  HTT_ULTRIG_11AX_TRIGGER,
+  HTT_ULTRIG_11AX_WILDCARD_TRIGGER,
+  HTT_ULTRIG_11AX_UNASSOC_WILDCARD_TRIGGER,
+  HTT_STA_UL_OFDMA_NUM_TRIG_TYPE,
+} HTT_STA_UL_OFDMA_RX_TRIG_TYPE;
+
+typedef enum {
+  HTT_11AX_TRIGGER_BASIC_E                             = 0,
+  HTT_11AX_TRIGGER_BRPOLL_E                            = 1,
+  HTT_11AX_TRIGGER_MU_BAR_E                            = 2,
+  HTT_11AX_TRIGGER_MU_RTS_E                            = 3,
+  HTT_11AX_TRIGGER_BUFFER_SIZE_E                       = 4,
+  HTT_11AX_TRIGGER_GCR_MU_BAR_E                        = 5,
+  HTT_11AX_TRIGGER_BQRP_E                              = 6,
+  HTT_11AX_TRIGGER_NDP_FB_REPORT_POLL_E                = 7,
+  HTT_11AX_TRIGGER_RESERVED_8_E                        = 8,
+  HTT_11AX_TRIGGER_RESERVED_9_E                        = 9,
+  HTT_11AX_TRIGGER_RESERVED_10_E                       = 10,
+  HTT_11AX_TRIGGER_RESERVED_11_E                       = 11,
+  HTT_11AX_TRIGGER_RESERVED_12_E                       = 12,
+  HTT_11AX_TRIGGER_RESERVED_13_E                       = 13,
+  HTT_11AX_TRIGGER_RESERVED_14_E                       = 14,
+  HTT_11AX_TRIGGER_RESERVED_15_E                       = 15,
+  HTT_STA_UL_OFDMA_NUM_11AX_TRIG_TYPE,
+} HTT_STA_UL_OFDMA_11AX_TRIG_TYPE;
+
+/* UL RESP Queues 0 - HIPRI, 1 - LOPRI & 2 - BSR */
+#define HTT_STA_UL_OFDMA_NUM_UL_QUEUES 3
+/* Actual resp type sent by STA for trigger
+ * 0 - HE TB PPDU, 1 - NULL Delimiter */
+#define HTT_STA_UL_OFDMA_NUM_RESP_END_TYPE 2
+/* Counter for MCS 0-13 */
+#define HTT_STA_UL_OFDMA_NUM_MCS_COUNTERS 14
+/* Counters BW 20,40,80,160,320 */
+#define HTT_STA_UL_OFDMA_NUM_BW_COUNTERS 5
+
+/* STATS_TYPE : HTT_DBG_EXT_STA_11AX_UL_STATS
+ * TLV_TAGS:
+ *    - HTT_STATS_STA_UL_OFDMA_STATS_TAG
+ */
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+
+    A_UINT32 pdev_id;
+
+    /* Trigger Type reported by HWSCH on RX reception
+     * Each index populate enum HTT_STA_UL_OFDMA_RX_TRIG_TYPE */
+    A_UINT32 rx_trigger_type[HTT_STA_UL_OFDMA_NUM_TRIG_TYPE];
+    /* 11AX Trigger Type on RX reception
+     * Each index populate enum HTT_STA_UL_OFDMA_11AX_TRIG_TYPE */
+    A_UINT32 ax_trigger_type[HTT_STA_UL_OFDMA_NUM_11AX_TRIG_TYPE];
+
+    /* Num data PPDUs/Delims responded to trigs. per HWQ for UL RESP */
+    A_UINT32 num_data_ppdu_responded_per_hwq[HTT_STA_UL_OFDMA_NUM_UL_QUEUES];
+    A_UINT32 num_null_delimiters_responded_per_hwq[HTT_STA_UL_OFDMA_NUM_UL_QUEUES];
+    /* Overall UL STA RESP Status 0 - HE TB PPDU, 1 - NULL Delimiter
+     * Super set of num_data_ppdu_responded_per_hwq, num_null_delimiters_responded_per_hwq */
+    A_UINT32 num_total_trig_responses[HTT_STA_UL_OFDMA_NUM_RESP_END_TYPE];
+
+    /* Time interval between current time ms and last successful trigger RX
+     * 0xFFFFFFFF denotes no trig received / timestamp roll back */
+    A_UINT32 last_trig_rx_time_delta_ms;
+
+    /* Rate Statistics for UL OFDMA
+     * UL TB PPDU TX MCS, NSS, GI, BW from STA HWQ */
+    A_UINT32 ul_ofdma_tx_mcs[HTT_STA_UL_OFDMA_NUM_MCS_COUNTERS];
+    A_UINT32 ul_ofdma_tx_nss[HTT_TX_PDEV_STATS_NUM_SPATIAL_STREAMS];
+    A_UINT32 ul_ofdma_tx_gi[HTT_TX_PDEV_STATS_NUM_GI_COUNTERS][HTT_STA_UL_OFDMA_NUM_MCS_COUNTERS];
+    A_UINT32 ul_ofdma_tx_ldpc;
+    A_UINT32 ul_ofdma_tx_bw[HTT_STA_UL_OFDMA_NUM_BW_COUNTERS];
+
+    /* Trig based PPDU TX/ RBO based PPDU TX Count */
+    A_UINT32 trig_based_ppdu_tx;
+    A_UINT32 rbo_based_ppdu_tx;
+    /* Switch MU EDCA to SU EDCA Count */
+    A_UINT32 mu_edca_to_su_edca_switch_count;
+    /* Num MU EDCA applied Count */
+    A_UINT32 num_mu_edca_param_apply_count;
+
+    /* Current MU EDCA Parameters for WMM ACs
+     * Mode - 0 - SU EDCA, 1- MU EDCA */
+    A_UINT32 current_edca_hwq_mode[HTT_NUM_AC_WMM];
+    /* Contention Window minimum. Range: 1 - 10 */
+    A_UINT32 current_cw_min[HTT_NUM_AC_WMM];
+    /* Contention Window maximum. Range: 1 - 10 */
+    A_UINT32 current_cw_max[HTT_NUM_AC_WMM];
+    /* AIFS value - 0 -255 */
+    A_UINT32 current_aifs[HTT_NUM_AC_WMM];
+
+} htt_sta_ul_ofdma_stats_tlv;
+
+/* NOTE:
+ * This structure is for documentation, and cannot be safely used directly.
+ * Instead, use the constituent TLV structures to fill/parse.
+ */
+typedef struct {
+    htt_sta_ul_ofdma_stats_tlv ul_ofdma_sta_stats;
+} htt_sta_11ax_ul_stats_t;
+
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+    /* No of Fine Timing Measurement frames transmitted successfully */
+    A_UINT32 tx_ftm_suc;
+    /* No of Fine Timing Measurement frames transmitted successfully after retry */
+    A_UINT32 tx_ftm_suc_retry;
+    /* No of Fine Timing Measurement frames not transmitted successfully */
+    A_UINT32 tx_ftm_fail;
+    /* No of Fine Timing Measurement Request frames received, including initial, non-initial, and duplicates */
+    A_UINT32 rx_ftmr_cnt;
+    /* No of duplicate Fine Timing Measurement Request frames received, including both initial and non-initial */
+    A_UINT32 rx_ftmr_dup_cnt;
+    /* No of initial Fine Timing Measurement Request frames received */
+    A_UINT32 rx_iftmr_cnt;
+    /* No of duplicate initial Fine Timing Measurement Request frames received */
+    A_UINT32 rx_iftmr_dup_cnt;
+} htt_vdev_rtt_resp_stats_tlv;
+
+typedef struct {
+    htt_vdev_rtt_resp_stats_tlv vdev_rtt_resp_stats;
+} htt_vdev_rtt_resp_stats_t;
+
+/* STATS_TYPE : HTT_DBG_EXT_PKTLOG_AND_HTT_RING_STATS
+ * TLV_TAGS:
+ *    - HTT_STATS_PKTLOG_AND_HTT_RING_STATS_TAG
+ */
+/* NOTE:
+ * This structure is for documentation, and cannot be safely used directly.
+ * Instead, use the constituent TLV structures to fill/parse.
+ */
+typedef struct {
+    htt_tlv_hdr_t   tlv_hdr;
+
+    /* No of pktlog payloads that were dropped in htt_ppdu_stats path */
+    A_UINT32 pktlog_lite_drop_cnt;
+    /* No of pktlog payloads that were dropped in TQM path */
+    A_UINT32 pktlog_tqm_drop_cnt;
+    /* No of pktlog ppdu stats payloads that were dropped */
+    A_UINT32 pktlog_ppdu_stats_drop_cnt;
+    /* No of pktlog ppdu ctrl payloads that were dropped */
+    A_UINT32 pktlog_ppdu_ctrl_drop_cnt;
+    /* No of pktlog sw events payloads that were dropped */
+    A_UINT32 pktlog_sw_events_drop_cnt;
+} htt_pktlog_and_htt_ring_stats_tlv;
+
+#define HTT_DLPAGER_STATS_MAX_HIST            10
+#define HTT_DLPAGER_ASYNC_LOCKED_PAGE_COUNT_M 0x000000FF
+#define HTT_DLPAGER_ASYNC_LOCKED_PAGE_COUNT_S 0
+#define HTT_DLPAGER_SYNC_LOCKED_PAGE_COUNT_M  0x0000FF00
+#define HTT_DLPAGER_SYNC_LOCKED_PAGE_COUNT_S  8
+#define HTT_DLPAGER_TOTAL_LOCKED_PAGES_M      0x0000FFFF
+#define HTT_DLPAGER_TOTAL_LOCKED_PAGES_S      0
+#define HTT_DLPAGER_TOTAL_FREE_PAGES_M        0xFFFF0000
+#define HTT_DLPAGER_TOTAL_FREE_PAGES_S        16
+#define HTT_DLPAGER_LAST_LOCKED_PAGE_IDX_M    0x0000FFFF
+#define HTT_DLPAGER_LAST_LOCKED_PAGE_IDX_S    0
+#define HTT_DLPAGER_LAST_UNLOCKED_PAGE_IDX_M  0xFFFF0000
+#define HTT_DLPAGER_LAST_UNLOCKED_PAGE_IDX_S  16
+
+#define HTT_DLPAGER_ASYNC_LOCK_PAGE_COUNT_GET(_var) \
+    (((_var) & HTT_DLPAGER_ASYNC_LOCKED_PAGE_COUNT_M) >> \
+     HTT_DLPAGER_ASYNC_LOCKED_PAGE_COUNT_S)
+
+#define HTT_DLPAGER_ASYNC_LOCK_PAGE_COUNT_SET(_var, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_DLPAGER_ASYNC_LOCKED_PAGE_COUNT, _val); \
+        ((_var) &= ~(HTT_DLPAGER_ASYNC_LOCKED_PAGE_COUNT_M));\
+        ((_var) |= ((_val) << HTT_DLPAGER_ASYNC_LOCKED_PAGE_COUNT_S)); \
+    } while (0)
+
+#define HTT_DLPAGER_SYNC_LOCK_PAGE_COUNT_GET(_var) \
+    (((_var) & HTT_DLPAGER_SYNC_LOCKED_PAGE_COUNT_M) >> \
+     HTT_DLPAGER_SYNC_LOCKED_PAGE_COUNT_S)
+
+#define HTT_DLPAGER_SYNC_LOCK_PAGE_COUNT_SET(_var, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_DLPAGER_SYNC_LOCKED_PAGE_COUNT, _val); \
+        ((_var) &= ~(HTT_DLPAGER_SYNC_LOCKED_PAGE_COUNT_M));\
+        ((_var) |= ((_val) << HTT_DLPAGER_SYNC_LOCKED_PAGE_COUNT_S)); \
+    } while (0)
+
+#define HTT_DLPAGER_TOTAL_LOCKED_PAGES_GET(_var) \
+    (((_var) & HTT_DLPAGER_TOTAL_LOCKED_PAGES_M) >> \
+     HTT_DLPAGER_TOTAL_LOCKED_PAGES_S)
+
+#define HTT_DLPAGER_TOTAL_LOCKED_PAGES_SET(_var, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_DLPAGER_TOTAL_LOCKED_PAGES, _val); \
+        ((_var) &= ~(HTT_DLPAGER_TOTAL_LOCKED_PAGES_M)); \
+        ((_var) |= ((_val) << HTT_DLPAGER_TOTAL_LOCKED_PAGES_S)); \
+    } while (0)
+
+#define HTT_DLPAGER_TOTAL_FREE_PAGES_GET(_var) \
+    (((_var) & HTT_DLPAGER_TOTAL_FREE_PAGES_M) >> \
+     HTT_DLPAGER_TOTAL_FREE_PAGES_S)
+
+#define HTT_DLPAGER_TOTAL_FREE_PAGES_SET(_var, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_DLPAGER_TOTAL_FREE_PAGES, _val); \
+        ((_var) &= ~(HTT_DLPAGER_TOTAL_FREE_PAGES_M)); \
+        ((_var) |= ((_val) << HTT_DLPAGER_TOTAL_FREE_PAGES_S)); \
+    } while (0)
+
+#define HTT_DLPAGER_LAST_LOCKED_PAGE_IDX_GET(_var) \
+    (((_var) & HTT_DLPAGER_LAST_LOCKED_PAGE_IDX_M) >> \
+     HTT_DLPAGER_LAST_LOCKED_PAGE_IDX_S)
+
+#define HTT_DLPAGER_LAST_LOCKED_PAGE_IDX_SET(_var, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_DLPAGER_LAST_LOCKED_PAGE_IDX, _val); \
+        ((_var) &= ~(HTT_DLPAGER_LAST_LOCKED_PAGE_IDX_M)); \
+        ((_var) |= ((_val) << HTT_DLPAGER_LAST_LOCKED_PAGE_IDX_S)); \
+    } while (0)
+
+#define HTT_DLPAGER_LAST_UNLOCKED_PAGE_IDX_GET(_var) \
+    (((_var) & HTT_DLPAGER_LAST_UNLOCKED_PAGE_IDX_M) >> \
+     HTT_DLPAGER_LAST_UNLOCKED_PAGE_IDX_S)
+
+#define HTT_DLPAGER_LAST_UNLOCKED_PAGE_IDX_SET(_var, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_DLPAGER_LAST_UNLOCKED_PAGE_IDX, _val); \
+        ((_var) &= ~(HTT_DLPAGER_LAST_UNLOCKED_PAGE_IDX_M)); \
+        ((_var) |= ((_val) << HTT_DLPAGER_LAST_UNLOCKED_PAGE_IDX_S)); \
+    } while (0)
+
+enum {
+    HTT_STATS_PAGE_LOCKED = 0,
+    HTT_STATS_PAGE_UNLOCKED = 1,
+    HTT_STATS_NUM_PAGE_LOCK_STATES
+};
+
+/* dlPagerStats structure
+ * Number of lock/unlock pages with last 10 lock/unlock occurrences are recorded */
+typedef struct{
+    /* msg_dword_1 bitfields:
+     *     async_lock                 : 8,
+     *     sync_lock                  : 8,
+     *     reserved                   : 16;
+     */
+    A_UINT32     msg_dword_1;
+    /* mst_dword_2 bitfields:
+     *     total_locked_pages         : 16,
+     *     total_free_pages           : 16;
+     */
+    A_UINT32     msg_dword_2;
+    /* msg_dword_3 bitfields:
+     *     last_locked_page_idx       : 16,
+     *     last_unlocked_page_idx     : 16;
+     */
+    A_UINT32     msg_dword_3;
+
+    struct {
+        A_UINT32 page_num;
+        A_UINT32 num_of_pages;
+        /* timestamp is in microsecond units, from SoC timer clock */
+        A_UINT32 timestamp_lsbs;
+        A_UINT32 timestamp_msbs;
+    } last_pages_info[HTT_STATS_NUM_PAGE_LOCK_STATES][HTT_DLPAGER_STATS_MAX_HIST];
+} htt_dl_pager_stats_tlv;
+
+/* NOTE:
+ *  This structure is for documentation, and cannot be safely used directly.
+ *  Instead, use the constituent TLV structures to fill/parse.
+ *  STATS_TYPE : HTT_DBG_EXT_STATS_DLPAGER_STATS
+ *  TLV_TAGS:
+ *      - HTT_STATS_DLPAGER_STATS_TAG
+ */
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+    htt_dl_pager_stats_tlv dl_pager_stats;
+} htt_dlpager_stats_t;
+
+/*======= PHY STATS ====================*/
+/*
+ * STATS TYPE : HTT_DBG_EXT_PHY_COUNTERS_AND_PHY_STATS
+ * TLV_TAGS:
+ *    - HTT_STATS_PHY_COUNTERS_TAG
+ *    - HTT_STATS_PHY_STATS_TAG
+ */
+
+#define HTT_MAX_RX_PKT_CNT 8
+#define HTT_MAX_RX_PKT_CRC_PASS_CNT 8
+#define HTT_MAX_PER_BLK_ERR_CNT 20
+#define HTT_MAX_RX_OTA_ERR_CNT 14
+
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+    /* number of RXTD OFDMA OTA error counts except power surge and drop */
+    A_UINT32 rx_ofdma_timing_err_cnt;
+    /* rx_cck_fail_cnt:
+     * number of cck error counts due to rx reception failure because of
+     * timing error in cck
+     */
+    A_UINT32 rx_cck_fail_cnt;
+    /* number of times tx abort initiated by mac */
+    A_UINT32 mactx_abort_cnt;
+    /* number of times rx abort initiated by mac */
+    A_UINT32 macrx_abort_cnt;
+    /* number of times tx abort initiated by phy */
+    A_UINT32 phytx_abort_cnt;
+    /* number of times rx abort initiated by phy */
+    A_UINT32 phyrx_abort_cnt;
+    /* number of rx defered count initiated by phy */
+    A_UINT32 phyrx_defer_abort_cnt;
+    /* number of sizing events generated at LSTF */
+    A_UINT32 rx_gain_adj_lstf_event_cnt; /* a.k.a sizing1 */
+    /* number of sizing events generated at non-legacy LTF */
+    A_UINT32 rx_gain_adj_non_legacy_cnt; /* a.k.a sizing2 */
+    /* rx_pkt_cnt -
+     * Received EOP (end-of-packet) count per packet type;
+     * [0] = 11a; [1] = 11b; [2] = 11n; [3] = 11ac; [4] = 11ax; [5] = GF
+     * [6-7]=RSVD
+     */
+    A_UINT32 rx_pkt_cnt[HTT_MAX_RX_PKT_CNT];
+    /* rx_pkt_crc_pass_cnt -
+     * Received EOP (end-of-packet) count per packet type;
+     * [0] = 11a; [1] = 11b; [2] = 11n; [3] = 11ac; [4] = 11ax; [5] = GF
+     * [6-7]=RSVD
+     */
+    A_UINT32 rx_pkt_crc_pass_cnt[HTT_MAX_RX_PKT_CRC_PASS_CNT];
+    /* per_blk_err_cnt -
+     * Error count per error source;
+     * [0] = unknown; [1] = LSIG; [2] = HTSIG; [3] = VHTSIG; [4] = HESIG;
+     * [5] = RXTD_OTA; [6] = RXTD_FATAL; [7] = DEMF; [8] = ROBE;
+     * [9] = PMI; [10] = TXFD; [11] = TXTD; [12] = PHYRF
+     * [13-19]=RSVD
+     */
+    A_UINT32 per_blk_err_cnt[HTT_MAX_PER_BLK_ERR_CNT];
+    /* rx_ota_err_cnt -
+     * RXTD OTA (over-the-air) error count per error reason;
+     * [0] = voting fail; [1] = weak det fail; [2] = strong sig fail;
+     * [3] = cck fail; [4] = power surge; [5] = power drop;
+     * [6] = btcf timing timeout error; [7] = btcf packet detect error;
+     * [8] = coarse timing timeout error
+     * [9-13]=RSVD
+     */
+    A_UINT32 rx_ota_err_cnt[HTT_MAX_RX_OTA_ERR_CNT];
+} htt_phy_counters_tlv;
+
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+    /* per chain hw noise floor values in dBm */
+    A_INT32  nf_chain[HTT_STATS_MAX_CHAINS];
+    /* number of false radars detected */
+    A_UINT32 false_radar_cnt;
+    /* number of channel switches happened due to radar detection */
+    A_UINT32 radar_cs_cnt;
+    /* ani_level -
+     * ANI level (noise interference) corresponds to the channel
+     * the desense levels range from -5 to 15 in dB units,
+     * higher values indicating more noise interference.
+     */
+    A_INT32 ani_level;
+    /* running time in minutes since FW boot */
+    A_UINT32 fw_run_time;
+} htt_phy_stats_tlv;
+
+/* NOTE:
+ * This structure is for documentation, and cannot be safely used directly.
+ * Instead, use the constituent TLV structures to fill/parse.
+ */
+typedef struct {
+    htt_phy_counters_tlv phy_counters;
+    htt_phy_stats_tlv phy_stats;
+} htt_phy_counters_and_phy_stats_t;
 
 #endif /* __HTT_STATS_H__ */
