@@ -17,7 +17,6 @@
 #include <linux/wait.h>
 #include <linux/mutex.h>
 #include <linux/msm_audio_ion.h>
-#include <linux/overflow.h>
 
 #include <soc/qcom/socinfo.h>
 #include <linux/qdsp6v2/apr_tal.h>
@@ -6802,8 +6801,8 @@ static int32_t qdsp_cvs_callback(struct apr_client_data *data, void *priv)
 
 		cvs_voc_pkt = v->shmem_info.sh_buf.buf[1].data;
 
-                if (__unsigned_add_overflow(cvs_voc_pkt[2],
-			(uint32_t)(3 * sizeof(uint32_t)), &tot_buf_sz)) {
+		if (__builtin_add_overflow(cvs_voc_pkt[2],
+				3 * sizeof(uint32_t), &tot_buf_sz)) {
 			pr_err("%s: integer overflow detected\n", __func__);
 			return -EINVAL;
 		}
