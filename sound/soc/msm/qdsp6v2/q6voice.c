@@ -17,6 +17,7 @@
 #include <linux/wait.h>
 #include <linux/mutex.h>
 #include <linux/msm_audio_ion.h>
+#include <linux/overflow.h>
 
 #include <soc/qcom/socinfo.h>
 #include <linux/qdsp6v2/apr_tal.h>
@@ -34,17 +35,6 @@
 
 #define CMD_STATUS_SUCCESS 0
 #define CMD_STATUS_FAIL 1
-
-/* Checking for unsigned overflow is relatively easy without causing UB. */
- #define __unsigned_add_overflow(a, b, d) ({	\
- 	typeof(a) __a = (a);			\
- 	typeof(b) __b = (b);			\
-	typeof(d) __d = (d);			\
- 	(void) (&__a == &__b);			\
-	(void) (&__a == __d);			\
-	*__d = __a + __b;			\
- 	*__d < __a;				\
-})
 
 enum {
 	VOC_TOKEN_NONE,
