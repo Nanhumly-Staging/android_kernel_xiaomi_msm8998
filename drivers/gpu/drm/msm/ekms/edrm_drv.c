@@ -32,7 +32,7 @@ static int msm_edrm_unload(struct drm_device *dev)
 	/* clean up display commit worker threads */
 	for (i = 0; i < priv->num_crtcs; i++) {
 		if (priv->disp_thread[i].thread) {
-			kthread_flush_worker(&priv->disp_thread[i].worker);
+			flush_kthread_worker(&priv->disp_thread[i].worker);
 			kthread_stop(priv->disp_thread[i].thread);
 			priv->disp_thread[i].thread = NULL;
 		}
@@ -126,7 +126,7 @@ static int msm_edrm_load(struct drm_device *dev, unsigned long flags)
 	/* initialize commit thread structure */
 	for (i = 0; i < priv->num_crtcs; i++) {
 		priv->disp_thread[i].crtc_id = priv->crtcs[i]->base.id;
-		kthread_init_worker(&priv->disp_thread[i].worker);
+		init_kthread_worker(&priv->disp_thread[i].worker);
 		priv->disp_thread[i].dev = dev;
 		priv->disp_thread[i].thread =
 			kthread_run(kthread_worker_fn,

@@ -498,7 +498,7 @@ static struct msm_commit *commit_init(struct drm_atomic_state *state)
 	 * bo's..
 	 */
 	INIT_FENCE_CB(&commit->fence_cb, fence_cb);
-	kthread_init_work(&commit->commit_work, _msm_drm_commit_work_cb);
+	init_kthread_work(&commit->commit_work, _msm_drm_commit_work_cb);
 
 	return commit;
 }
@@ -525,7 +525,7 @@ static int msm_atomic_commit_dispatch(struct drm_device *dev,
 			if (priv->disp_thread[j].crtc_id ==
 						crtc->base.id) {
 				if (priv->disp_thread[j].thread) {
-					kthread_queue_work(
+					queue_kthread_work(
 						&priv->disp_thread[j].worker,
 							&commit->commit_work);
 					/* only return zero if work is

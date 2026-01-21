@@ -1879,7 +1879,7 @@ static void msm_hs_start_tx_locked(struct uart_port *uport)
 
 	if (!tx->dma_in_flight) {
 		tx->dma_in_flight = true;
-		kthread_queue_work(&msm_uport->tx.kworker,
+		queue_kthread_work(&msm_uport->tx.kworker,
 			&msm_uport->tx.kwork);
 	}
 }
@@ -1908,7 +1908,7 @@ static void msm_hs_sps_tx_callback(struct sps_event_notify *notify)
 
 	del_timer(&msm_uport->tx.tx_timeout_timer);
 	MSM_HS_DBG("%s(): Queue kthread work", __func__);
-	kthread_queue_work(&msm_uport->tx.kworker, &msm_uport->tx.kwork);
+	queue_kthread_work(&msm_uport->tx.kworker, &msm_uport->tx.kwork);
 }
 
 static void msm_serial_hs_tx_work(struct kthread_work *work)
@@ -2020,7 +2020,7 @@ static void msm_hs_sps_rx_callback(struct sps_event_notify *notify)
 			__func__, inx,
 			msm_uport->rx.pending_flag & ~(1<<inx));
 		}
-		kthread_queue_work(&msm_uport->rx.kworker,
+		queue_kthread_work(&msm_uport->rx.kworker,
 				&msm_uport->rx.kwork);
 		MSM_HS_DBG("%s(): Scheduled rx_tlet", __func__);
 	}
@@ -2721,7 +2721,7 @@ static int msm_hs_startup(struct uart_port *uport)
 	}
 
 	/* Connect RX */
-	kthread_flush_worker(&msm_uport->rx.kworker);
+	flush_kthread_worker(&msm_uport->rx.kworker);
 	if (rx->flush != FLUSH_SHUTDOWN)
 		disconnect_rx_endpoint(msm_uport);
 	else
@@ -2840,7 +2840,7 @@ static int uartdm_init_port(struct uart_port *uport)
 
 	/* Init kernel threads for tx and rx */
 
-	kthread_init_worker(&rx->kworker);
+	init_kthread_worker(&rx->kworker);
 	rx->task = kthread_run(kthread_worker_fn,
 			&rx->kworker, "msm_serial_hs_%d_rx_work", uport->line);
 	if (IS_ERR(rx->task)) {
@@ -2849,9 +2849,9 @@ static int uartdm_init_port(struct uart_port *uport)
 	}
 	sched_setscheduler(rx->task, SCHED_FIFO, &param);
 
-	kthread_init_work(&rx->kwork, msm_serial_hs_rx_work);
+	init_kthread_work(&rx->kwork, msm_serial_hs_rx_work);
 
-	kthread_init_worker(&tx->kworker);
+	init_kthread_worker(&tx->kworker);
 	tx->task = kthread_run(kthread_worker_fn,
 			&tx->kworker, "msm_serial_hs_%d_tx_work", uport->line);
 	if (IS_ERR(rx->task)) {
@@ -2860,7 +2860,7 @@ static int uartdm_init_port(struct uart_port *uport)
 	}
 	sched_setscheduler(tx->task, SCHED_FIFO, &param);
 
-	kthread_init_work(&tx->kwork, msm_serial_hs_tx_work);
+	init_kthread_work(&tx->kwork, msm_serial_hs_tx_work);
 
 	rx->buffer = dma_alloc_coherent(uport->dev,
 				UART_DMA_DESC_NR * UARTDM_RX_BUF_SIZE,
@@ -3778,7 +3778,7 @@ static void msm_hs_shutdown(struct uart_port *uport)
 	msm_uport->wakeup.freed = true;
 
 	/* make sure tx lh finishes */
-	kthread_flush_worker(&msm_uport->tx.kworker);
+	flush_kthread_worker(&msm_uport->tx.kworker);
 	ret = wait_event_timeout(msm_uport->tx.wait,
 			uart_circ_empty(tx_buf), 500);
 	if (!ret)
@@ -3788,7 +3788,7 @@ static void msm_hs_shutdown(struct uart_port *uport)
 	/* Stop remote side from sending data */
 	msm_hs_disable_flow_control(uport, false);
 	/* make sure rx lh finishes */
-	kthread_flush_worker(&msm_uport->rx.kworker);
+	flush_kthread_worker(&msm_uport->rx.kworker);
 
 	if (msm_uport->rx.flush != FLUSH_SHUTDOWN) {
 		/* disable and disconnect rx */

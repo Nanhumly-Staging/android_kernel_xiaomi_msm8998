@@ -761,7 +761,6 @@ const char * const vmstat_text[] = {
 #endif
 	"workingset_refault",
 	"workingset_activate",
-	"workingset_restore",
 	"workingset_nodereclaim",
 	"nr_anon_transparent_hugepages",
 	"nr_free_cma",

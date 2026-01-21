@@ -1080,7 +1080,7 @@ static void __spi_pump_messages(struct spi_master *master, bool in_kthread)
 
 	/* If another context is idling the device then defer */
 	if (master->idling) {
-		kthread_queue_work(&master->kworker, &master->pump_messages);
+		queue_kthread_work(&master->kworker, &master->pump_messages);
 		spin_unlock_irqrestore(&master->queue_lock, flags);
 		return;
 	}
@@ -1094,7 +1094,7 @@ static void __spi_pump_messages(struct spi_master *master, bool in_kthread)
 
 		/* Only do teardown in the thread */
 		if (!in_kthread) {
-			kthread_queue_work(&master->kworker,
+			queue_kthread_work(&master->kworker,
 					   &master->pump_messages);
 			spin_unlock_irqrestore(&master->queue_lock, flags);
 			return;
@@ -1207,7 +1207,7 @@ static int spi_init_queue(struct spi_master *master)
 	master->running = false;
 	master->busy = false;
 
-	kthread_init_worker(&master->kworker);
+	init_kthread_worker(&master->kworker);
 	master->kworker_task = kthread_run(kthread_worker_fn,
 					   &master->kworker, "%s",
 					   dev_name(&master->dev));
@@ -1215,7 +1215,7 @@ static int spi_init_queue(struct spi_master *master)
 		dev_err(&master->dev, "failed to create message pump task\n");
 		return PTR_ERR(master->kworker_task);
 	}
-	kthread_init_work(&master->pump_messages, spi_pump_messages);
+	init_kthread_work(&master->pump_messages, spi_pump_messages);
 
 	/*
 	 * Master config will indicate if this controller should run the
@@ -1288,7 +1288,7 @@ void spi_finalize_current_message(struct spi_master *master)
 	spin_lock_irqsave(&master->queue_lock, flags);
 	master->cur_msg = NULL;
 	master->cur_msg_prepared = false;
-	kthread_queue_work(&master->kworker, &master->pump_messages);
+	queue_kthread_work(&master->kworker, &master->pump_messages);
 	spin_unlock_irqrestore(&master->queue_lock, flags);
 
 	trace_spi_message_done(mesg);
@@ -1314,7 +1314,7 @@ static int spi_start_queue(struct spi_master *master)
 	master->cur_msg = NULL;
 	spin_unlock_irqrestore(&master->queue_lock, flags);
 
-	kthread_queue_work(&master->kworker, &master->pump_messages);
+	queue_kthread_work(&master->kworker, &master->pump_messages);
 
 	return 0;
 }
@@ -1361,7 +1361,7 @@ static int spi_destroy_queue(struct spi_master *master)
 	ret = spi_stop_queue(master);
 
 	/*
-	 * kthread_flush_worker will block until all work is done.
+	 * flush_kthread_worker will block until all work is done.
 	 * If the reason that stop_queue timed out is that the work will never
 	 * finish, then it does no good to call flush/stop thread, so
 	 * return anyway.
@@ -1371,7 +1371,7 @@ static int spi_destroy_queue(struct spi_master *master)
 		return ret;
 	}
 
-	kthread_flush_worker(&master->kworker);
+	flush_kthread_worker(&master->kworker);
 	kthread_stop(master->kworker_task);
 
 	return 0;
@@ -1395,7 +1395,7 @@ static int __spi_queued_transfer(struct spi_device *spi,
 
 	list_add_tail(&msg->queue, &master->queue);
 	if (!master->busy && need_pump)
-		kthread_queue_work(&master->kworker, &master->pump_messages);
+		queue_kthread_work(&master->kworker, &master->pump_messages);
 
 	spin_unlock_irqrestore(&master->queue_lock, flags);
 	return 0;

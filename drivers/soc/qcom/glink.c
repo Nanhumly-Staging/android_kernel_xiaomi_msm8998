@@ -4103,8 +4103,8 @@ int glink_core_register_transport(struct glink_transport_if *if_ptr,
 	INIT_LIST_HEAD(&xprt_ptr->notified);
 	spin_lock_init(&xprt_ptr->tx_ready_lock_lhb3);
 	mutex_init(&xprt_ptr->xprt_dbgfs_lock_lhb4);
-	kthread_init_work(&xprt_ptr->tx_kwork, tx_func);
-	kthread_init_worker(&xprt_ptr->tx_wq);
+	init_kthread_work(&xprt_ptr->tx_kwork, tx_func);
+	init_kthread_worker(&xprt_ptr->tx_wq);
 	xprt_ptr->tx_task = kthread_run(kthread_worker_fn,
 			&xprt_ptr->tx_wq, "%s_%s_glink_tx",
 			xprt_ptr->edge, xprt_ptr->name);
@@ -4211,7 +4211,7 @@ static void glink_core_link_down(struct glink_transport_if *if_ptr)
 	GLINK_DBG_XPRT(xprt_ptr,
 		"%s: Flushing work from tx_wq. Thread: %u\n", __func__,
 		current->pid);
-	kthread_flush_worker(&xprt_ptr->tx_wq);
+	flush_kthread_worker(&xprt_ptr->tx_wq);
 	glink_core_channel_cleanup(xprt_ptr);
 	check_link_notifier_and_notify(xprt_ptr, GLINK_LINK_STATE_DOWN);
 }
@@ -5080,7 +5080,7 @@ static void glink_core_rx_cmd_ch_remote_close(
 
 	if (is_ch_fully_closed) {
 		glink_delete_ch_from_list(ctx, true);
-		kthread_flush_worker(&xprt_ptr->tx_wq);
+		flush_kthread_worker(&xprt_ptr->tx_wq);
 	}
 	rwref_put(&ctx->ch_state_lhb2);
 }
@@ -5118,7 +5118,7 @@ static void glink_core_rx_cmd_ch_close_ack(struct glink_transport_if *if_ptr,
 	is_ch_fully_closed = glink_core_ch_close_ack_common(ctx, false);
 	if (is_ch_fully_closed) {
 		glink_delete_ch_from_list(ctx, true);
-		kthread_flush_worker(&xprt_ptr->tx_wq);
+		flush_kthread_worker(&xprt_ptr->tx_wq);
 	}
 	rwref_put(&ctx->ch_state_lhb2);
 }
@@ -5461,7 +5461,7 @@ static void xprt_schedule_tx(struct glink_core_xprt_ctx *xprt_ptr,
 	spin_unlock(&ch_ptr->tx_lists_lock_lhc3);
 	spin_unlock_irqrestore(&xprt_ptr->tx_ready_lock_lhb3, flags);
 
-	kthread_queue_work(&xprt_ptr->tx_wq, &xprt_ptr->tx_kwork);
+	queue_kthread_work(&xprt_ptr->tx_wq, &xprt_ptr->tx_kwork);
 }
 
 /**
@@ -5765,7 +5765,7 @@ static void glink_core_tx_resume(struct glink_transport_if *if_ptr)
 {
 	struct glink_core_xprt_ctx *xprt_ptr = if_ptr->glink_core_priv;
 
-	kthread_queue_work(&xprt_ptr->tx_wq, &xprt_ptr->tx_kwork);
+	queue_kthread_work(&xprt_ptr->tx_wq, &xprt_ptr->tx_kwork);
 }
 
 /**

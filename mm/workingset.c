@@ -118,7 +118,7 @@
  * the only thing eating into inactive list space is active pages.
  *
  *
- *		Refaulting inactive pages
+ *		Activating refaulting pages
  *
  * All that is known about the active list is that the pages have been
  * accessed more than once in the past.  This means that at any given
@@ -131,24 +131,12 @@
  * used less frequently than the refaulting page - or even not used at
  * all anymore.
  *
- * That means if inactive cache is refaulting with a suitable refault
- * distance, we assume the cache workingset is transitioning and put
- * pressure on the current active list.
- *
  * If this is wrong and demotion kicks in, the pages which are truly
  * used more frequently will be reactivated while the less frequently
  * used once will be evicted from memory.
  *
  * But if this is right, the stale pages will be pushed out of memory
  * and the used pages get to stay in cache.
- *
- *		Refaulting active pages
- *
- * If on the other hand the refaulting pages have recently been
- * deactivated, it means that the active list is no longer protecting
- * actively used cache from reclaim. The cache is NOT transitioning to
- * a different workingset; the existing workingset is thrashing in the
- * space allocated to the page cache.
  *
  *
  *		Implementation
@@ -164,50 +152,54 @@
  * refault distance will immediately activate the refaulting page.
  */
 
-#define EVICTION_SHIFT	(RADIX_TREE_EXCEPTIONAL_ENTRY + \
-			 1 + ZONES_SHIFT + NODES_SHIFT)
-#define EVICTION_MASK	(~0UL >> EVICTION_SHIFT)
-
-/*
- * Eviction timestamps need to be able to cover the full range of
- * actionable refaults. However, bits are tight in the radix tree
- * entry, and after storing the identifier for the lruvec there might
- * not be enough left to represent every single actionable refault. In
- * that case, we have to sacrifice granularity for distance, and group
- * evictions into coarser buckets by shaving off lower timestamp bits.
- */
-static unsigned int bucket_order __read_mostly;
-
-static void *pack_shadow(unsigned long eviction, struct zone *zone,
-			 bool workingset)
+static void *pack_shadow(unsigned long eviction, struct zone *zone)
 {
-	eviction >>= bucket_order;
 	eviction = (eviction << NODES_SHIFT) | zone_to_nid(zone);
 	eviction = (eviction << ZONES_SHIFT) | zone_idx(zone);
 	eviction = (eviction << RADIX_TREE_EXCEPTIONAL_SHIFT);
-	eviction = (eviction << 1) | workingset;
 
 	return (void *)(eviction | RADIX_TREE_EXCEPTIONAL_ENTRY);
 }
 
-static void unpack_shadow(void *shadow, struct zone **zonep,
-			  unsigned long *evictionp, bool *workingsetp)
+static void unpack_shadow(void *shadow,
+			  struct zone **zone,
+			  unsigned long *distance)
 {
 	unsigned long entry = (unsigned long)shadow;
+	unsigned long eviction;
+	unsigned long refault;
+	unsigned long mask;
 	int zid, nid;
-	bool workingset;
 
 	entry >>= RADIX_TREE_EXCEPTIONAL_SHIFT;
-	workingset = entry & 1;
-	entry >>= 1;
 	zid = entry & ((1UL << ZONES_SHIFT) - 1);
 	entry >>= ZONES_SHIFT;
 	nid = entry & ((1UL << NODES_SHIFT) - 1);
 	entry >>= NODES_SHIFT;
+	eviction = entry;
 
-	*zonep = NODE_DATA(nid)->node_zones + zid;
-	*evictionp = entry << bucket_order;
-	*workingsetp = workingset;
+	*zone = NODE_DATA(nid)->node_zones + zid;
+
+	refault = atomic_long_read(&(*zone)->inactive_age);
+	mask = ~0UL >> (NODES_SHIFT + ZONES_SHIFT +
+			RADIX_TREE_EXCEPTIONAL_SHIFT);
+	/*
+	 * The unsigned subtraction here gives an accurate distance
+	 * across inactive_age overflows in most cases.
+	 *
+	 * There is a special case: usually, shadow entries have a
+	 * short lifetime and are either refaulted or reclaimed along
+	 * with the inode before they get too old.  But it is not
+	 * impossible for the inactive_age to lap a shadow entry in
+	 * the field, which can then can result in a false small
+	 * refault distance, leading to a false activation should this
+	 * old entry actually refault again.  However, earlier kernels
+	 * used to deactivate unconditionally with *every* reclaim
+	 * invocation for the longest time, so the occasional
+	 * inappropriate activation leading to pressure on the active
+	 * list is not a problem.
+	 */
+	*distance = (refault - eviction) & mask;
 }
 
 /**
@@ -224,65 +216,31 @@ void *workingset_eviction(struct address_space *mapping, struct page *page)
 	unsigned long eviction;
 
 	eviction = atomic_long_inc_return(&zone->inactive_age);
-	return pack_shadow(eviction, zone, PageWorkingset(page));
+	return pack_shadow(eviction, zone);
 }
 
 /**
  * workingset_refault - evaluate the refault of a previously evicted page
- * @page: the freshly allocated replacement page
  * @shadow: shadow entry of the evicted page
  *
  * Calculates and evaluates the refault distance of the previously
  * evicted page in the context of the zone it was allocated in.
+ *
+ * Returns %true if the page should be activated, %false otherwise.
  */
-void workingset_refault(struct page *page, void *shadow)
+bool workingset_refault(void *shadow)
 {
 	unsigned long refault_distance;
 	struct zone *zone;
-	unsigned long eviction;
-	unsigned long refault;
-	bool workingset;
 
-	unpack_shadow(shadow, &zone, &eviction, &workingset);
-
-	refault = atomic_long_read(&zone->inactive_age);
-
-	/*
-	 * Calculate the refault distance
-	 *
-	 * The unsigned subtraction here gives an accurate distance
-	 * across inactive_age overflows in most cases. There is a
-	 * special case: usually, shadow entries have a short lifetime
-	 * and are either refaulted or reclaimed along with the inode
-	 * before they get too old.  But it is not impossible for the
-	 * inactive_age to lap a shadow entry in the field, which can
-	 * then result in a false small refault distance, leading to a
-	 * false activation should this old entry actually refault
-	 * again.  However, earlier kernels used to deactivate
-	 * unconditionally with *every* reclaim invocation for the
-	 * longest time, so the occasional inappropriate activation
-	 * leading to pressure on the active list is not a problem.
-	 */
-	refault_distance = (refault - eviction) & EVICTION_MASK;
-
+	unpack_shadow(shadow, &zone, &refault_distance);
 	inc_zone_state(zone, WORKINGSET_REFAULT);
 
-	/*
-	 * Compare the distance to the existing workingset size. We
-	 * don't act on pages that couldn't stay resident even if all
-	 * the memory was available to the page cache.
-	 */
-	if (refault_distance > zone_page_state(zone, NR_ACTIVE_FILE))
-		return;
-
-	SetPageActive(page);
-	inc_zone_state(zone, WORKINGSET_ACTIVATE);
-
-	/* Page was active prior to eviction */
-	if (workingset) {
-		SetPageWorkingset(page);
-		inc_zone_state(zone, WORKINGSET_RESTORE);
+	if (refault_distance <= zone_page_state(zone, NR_ACTIVE_FILE)) {
+		inc_zone_state(zone, WORKINGSET_ACTIVATE);
+		return true;
 	}
+	return false;
 }
 
 /**
@@ -320,9 +278,7 @@ static unsigned long count_shadow_nodes(struct shrinker *shrinker,
 	shadow_nodes = list_lru_shrink_count(&workingset_shadow_nodes, sc);
 	local_irq_enable();
 
-	pages = node_page_state(sc->nid, NR_ACTIVE_FILE) +
-		node_page_state(sc->nid, NR_INACTIVE_FILE);
-
+	pages = node_present_pages(sc->nid);
 	/*
 	 * Active cache pages are limited to 50% of memory, and shadow
 	 * entries that represent a refault distance bigger than that
@@ -440,24 +396,7 @@ static struct lock_class_key shadow_nodes_key;
 
 static int __init workingset_init(void)
 {
-	unsigned int timestamp_bits;
-	unsigned int max_order;
 	int ret;
-
-	BUILD_BUG_ON(BITS_PER_LONG < EVICTION_SHIFT);
-	/*
-	 * Calculate the eviction bucket size to cover the longest
-	 * actionable refault distance, which is currently half of
-	 * memory (totalram_pages/2). However, memory hotplug may add
-	 * some more pages at runtime, so keep working with up to
-	 * double the initial memory by using totalram_pages as-is.
-	 */
-	timestamp_bits = BITS_PER_LONG - EVICTION_SHIFT;
-	max_order = fls_long(totalram_pages() - 1);
-	if (max_order > timestamp_bits)
-		bucket_order = max_order - timestamp_bits;
-	printk("workingset: timestamp_bits=%d max_order=%d bucket_order=%u\n",
-	       timestamp_bits, max_order, bucket_order);
 
 	ret = list_lru_init_key(&workingset_shadow_nodes, &shadow_nodes_key);
 	if (ret)

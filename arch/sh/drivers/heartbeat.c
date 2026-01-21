@@ -22,7 +22,6 @@
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/sched.h>
-#include <linux/sched/loadavg.h>
 #include <linux/timer.h>
 #include <linux/io.h>
 #include <linux/slab.h>

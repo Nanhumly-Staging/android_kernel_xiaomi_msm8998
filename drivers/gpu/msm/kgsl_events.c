@@ -32,7 +32,7 @@ static inline void signal_event(struct kgsl_device *device,
 {
 	list_del(&event->node);
 	event->result = result;
-	kthread_queue_work(&kgsl_driver.worker, &event->work);
+	queue_kthread_work(&kgsl_driver.worker, &event->work);
 }
 
 /**
@@ -282,7 +282,7 @@ int kgsl_add_event(struct kgsl_device *device, struct kgsl_event_group *group,
 	event->created = jiffies;
 	event->group = group;
 
-	kthread_init_work(&event->work, _kgsl_event_worker);
+	init_kthread_work(&event->work, _kgsl_event_worker);
 
 	trace_kgsl_register_event(KGSL_CONTEXT_ID(context), timestamp, func);
 
@@ -297,7 +297,7 @@ int kgsl_add_event(struct kgsl_device *device, struct kgsl_event_group *group,
 
 	if (timestamp_cmp(retired, timestamp) >= 0) {
 		event->result = KGSL_EVENT_RETIRED;
-		kthread_queue_work(&kgsl_driver.worker, &event->work);
+		queue_kthread_work(&kgsl_driver.worker, &event->work);
 		spin_unlock(&group->lock);
 		return 0;
 	}
