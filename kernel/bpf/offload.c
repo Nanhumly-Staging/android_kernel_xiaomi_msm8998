@@ -412,7 +412,7 @@ static void __bpf_map_offload_destroy(struct bpf_offloaded_map *offmap)
 {
 	WARN_ON(bpf_map_offload_ndo(offmap, BPF_OFFLOAD_MAP_FREE));
 	/* Make sure BPF_MAP_GET_NEXT_ID can't find this dead map */
-	bpf_map_free_id(&offmap->map);
+	bpf_map_free_id(&offmap->map, true);
 	list_del_init(&offmap->offloads);
 	offmap->netdev = NULL;
 }
@@ -704,7 +704,6 @@ void bpf_offload_dev_destroy(struct bpf_offload_dev *offdev)
 	kfree(offdev);
 }
 EXPORT_SYMBOL_GPL(bpf_offload_dev_destroy);
-
 
 void *bpf_offload_dev_priv(struct bpf_offload_dev *offdev)
 {

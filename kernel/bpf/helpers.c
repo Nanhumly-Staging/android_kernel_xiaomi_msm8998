@@ -1,13 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-only
 /* Copyright (c) 2011-2014 PLUMgrid, http://plumgrid.com
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of version 2 of the GNU General Public
- * License as published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- * General Public License for more details.
  */
 #include <linux/bpf.h>
 #include <linux/rcupdate.h>
@@ -347,7 +339,7 @@ BPF_CALL_0(bpf_get_current_cgroup_id)
 {
 	struct cgroup *cgrp = task_dfl_cgroup(current);
 
-	return cgrp->kn->id.id;
+	return cgroup_id(cgrp);
 }
 
 const struct bpf_func_proto bpf_get_current_cgroup_id_proto = {
@@ -364,36 +356,37 @@ BPF_CALL_1(bpf_get_current_ancestor_cgroup_id, int, ancestor_level)
 	ancestor = cgroup_ancestor(cgrp, ancestor_level);
 	if (!ancestor)
 		return 0;
-	return ancestor->id;
+	return cgroup_id(ancestor);
 }
 
 const struct bpf_func_proto bpf_get_current_ancestor_cgroup_id_proto = {
 	.func		= bpf_get_current_ancestor_cgroup_id,
 	.gpl_only	= false,
 	.ret_type	= RET_INTEGER,
-	.arg1_type	= ARG_ANYTHING,
 };
 
 #ifdef CONFIG_CGROUP_BPF
-DECLARE_PER_CPU(void*, bpf_cgroup_storage[MAX_BPF_CGROUP_STORAGE_TYPE]);
+DECLARE_PER_CPU(struct bpf_cgroup_storage*,
+		bpf_cgroup_storage[MAX_BPF_CGROUP_STORAGE_TYPE]);
 
 BPF_CALL_2(bpf_get_local_storage, struct bpf_map *, map, u64, flags)
 {
 	/* flags argument is not used now,
- 	 * but provides an ability to extend the API.
- 	 * verifier checks that its value is correct.
+	 * but provides an ability to extend the API.
+	 * verifier checks that its value is correct.
 	 */
 	enum bpf_cgroup_storage_type stype = cgroup_storage_type(map);
 	struct bpf_cgroup_storage *storage;
- 	void *ptr;
- 
- 	storage = this_cpu_read(bpf_cgroup_storage[stype]);
- 
- 	if (stype == BPF_CGROUP_STORAGE_SHARED)
- 		ptr = &READ_ONCE(storage->buf)->data[0];
- 	else
- 		ptr = this_cpu_ptr(storage->percpu_buf);
- 	return (unsigned long)ptr;
+	void *ptr;
+
+	storage = this_cpu_read(bpf_cgroup_storage[stype]);
+
+	if (stype == BPF_CGROUP_STORAGE_SHARED)
+		ptr = &READ_ONCE(storage->buf)->data[0];
+	else
+		ptr = this_cpu_ptr(storage->percpu_buf);
+
+	return (unsigned long)ptr;
 }
 
 const struct bpf_func_proto bpf_get_local_storage_proto = {
@@ -533,110 +526,3 @@ const struct bpf_func_proto bpf_strtoul_proto = {
 	.arg4_type	= ARG_PTR_TO_LONG,
 };
 #endif
-
-static const struct bpf_func_proto bpf_get_raw_smp_processor_id_proto = {
-	.func		= bpf_get_raw_cpu_id,
-	.gpl_only	= false,
-	.ret_type	= RET_INTEGER,
-};
-
-BPF_CALL_5(bpf_event_output_data, void *, ctx, struct bpf_map *, map,
-	   u64, flags, void *, data, u64, size)
-{
-	if (unlikely(flags & ~(BPF_F_INDEX_MASK)))
-		return -EINVAL;
-
-	return bpf_event_output(map, flags, data, size, NULL, 0, NULL);
-}
-
-const struct bpf_func_proto bpf_event_output_data_proto =  {
-	.func		= bpf_event_output_data,
-	.gpl_only       = true,
-	.ret_type       = RET_INTEGER,
-	.arg1_type      = ARG_PTR_TO_CTX,
-	.arg2_type      = ARG_CONST_MAP_PTR,
-	.arg3_type      = ARG_ANYTHING,
-	.arg4_type      = ARG_PTR_TO_MEM,
-	.arg5_type      = ARG_CONST_SIZE_OR_ZERO,
-};
-
-const struct bpf_func_proto bpf_get_current_task_proto __weak;
-const struct bpf_func_proto bpf_probe_read_user_proto __weak;
-const struct bpf_func_proto bpf_probe_read_user_str_proto __weak;
-const struct bpf_func_proto bpf_probe_read_kernel_proto __weak;
-const struct bpf_func_proto bpf_probe_read_kernel_str_proto __weak;
-
-const struct bpf_func_proto *
-bpf_base_func_proto(enum bpf_func_id func_id, const struct bpf_prog *prog)
-{
-	switch (func_id) {
-	case BPF_FUNC_map_lookup_elem:
-		return &bpf_map_lookup_elem_proto;
-	case BPF_FUNC_map_update_elem:
-		return &bpf_map_update_elem_proto;
-	case BPF_FUNC_map_delete_elem:
-		return &bpf_map_delete_elem_proto;
-	case BPF_FUNC_map_push_elem:
-		return &bpf_map_push_elem_proto;
-	case BPF_FUNC_map_pop_elem:
-		return &bpf_map_pop_elem_proto;
-	case BPF_FUNC_map_peek_elem:
-		return &bpf_map_peek_elem_proto;
-	case BPF_FUNC_get_prandom_u32:
-		return &bpf_get_prandom_u32_proto;
-	case BPF_FUNC_get_smp_processor_id:
-		return &bpf_get_raw_smp_processor_id_proto;
-	case BPF_FUNC_get_numa_node_id:
-		return &bpf_get_numa_node_id_proto;
-	case BPF_FUNC_tail_call:
-		return &bpf_tail_call_proto;
-	case BPF_FUNC_ktime_get_ns:
-		return &bpf_ktime_get_ns_proto;
-	case BPF_FUNC_ktime_get_boot_ns:
-		return &bpf_ktime_get_boot_ns_proto;
-	case BPF_FUNC_ringbuf_output:
-		return &bpf_ringbuf_output_proto;
-	case BPF_FUNC_ringbuf_reserve:
-		return &bpf_ringbuf_reserve_proto;
-	case BPF_FUNC_ringbuf_submit:
-		return &bpf_ringbuf_submit_proto;
-	case BPF_FUNC_ringbuf_discard:
-		return &bpf_ringbuf_discard_proto;
-	case BPF_FUNC_ringbuf_query:
-		return &bpf_ringbuf_query_proto;
-	default:
-		break;
-	}
-
-	if (!capable(CAP_SYS_ADMIN))
-		return NULL;
-
-	switch (func_id) {
-	case BPF_FUNC_spin_lock:
-		return &bpf_spin_lock_proto;
-	case BPF_FUNC_spin_unlock:
-		return &bpf_spin_unlock_proto;
-	case BPF_FUNC_trace_printk:
-		return bpf_get_trace_printk_proto();
-	default:
-		break;
-	}
-
-	if (!perfmon_capable())
-		return NULL;
-
-	switch (func_id) {
-	case BPF_FUNC_get_current_task:
-		return &bpf_get_current_task_proto;
-	case BPF_FUNC_probe_read_user:
-		return &bpf_probe_read_user_proto;
-	case BPF_FUNC_probe_read_kernel:
-		return &bpf_probe_read_kernel_proto;
-	case BPF_FUNC_probe_read_user_str:
-		return &bpf_probe_read_user_str_proto;
-	case BPF_FUNC_probe_read_kernel_str:
-		return &bpf_probe_read_kernel_str_proto;
-	default:
-		return NULL;
-	}
-}
