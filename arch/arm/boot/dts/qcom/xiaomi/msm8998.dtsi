@@ -74,8 +74,8 @@
 				system {
 					compatible = "android,system";
 					dev = "/dev/block/platform/soc/1da4000.ufshc/by-name/system";
-					type = "ext4";
-					mnt_flags = "ro,barrier=1,discard";
+					type = "erofs";
+					mnt_flags = "ro";
 					fsmgr_flags = "wait";
 					status = "ok";
 				};
@@ -88,6 +88,14 @@
 					fsmgr_flags = "wait";
 					status = "ok";
 				};
+ metadata {
+                                        compatible = "android,metadata";
+                                        dev = "/dev/block/platform/soc/1da4000.ufshc/by-name/oops";
+                                        type = "ext4";
+                                        mnt_flags = "nosuid,nodev,noatime,discard,data=journal,commit=1";
+                                        fsmgr_flags = "wait,check,formattable,first_stage_mount,check,metadata_csum";
+                                        status = "ok";
+                                };
 
 			};
 		};
