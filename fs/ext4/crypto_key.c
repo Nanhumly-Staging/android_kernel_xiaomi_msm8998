@@ -11,6 +11,7 @@
 #include <keys/encrypted-type.h>
 #include <keys/user-type.h>
 #include <linux/random.h>
+#include <linux/fscrypt_legacy_keyring.h>
 #include <linux/scatterlist.h>
 #include <uapi/linux/keyctl.h>
 
@@ -296,7 +297,7 @@ retry:
 		ctx.master_key_descriptor);
 	full_key_descriptor[EXT4_KEY_DESC_PREFIX_SIZE +
 			    (2 * EXT4_KEY_DESCRIPTOR_SIZE)] = '\0';
-	keyring_key = request_key(&key_type_logon, full_key_descriptor, NULL);
+	keyring_key = fscrypt_legacy_request_key(full_key_descriptor);
 	if (IS_ERR(keyring_key)) {
 		res = PTR_ERR(keyring_key);
 		keyring_key = NULL;

@@ -11,6 +11,7 @@
 #include <keys/user-type.h>
 #include <linux/scatterlist.h>
 #include <linux/ratelimit.h>
+#include <linux/fscrypt_legacy_keyring.h>
 #include <crypto/aes.h>
 #include <crypto/sha.h>
 #include <crypto/skcipher.h>
@@ -85,7 +86,7 @@ find_and_lock_process_key(const char *prefix,
 	if (!description)
 		return ERR_PTR(-ENOMEM);
 
-	key = request_key(&key_type_logon, description, NULL);
+	key = fscrypt_legacy_request_key(description);
 	kfree(description);
 	if (IS_ERR(key))
 		return key;

@@ -10,6 +10,7 @@
 #include <linux/fs.h>
 #include <linux/capability.h>
 #include <linux/time.h>
+#include <linux/fscrypt_legacy_keyring.h>
 #include <linux/compat.h>
 #include <linux/mount.h>
 #include <linux/file.h>
@@ -867,6 +868,25 @@ encryption_policy_out:
 		return -EOPNOTSUPP;
 #endif
 	}
+#ifdef CONFIG_EXT4_FS_ENCRYPTION
+	case FS_IOC_ADD_ENCRYPTION_KEY:
+		if (!ext4_sb_has_crypto(sb))
+			return -EOPNOTSUPP;
+		return fscrypt_legacy_ioctl_add_key(filp, (void __user *)arg);
+	case FS_IOC_REMOVE_ENCRYPTION_KEY:
+		if (!ext4_sb_has_crypto(sb))
+			return -EOPNOTSUPP;
+		return fscrypt_legacy_ioctl_remove_key(filp, (void __user *)arg);
+	case FS_IOC_REMOVE_ENCRYPTION_KEY_ALL_USERS:
+		if (!ext4_sb_has_crypto(sb))
+			return -EOPNOTSUPP;
+		return fscrypt_legacy_ioctl_remove_key_all_users(filp,
+							 (void __user *)arg);
+	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
+		if (!ext4_sb_has_crypto(sb))
+			return -EOPNOTSUPP;
+		return fscrypt_legacy_ioctl_get_key_status(filp, (void __user *)arg);
+#endif
 	case EXT4_IOC_FSGETXATTR:
 	{
 		struct fsxattr fa;
@@ -996,6 +1016,12 @@ long ext4_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case EXT4_IOC_SET_ENCRYPTION_POLICY:
 	case EXT4_IOC_GET_ENCRYPTION_PWSALT:
 	case EXT4_IOC_GET_ENCRYPTION_POLICY:
+#ifdef CONFIG_EXT4_FS_ENCRYPTION
+	case FS_IOC_ADD_ENCRYPTION_KEY:
+	case FS_IOC_REMOVE_ENCRYPTION_KEY:
+	case FS_IOC_REMOVE_ENCRYPTION_KEY_ALL_USERS:
+	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
+#endif
 	case FS_IOC_ENABLE_VERITY:
 	case FS_IOC_MEASURE_VERITY:
 		break;
