@@ -149,6 +149,7 @@ static struct bpf_ringbuf *bpf_ringbuf_alloc(size_t data_sz, int numa_node)
 static struct bpf_map *ringbuf_map_alloc(union bpf_attr *attr)
 {
 	struct bpf_ringbuf_map *rb_map;
+	u64 cost;
 	int err;
 
 	if (attr->map_flags & ~RINGBUF_CREATE_FLAG_MASK)
@@ -171,9 +172,9 @@ static struct bpf_map *ringbuf_map_alloc(union bpf_attr *attr)
 
 	bpf_map_init_from_attr(&rb_map->map, attr);
 
-	rb_map->map.pages = sizeof(struct bpf_ringbuf_map) +
-			     sizeof(struct bpf_ringbuf) +
-			     attr->max_entries;
+	cost = sizeof(struct bpf_ringbuf_map) + sizeof(struct bpf_ringbuf) +
+	       attr->max_entries;
+	rb_map->map.pages = round_up(cost, PAGE_SIZE) >> PAGE_SHIFT;
 	err = bpf_map_precharge_memlock(rb_map->map.pages);
 	if (err)
 		goto err_free_map;
