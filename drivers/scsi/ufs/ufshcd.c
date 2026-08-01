@@ -3828,6 +3828,7 @@ int ufshcd_read_device_desc(struct ufs_hba *hba, u8 *buf, u32 size)
 {
 	return ufshcd_read_desc(hba, QUERY_DESC_IDN_DEVICE, 0, buf, size);
 }
+EXPORT_SYMBOL_GPL(ufshcd_read_device_desc);
 
 /**
  * ufshcd_read_string_desc - read string descriptor
@@ -3899,6 +3900,7 @@ out_free_buff:
 out:
 	return err;
 }
+EXPORT_SYMBOL_GPL(ufshcd_read_string_desc);
 
 /**
  * ufshcd_read_unit_desc_param - read the specified unit descriptor parameter

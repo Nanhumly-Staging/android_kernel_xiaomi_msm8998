@@ -28,6 +28,7 @@
 #include "ufshcd.h"
 #include "ufshcd-pltfrm.h"
 #include "unipro.h"
+#include "ufs-sysfs.h"
 #include "ufs-qcom.h"
 #include "ufshci.h"
 #include "ufs_quirks.h"
@@ -2819,6 +2820,13 @@ static int ufs_qcom_probe(struct platform_device *pdev)
 	int err;
 	struct device *dev = &pdev->dev;
 	struct device_node *np = dev->of_node;
+	struct ufs_hba *hba;
+	static bool sysfs_done;
+
+	if (!sysfs_done) {
+		ufs_sysfs_init();
+		sysfs_done = true;
+	}
 
 	/*
 	 * On qcom platforms, bootdevice is the primary storage
@@ -2839,10 +2847,15 @@ static int ufs_qcom_probe(struct platform_device *pdev)
 
 	/* Perform generic probe */
 	err = ufshcd_pltfrm_init(pdev, &ufs_hba_qcom_variant);
-	if (err)
+	if (err){
 		dev_err(dev, "ufshcd_pltfrm_init() failed %d\n", err);
 
 	return err;
+	}
+	hba = platform_get_drvdata(pdev);
+	ufs_sysfs_set_hba(hba);
+
+	return 0;
 }
 
 /**
@@ -2854,7 +2867,7 @@ static int ufs_qcom_probe(struct platform_device *pdev)
 static int ufs_qcom_remove(struct platform_device *pdev)
 {
 	struct ufs_hba *hba =  platform_get_drvdata(pdev);
-
+	ufs_sysfs_clear_hba();
 	pm_runtime_get_sync(&(pdev)->dev);
 	ufshcd_remove(hba);
 	return 0;

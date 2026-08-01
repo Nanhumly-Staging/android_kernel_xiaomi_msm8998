@@ -1012,4 +1012,12 @@ config MFSE_QMI
 	help
 	 This option enables the QMI client driver for MFSE service.
 
+config MSM_SOC_SYSFS
+	tristate "MSM SoC sysfs attributes for soc1"
+	depends on ARCH_QCOM
+	help
+	 This driver creates sysfs nodes under /sys/devices/soc1/ to expose
+	 fixed CPU information: cpu_freq, core_num, cpu_type, user_cpu_freq.
+
+
 source "drivers/soc/qcom/memshare/Kconfig"

@@ -30,6 +30,16 @@ config MSM_APM
 	  SRAM Vmin requirements are met across different performance
 	  levels.
 
+config FUELSUMMARY
+	tristate "Fuel Summary sysfs class"
+	depends on POWER_SUPPLY
+	help
+	  Creates a fuelsummary sysfs class that maps battery
+	  power_supply properties to simplified nodes:
+	    /sys/class/fuelsummary/cycle  -> cycle_count
+	    /sys/class/fuelsummary/soh    -> charge_full
+
+
 if MSM_PM
 menuconfig MSM_IDLE_STATS
 	bool "Collect idle statistics"
