@@ -39,7 +39,6 @@
 #include <asm/tls.h>
 #include <asm/system_misc.h>
 #include <asm/opcodes.h>
-#include <linux/sched/task_stack.h>
 
 
 static const char *handler[]= {

@@ -42,7 +42,6 @@
 #include <arch/chip.h>
 #include <arch/abi.h>
 #include <arch/sim_def.h>
-#include <linux/sched/task_stack.h>
 
 /*
  * Use the (x86) "idle=poll" option to prefer low latency when leaving the

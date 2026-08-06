@@ -29,7 +29,6 @@
 #include <asm/traps.h>
 
 #include "setup.h"
-#include <linux/sched/task_stack.h>
 
 static void dump_mem(const char *, const char *, unsigned long, unsigned long);
 

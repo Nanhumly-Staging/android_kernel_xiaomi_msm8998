@@ -109,7 +109,6 @@
 #include <linux/kmemcheck.h>
 #include <linux/kmemleak.h>
 #include <linux/memory_hotplug.h>
-#include <linux/sched/task_stack.h>
 
 /*
  * Kmemleak configuration and common defines.

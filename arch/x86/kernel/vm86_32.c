@@ -35,7 +35,6 @@
 #include <linux/interrupt.h>
 #include <linux/syscalls.h>
 #include <linux/sched.h>
-#include <linux/sched/task_stack.h>
 #include <linux/kernel.h>
 #include <linux/signal.h>
 #include <linux/string.h>

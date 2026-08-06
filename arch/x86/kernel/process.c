@@ -34,7 +34,6 @@
 #include <asm/spec-ctrl.h>
 
 #include "process.h"
-#include <linux/sched/task_stack.h>
 
 /*
  * per-CPU TSS segments. Threads are completely 'soft' on Linux,

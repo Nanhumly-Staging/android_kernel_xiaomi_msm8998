@@ -8,7 +8,6 @@
 
 #include <linux/ptrace.h>
 #include <linux/tracehook.h>
-#include <linux/sched/task_stack.h>
 #include <linux/regset.h>
 #include <linux/unistd.h>
 #include <linux/elf.h>

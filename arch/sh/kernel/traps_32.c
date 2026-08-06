@@ -25,8 +25,6 @@
 #include <linux/sysfs.h>
 #include <linux/uaccess.h>
 #include <linux/perf_event.h>
-#include <linux/sched/task_stack.h>
-
 #include <asm/alignment.h>
 #include <asm/fpu.h>
 #include <asm/kprobes.h>

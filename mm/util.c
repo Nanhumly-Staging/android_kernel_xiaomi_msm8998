@@ -16,7 +16,6 @@
 #include <asm/uaccess.h>
 
 #include "internal.h"
-#include <linux/sched/task_stack.h>
 
 static inline int is_kernel_rodata(unsigned long addr)
 {

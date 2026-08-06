@@ -17,7 +17,6 @@
 #include <linux/sysfs.h>
 
 #include <asm/stacktrace.h>
-#include <linux/sched/task_stack.h>
 
 
 int panic_on_unrecovered_nmi;

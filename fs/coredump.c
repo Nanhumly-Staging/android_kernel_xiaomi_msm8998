@@ -46,7 +46,6 @@
 #include "internal.h"
 
 #include <trace/events/sched.h>
-#include <linux/sched/task_stack.h>
 
 int core_uses_pid;
 unsigned int core_pipe_limit;

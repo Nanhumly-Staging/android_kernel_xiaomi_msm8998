@@ -35,7 +35,6 @@
 #include <asm/reset-regs.h>
 #include <asm/gdb-stub.h>
 #include "internal.h"
-#include <linux/sched/task_stack.h>
 
 /*
  * return saved PC of a blocked thread.

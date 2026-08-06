@@ -33,7 +33,6 @@
 #endif
 
 #include "entry.h"
-#include <linux/sched/task_stack.h>
 
 /*
  * Bits in the PSR that we allow ptrace() to change:

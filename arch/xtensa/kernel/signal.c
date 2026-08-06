@@ -20,7 +20,6 @@
 #include <linux/ptrace.h>
 #include <linux/personality.h>
 #include <linux/tracehook.h>
-#include <linux/sched/task_stack.h>
 
 #include <asm/ucontext.h>
 #include <asm/uaccess.h>

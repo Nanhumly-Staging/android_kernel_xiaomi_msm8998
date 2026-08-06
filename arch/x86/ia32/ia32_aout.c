@@ -26,7 +26,6 @@
 #include <linux/init.h>
 #include <linux/jiffies.h>
 #include <linux/perf_event.h>
-#include <linux/sched/task_stack.h>
 
 #include <asm/uaccess.h>
 #include <asm/pgalloc.h>

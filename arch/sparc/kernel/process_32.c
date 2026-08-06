@@ -41,7 +41,6 @@
 #include <asm/setup.h>
 
 #include "kernel.h"
-#include <linux/sched/task_stack.h>
 
 /* 
  * Power management idle function 

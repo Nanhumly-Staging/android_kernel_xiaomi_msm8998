@@ -76,7 +76,6 @@
 #include <asm/realmode.h>
 #include <asm/misc.h>
 #include <asm/spec-ctrl.h>
-#include <linux/sched/task_stack.h>
 
 /* Number of siblings per CPU package */
 int smp_num_siblings = 1;

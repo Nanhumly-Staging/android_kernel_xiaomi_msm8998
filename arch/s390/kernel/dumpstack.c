@@ -17,7 +17,6 @@
 #include <asm/debug.h>
 #include <asm/dis.h>
 #include <asm/ipl.h>
-#include <linux/sched/task_stack.h>
 
 /*
  * For show_trace we have tree different stack to consider:

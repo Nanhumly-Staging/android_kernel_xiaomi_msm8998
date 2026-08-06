@@ -35,7 +35,6 @@
 #include <asm/syscalls.h>
 #include <asm/vdso.h>
 #include <arch/interrupts.h>
-#include <linux/sched/task_stack.h>
 
 #define DEBUG_SIG 0
 

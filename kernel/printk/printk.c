@@ -54,7 +54,6 @@
 
 #include "console_cmdline.h"
 #include "braille.h"
-#include <linux/sched/task_stack.h>
 
 #ifdef CONFIG_EARLY_PRINTK_DIRECT
 extern void printascii(char *);

@@ -27,7 +27,6 @@
 #include <asm/ucontext.h>
 
 #include "proto.h"
-#include <linux/sched/task_stack.h>
 
 
 #define DEBUG_SIG 0

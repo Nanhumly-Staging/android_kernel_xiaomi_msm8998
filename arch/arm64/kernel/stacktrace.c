@@ -25,7 +25,6 @@
 #include <asm/irq.h>
 #include <asm/stack_pointer.h>
 #include <asm/stacktrace.h>
-#include <linux/sched/task_stack.h>
 
 /*
  * AArch64 PCS assigns the frame pointer to x29.

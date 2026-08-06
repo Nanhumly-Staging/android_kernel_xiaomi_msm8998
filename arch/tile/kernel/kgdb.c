@@ -19,8 +19,6 @@
 #include <linux/kdebug.h>
 #include <linux/uaccess.h>
 #include <linux/module.h>
-#include <linux/sched/task_stack.h>
-
 #include <asm/cacheflush.h>
 
 static tile_bundle_bits singlestep_insn = TILEGX_BPT_BUNDLE | DIE_SSTEPBP;

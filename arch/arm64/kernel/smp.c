@@ -58,7 +58,6 @@
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/ipi.h>
-#include <linux/sched/task_stack.h>
 
 DEFINE_PER_CPU_READ_MOSTLY(int, cpu_number);
 EXPORT_PER_CPU_SYMBOL(cpu_number);

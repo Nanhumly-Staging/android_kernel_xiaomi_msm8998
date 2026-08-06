@@ -28,7 +28,6 @@
 #include <linux/module.h>
 #include <linux/types.h>
 #include <linux/kernel.h>
-#include <linux/sched/task_stack.h>
 #include <linux/delay.h>
 #include <linux/timer.h>
 #include <linux/seq_file.h>

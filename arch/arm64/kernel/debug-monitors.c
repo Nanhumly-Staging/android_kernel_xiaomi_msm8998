@@ -26,7 +26,6 @@
 #include <linux/kprobes.h>
 #include <linux/stat.h>
 #include <linux/uaccess.h>
-#include <linux/sched/task_stack.h>
 
 #include <asm/cpufeature.h>
 #include <asm/cputype.h>

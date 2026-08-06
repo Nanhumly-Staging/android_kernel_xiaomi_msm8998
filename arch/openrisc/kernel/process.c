@@ -43,7 +43,6 @@
 #include <asm/spr_defs.h>
 
 #include <linux/smp.h>
-#include <linux/sched/task_stack.h>
 
 /*
  * Pointer to Current thread info structure.

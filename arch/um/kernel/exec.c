@@ -16,7 +16,6 @@
 #include <mem_user.h>
 #include <skas.h>
 #include <os.h>
-#include <linux/sched/task_stack.h>
 
 void flush_thread(void)
 {
