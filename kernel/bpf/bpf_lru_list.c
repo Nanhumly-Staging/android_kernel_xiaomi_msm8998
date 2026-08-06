@@ -1,5 +1,8 @@
-// SPDX-License-Identifier: GPL-2.0-only
 /* Copyright (c) 2016 Facebook
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of version 2 of the GNU General Public
+ * License as published by the Free Software Foundation.
  */
 #include <linux/cpumask.h>
 #include <linux/spinlock.h>
@@ -41,12 +44,7 @@ static struct list_head *local_pending_list(struct bpf_lru_locallist *loc_l)
 /* bpf_lru_node helpers */
 static bool bpf_lru_node_is_ref(const struct bpf_lru_node *node)
 {
-	return READ_ONCE(node->ref);
-}
-
-static void bpf_lru_node_clear_ref(struct bpf_lru_node *node)
-{
-	WRITE_ONCE(node->ref, 0);
+	return node->ref;
 }
 
 static void bpf_lru_list_count_inc(struct bpf_lru_list *l,
@@ -94,7 +92,7 @@ static void __bpf_lru_node_move_in(struct bpf_lru_list *l,
 
 	bpf_lru_list_count_inc(l, tgt_type);
 	node->type = tgt_type;
-	bpf_lru_node_clear_ref(node);
+	node->ref = 0;
 	list_move(&node->list, &l->lists[tgt_type]);
 }
 
@@ -115,7 +113,7 @@ static void __bpf_lru_node_move(struct bpf_lru_list *l,
 		bpf_lru_list_count_inc(l, tgt_type);
 		node->type = tgt_type;
 	}
-	bpf_lru_node_clear_ref(node);
+	node->ref = 0;
 
 	/* If the moving node is the next_inactive_rotation candidate,
 	 * move the next_inactive_rotation pointer also.
@@ -172,7 +170,7 @@ static void __bpf_lru_list_rotate_inactive(struct bpf_lru *lru,
 					   struct bpf_lru_list *l)
 {
 	struct list_head *inactive = &l->lists[BPF_LRU_LIST_T_INACTIVE];
-	struct list_head *cur, *next, *last;
+	struct list_head *cur, *last, *next = inactive;
 	struct bpf_lru_node *node;
 	unsigned int i = 0;
 
@@ -358,11 +356,12 @@ static void __local_list_add_pending(struct bpf_lru *lru,
 	*(u32 *)((void *)node + lru->hash_offset) = hash;
 	node->cpu = cpu;
 	node->type = BPF_LRU_LOCAL_LIST_T_PENDING;
-	bpf_lru_node_clear_ref(node);
+	node->ref = 0;
 	list_add(&node->list, local_pending_list(loc_l));
 }
 
-struct bpf_lru_node *__local_list_pop_free(struct bpf_lru_locallist *loc_l)
+static struct bpf_lru_node *
+__local_list_pop_free(struct bpf_lru_locallist *loc_l)
 {
 	struct bpf_lru_node *node;
 
@@ -375,8 +374,8 @@ struct bpf_lru_node *__local_list_pop_free(struct bpf_lru_locallist *loc_l)
 	return node;
 }
 
-struct bpf_lru_node *__local_list_pop_pending(struct bpf_lru *lru,
-					      struct bpf_lru_locallist *loc_l)
+static struct bpf_lru_node *
+__local_list_pop_pending(struct bpf_lru *lru, struct bpf_lru_locallist *loc_l)
 {
 	struct bpf_lru_node *node;
 	bool force = false;
@@ -423,7 +422,7 @@ static struct bpf_lru_node *bpf_percpu_lru_pop_free(struct bpf_lru *lru,
 	if (!list_empty(free_list)) {
 		node = list_first_entry(free_list, struct bpf_lru_node, list);
 		*(u32 *)((void *)node + lru->hash_offset) = hash;
-		bpf_lru_node_clear_ref(node);
+		node->ref = 0;
 		__bpf_lru_node_move(l, node, BPF_LRU_LIST_T_INACTIVE);
 	}
 
@@ -526,7 +525,7 @@ static void bpf_common_lru_push_free(struct bpf_lru *lru,
 		}
 
 		node->type = BPF_LRU_LOCAL_LIST_T_FREE;
-		bpf_lru_node_clear_ref(node);
+		node->ref = 0;
 		list_move(&node->list, local_free_list(loc_l));
 
 		raw_spin_unlock_irqrestore(&loc_l->lock, flags);
@@ -560,8 +559,9 @@ void bpf_lru_push_free(struct bpf_lru *lru, struct bpf_lru_node *node)
 		bpf_common_lru_push_free(lru, node);
 }
 
-void bpf_common_lru_populate(struct bpf_lru *lru, void *buf, u32 node_offset,
-			     u32 elem_size, u32 nr_elems)
+static void bpf_common_lru_populate(struct bpf_lru *lru, void *buf,
+				    u32 node_offset, u32 elem_size,
+				    u32 nr_elems)
 {
 	struct bpf_lru_list *l = &lru->common_lru.lru_list;
 	u32 i;
@@ -571,14 +571,15 @@ void bpf_common_lru_populate(struct bpf_lru *lru, void *buf, u32 node_offset,
 
 		node = (struct bpf_lru_node *)(buf + node_offset);
 		node->type = BPF_LRU_LIST_T_FREE;
-		bpf_lru_node_clear_ref(node);
+		node->ref = 0;
 		list_add(&node->list, &l->lists[BPF_LRU_LIST_T_FREE]);
 		buf += elem_size;
 	}
 }
 
-void bpf_percpu_lru_populate(struct bpf_lru *lru, void *buf, u32 node_offset,
-			     u32 elem_size, u32 nr_elems)
+static void bpf_percpu_lru_populate(struct bpf_lru *lru, void *buf,
+				    u32 node_offset, u32 elem_size,
+				    u32 nr_elems)
 {
 	u32 i, pcpu_entries;
 	int cpu;
@@ -596,7 +597,7 @@ again:
 		node = (struct bpf_lru_node *)(buf + node_offset);
 		node->cpu = cpu;
 		node->type = BPF_LRU_LIST_T_FREE;
-		bpf_lru_node_clear_ref(node);
+		node->ref = 0;
 		list_add(&node->list, &l->lists[BPF_LRU_LIST_T_FREE]);
 		i++;
 		buf += elem_size;
