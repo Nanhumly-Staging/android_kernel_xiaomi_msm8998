@@ -8,7 +8,6 @@
 #include <linux/slab.h>
 #include <linux/idr.h>
 #include <linux/rhashtable.h>
-#include <net/page_pool.h>
 
 #include <net/xdp.h>
 
@@ -28,10 +27,7 @@ static struct rhashtable *mem_id_ht;
 
 struct xdp_mem_allocator {
 	struct xdp_mem_info mem;
-	union {
-		void *allocator;
-		struct page_pool *page_pool;
-	};
+	void *allocator;
 	struct rhash_head node;
 	struct rcu_head rcu;
 };
@@ -78,9 +74,7 @@ static void __xdp_mem_allocator_rcu_free(struct rcu_head *rcu)
 	/* Allow this ID to be reused */
 	ida_simple_remove(&mem_id_pool, xa->mem.id);
 
-	/* Notice, driver is expected to free the *allocator,
-	 * e.g. page_pool, and MUST also use RCU free.
-	 */
+	/* TODO: Depending on allocator type/pointer free resources */
 
 	/* Poison memory */
 	xa->mem.id = 0xFFFF;
@@ -231,17 +225,6 @@ again:
 	return id;
 }
 
-static bool __is_supported_mem_type(enum xdp_mem_type type)
-{
-	if (type == MEM_TYPE_PAGE_POOL)
-		return is_page_pool_compiled_in();
-
-	if (type >= MEM_TYPE_MAX)
-		return false;
-
-	return true;
-}
-
 int xdp_rxq_info_reg_mem_model(struct xdp_rxq_info *xdp_rxq,
 			       enum xdp_mem_type type, void *allocator)
 {
@@ -256,16 +239,13 @@ int xdp_rxq_info_reg_mem_model(struct xdp_rxq_info *xdp_rxq,
 		return -EFAULT;
 	}
 
-	if (!__is_supported_mem_type(type))
-		return -EOPNOTSUPP;
+	if (type >= MEM_TYPE_MAX)
+		return -EINVAL;
 
 	xdp_rxq->mem.type = type;
 
-	if (!allocator) {
-		if (type == MEM_TYPE_PAGE_POOL)
-			return -EINVAL; /* Setup time check page_pool req */
+	if (!allocator)
 		return 0;
-	}
 
 	/* Delay init of rhashtable to save memory if feature isn't used */
 	if (!mem_id_init) {
@@ -314,31 +294,15 @@ EXPORT_SYMBOL_GPL(xdp_rxq_info_reg_mem_model);
 
 void xdp_return_frame(void *data, struct xdp_mem_info *mem)
 {
-	struct xdp_mem_allocator *xa;
-	struct page *page;
-
-	switch (mem->type) {
-	case MEM_TYPE_PAGE_POOL:
-		rcu_read_lock();
-		/* mem->id is valid, checked in xdp_rxq_info_reg_mem_model() */
-		xa = rhashtable_lookup(mem_id_ht, &mem->id, mem_id_rht_params);
-		page = virt_to_head_page(data);
-		if (xa)
-			page_pool_put_page(xa->page_pool, page);
-		else
-			put_page(page);
-		rcu_read_unlock();
-		break;
-	case MEM_TYPE_PAGE_SHARED:
+	if (mem->type == MEM_TYPE_PAGE_SHARED) {
 		__free_page_frag(data);
-		break;
-	case MEM_TYPE_PAGE_ORDER0:
-		page = virt_to_page(data); /* Assumes order0 page*/
+		return;
+	}
+
+	if (mem->type == MEM_TYPE_PAGE_ORDER0) {
+		struct page *page = virt_to_page(data); /* Assumes order0 page*/
+
 		put_page(page);
-		break;
-	default:
-		/* Not possible, checked in xdp_rxq_info_reg_mem_model() */
-		break;
 	}
 }
 EXPORT_SYMBOL_GPL(xdp_return_frame);
