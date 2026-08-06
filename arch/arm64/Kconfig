@@ -1313,3 +1313,5 @@ config PAPER_OPLUS_BACKLIGHT
 	bool "Support oplus backlight"
 	depends on TOUCHSCREEN_COMMON
 	default y
+
+source "drivers/moon/Kconfig"
