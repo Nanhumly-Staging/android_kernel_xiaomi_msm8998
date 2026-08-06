@@ -56,8 +56,6 @@ static struct bpf_map *xsk_map_alloc(union bpf_attr *attr)
 	if (err)
 		goto free_m;
 
-	err = -ENOMEM;
-
 	m->flush_list = alloc_percpu(struct list_head);
 	if (!m->flush_list)
 		goto free_m;
