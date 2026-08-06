@@ -69,14 +69,9 @@ enum {
  */
 struct pt_regs 
 {
-	union {
-		user_pt_regs user_regs;
-		struct {
-			unsigned long args[1];
-			psw_t psw;
-			unsigned long gprs[NUM_GPRS];
-		};
-	};
+	unsigned long args[1];
+	psw_t psw;
+	unsigned long gprs[NUM_GPRS];
 	unsigned long orig_gpr2;
 	unsigned int int_code;
 	unsigned int int_parm;
